@@ -4,3 +4,5 @@
 .env.production
 .env.test
 .env.test.local
+.web_credentials
+.web_credentials.txt

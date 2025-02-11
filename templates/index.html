@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Trend Finder</title>
+    <!-- Add marked.js for markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        background: #1a1b26;
+        color: #a9b1d6;
+      }
+      .container {
+        display: flex;
+        gap: 20px;
+        height: calc(100vh - 40px);
+      }
+      .terminal-container {
+        flex: 1;
+        background: #1a1b26;
+        border-radius: 8px;
+        border: 1px solid #414868;
+        overflow: hidden;
+      }
+      .reports-container {
+        width: 300px;
+        background: #24283b;
+        border-radius: 8px;
+        padding: 20px;
+        overflow-y: auto;
+      }
+      .report-item {
+        padding: 10px;
+        margin-bottom: 10px;
+        background: #1a1b26;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .report-item:hover {
+        background: #414868;
+      }
+      h1,
+      h2 {
+        margin-top: 0;
+        color: #7aa2f7;
+      }
+      .report-date {
+        font-size: 0.8em;
+        color: #565f89;
+      }
+      #terminal-iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+      .start-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+      }
+      .start-button {
+        background: #7aa2f7;
+        color: #1a1b26;
+        border: none;
+        padding: 16px 32px;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 30px;
+        opacity: 0.5;
+        transform: scale(0.95);
+      }
+      .start-button:not(:disabled) {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 4px 12px rgba(122, 162, 247, 0.2);
+      }
+      .start-button:not(:disabled):hover {
+        background: #89b4ff;
+        transform: translateY(-2px) scale(1.05);
+      }
+      .selection-status {
+        margin-top: 20px;
+        color: #565f89;
+        font-size: 14px;
+        height: 20px;
+      }
+      .hidden {
+        display: none;
+      }
+      .markdown-preview {
+        padding: 20px;
+        background: #1a1b26;
+        border-radius: 8px;
+        margin-top: 10px;
+        white-space: pre-wrap;
+        font-family: monospace;
+      }
+
+      /* Modal styles */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 1000;
+      }
+
+      .modal-content {
+        position: relative;
+        background: #1a1b26;
+        margin: 40px auto;
+        padding: 20px;
+        width: 80%;
+        max-width: 900px;
+        max-height: 80vh;
+        border-radius: 8px;
+        overflow-y: auto;
+        border: 1px solid #414868;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #414868;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        color: #a9b1d6;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+      }
+
+      .modal-close:hover {
+        color: #7aa2f7;
+      }
+
+      /* Report content styling */
+      .report-content {
+        line-height: 1.6;
+      }
+
+      .report-content h1 {
+        color: #7aa2f7;
+        font-size: 24px;
+        margin-top: 0;
+      }
+      .report-content h2 {
+        color: #bb9af7;
+        font-size: 20px;
+        margin-top: 20px;
+      }
+      .report-content h3 {
+        color: #7dcfff;
+        font-size: 18px;
+      }
+      .report-content strong {
+        color: #e0af68;
+      }
+      .report-content ul {
+        padding-left: 20px;
+      }
+      .report-content li {
+        margin: 5px 0;
+      }
+
+      /* Report actions styling */
+      .report-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .report-actions button {
+        background: #414868;
+        color: #a9b1d6;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+      }
+
+      .report-actions button:hover {
+        background: #565f89;
+        color: #c0caf5;
+      }
+
+      .category-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+        max-width: 800px;
+        width: 100%;
+      }
+
+      .category-card {
+        background: #24283b;
+        padding: 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+        text-align: left;
+      }
+
+      .category-card.selected {
+        border-color: #7aa2f7;
+        background: #2f354d;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .category-card:hover:not(.selected) {
+        border-color: #414868;
+        transform: translateY(-1px);
+      }
+
+      .category-icon {
+        font-size: 24px;
+        margin-bottom: 8px;
+      }
+
+      .category-name {
+        font-weight: 500;
+      }
+
+      .category-count {
+        font-size: 12px;
+        color: #565f89;
+        margin-top: 4px;
+      }
+
+      .focus-tags {
+        display: flex;
+        gap: 4px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+      }
+
+      .focus-tag {
+        background: #414868;
+        color: #a9b1d6;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="terminal-container">
+        <div id="start-screen" class="start-container">
+          <h2>AI Trend Finder</h2>
+          <p>Select one category to analyze trends from influential accounts</p>
+
+          <div class="category-selector" id="categorySelector">
+            <!-- Categories will be loaded here -->
+          </div>
+
+          <div class="selection-status" id="selectionStatus">
+            <!-- Selection status will be shown here -->
+          </div>
+
+          <button
+            class="start-button"
+            onclick="startAnalysis()"
+            disabled
+            id="startButton"
+          >
+            Analyze Trends
+          </button>
+        </div>
+        <iframe id="terminal-iframe" class="hidden" src="about:blank"></iframe>
+      </div>
+      <div class="reports-container">
+        <h2>Generated Reports</h2>
+        <div id="reports-list">
+          <!-- Reports will be loaded here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for reading reports -->
+    <div id="reportModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalTitle"></h2>
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div id="modalContent" class="report-content"></div>
+      </div>
+    </div>
+
+    <script>
+      const categories = {
+        entrepreneurs: {
+          icon: "💼",
+          label: "Entrepreneurs",
+        },
+        scientists: {
+          icon: "🔬",
+          label: "Scientists",
+        },
+        musicians: {
+          icon: "🎵",
+          label: "Musicians",
+        },
+        athletes: {
+          icon: "⚽",
+          label: "Athletes",
+        },
+        politicians: {
+          icon: "��️",
+          label: "Politicians",
+        },
+      };
+
+      let selectedCategory = null;
+
+      function loadCategories() {
+        fetch("/api/twitter_lists")
+          .then((response) => response.json())
+          .then((lists) => {
+            const selector = document.getElementById("categorySelector");
+            Object.entries(categories).forEach(([key, { icon, label }]) => {
+              const accounts = lists[key] || [];
+              const card = document.createElement("div");
+              card.className = "category-card";
+              card.onclick = () => selectCategory(key, card);
+
+              const focusCounts = accounts.reduce((acc, account) => {
+                account.focus.forEach((f) => (acc[f] = (acc[f] || 0) + 1));
+                return acc;
+              }, {});
+
+              card.innerHTML = `
+                <div class="category-icon">${icon}</div>
+                <div class="category-name">${label}</div>
+                <div class="category-count">${accounts.length} accounts</div>
+                <div class="focus-tags">
+                  ${Object.entries(focusCounts)
+                    .map(
+                      ([focus, count]) =>
+                        `<span class="focus-tag">${focus} (${count})</span>`
+                    )
+                    .join("")}
+                </div>
+              `;
+              selector.appendChild(card);
+            });
+          });
+      }
+
+      function selectCategory(category, element) {
+        // Remove previous selection
+        if (selectedCategory) {
+          document.querySelectorAll(".category-card").forEach((card) => {
+            card.classList.remove("selected");
+          });
+        }
+
+        // Set new selection
+        selectedCategory = category;
+        element.classList.add("selected");
+
+        // Update UI
+        const statusEl = document.getElementById("selectionStatus");
+        const startButton = document.getElementById("startButton");
+
+        statusEl.textContent = `Selected: ${categories[category].label}`;
+        startButton.disabled = false;
+      }
+
+      function startAnalysis() {
+        if (!selectedCategory) return;
+
+        document.getElementById("start-screen").classList.add("hidden");
+        const iframe = document.getElementById("terminal-iframe");
+        iframe.classList.remove("hidden");
+
+        // Pass selected category to the backend
+        fetch("/api/start_analysis", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            categories: [selectedCategory],
+          }),
+        }).then(() => {
+          iframe.src = "/terminal";
+        });
+      }
+
+      // Load categories when page loads
+      loadCategories();
+
+      // Modal functions
+      function openModal(title, content) {
+        document.getElementById("modalTitle").textContent = title;
+        document.getElementById("modalContent").innerHTML =
+          marked.parse(content);
+        document.getElementById("reportModal").style.display = "block";
+        document.body.style.overflow = "hidden"; // Prevent background scrolling
+      }
+
+      function closeModal() {
+        document.getElementById("reportModal").style.display = "none";
+        document.body.style.overflow = "auto";
+      }
+
+      // Close modal when clicking outside
+      window.onclick = function (event) {
+        const modal = document.getElementById("reportModal");
+        if (event.target === modal) {
+          closeModal();
+        }
+      };
+
+      // Handle escape key
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          closeModal();
+        }
+      });
+
+      function loadReports() {
+        fetch("/api/reports")
+          .then((response) => response.json())
+          .then((reports) => {
+            const reportsList = document.getElementById("reports-list");
+            reportsList.innerHTML = reports
+              .map(
+                (report) => `
+                  <div class="report-item">
+                    <div>${report.filename}</div>
+                    <div class="report-date">${report.created_at}</div>
+                    <div class="report-actions">
+                      <button onclick="viewReport('${report.filename}')">View</button>
+                      <button onclick="downloadReport('${report.filename}')">Download</button>
+                    </div>
+                  </div>
+                `
+              )
+              .join("");
+          });
+      }
+
+      function viewReport(filename) {
+        fetch(`/api/reports/${filename}/content`)
+          .then((response) => response.text())
+          .then((content) => {
+            openModal(filename, content);
+          });
+      }
+
+      function downloadReport(filename) {
+        window.open(`/api/reports/${filename}/download`, "_blank");
+      }
+
+      // Load reports initially and refresh every 30 seconds
+      loadReports();
+      setInterval(loadReports, 30000);
+    </script>
+  </body>
+</html>
