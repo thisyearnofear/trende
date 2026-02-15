@@ -3,7 +3,14 @@
  * Single source of truth for frontend-backend contracts
  */
 
-export type QueryStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type QueryStatus =
+  | 'pending'
+  | 'planning'
+  | 'researching'
+  | 'analyzing'
+  | 'processing'
+  | 'completed'
+  | 'failed';
 
 export interface Query {
   id: string;
@@ -40,8 +47,38 @@ export interface TrendItem {
 export interface TrendSummary {
   overview: string;
   keyThemes: string[];
-  topTrends: {}[]
+  topTrends: Record<string, unknown>[];
   sentiment: 'positive' | 'negative' | 'neutral';
+  confidenceScore?: number;
+  validationResults?: string[];
+  finalReportMd?: string;
+  memePageData?: Record<string, unknown>;
+  consensusData?: {
+    providers?: string[];
+    agreement_score?: number;
+    main_divergence?: string;
+    provider_outputs?: Array<{
+      provider: string;
+      response_excerpt: string;
+    }>;
+    synthesis_model?: string;
+  };
+  attestationData?: {
+    provider?: string;
+    status?: string;
+    method?: string;
+    attestation_id?: string;
+    input_hash?: string;
+    signature?: string;
+    key_id?: string;
+    quote?: string;
+    receipt?: string;
+    verify_endpoint?: string;
+    verification_note?: string;
+    payload?: Record<string, unknown>;
+    provider_count?: number;
+    generated_at?: string;
+  };
   generatedAt: string;
 }
 

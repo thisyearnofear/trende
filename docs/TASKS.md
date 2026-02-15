@@ -10,15 +10,20 @@
 - [ ] **Architect Logic**: Expand `architect.py` to support "Verified News" output mode.
 - [x] **Frontend Viewer**: Created `/meme/[queryId]` with a high-conviction "Alpha Page" format.
 - [x] **Dual Output Toggle**: Added Meme Thesis and Verifiable News Synthesizer modes in the Forge UI.
+- [x] **Verification Detail UX**: Added verification details modal and attestation check action in Forge news mode.
 
-## 🟢 Priority 3: Monad & nad.fun
-- [ ] **nad.fun Payload**: Research the `nad.fun` contract/API parameters for launching tokens.
-- [ ] **X402 Settlement**: Add Monad Testnet support to `x402_service.py`.
+## 🟢 Priority 3: Agentic Interoperability (A2A)
+- [ ] **Alpha API**: Create a specialized `/api/agent/alpha` endpoint that returns a concise, signed JSON suitable for `nad.fun` launch agents.
+- [ ] **Permanent Proof URL**: Implement a public `/proof/[queryId]` page that displays the multi-model consensus for any token to link to.
+- [ ] **Agent Wallet (Treasury)**: Maintain the Monad wallet to receive X402 payments from other agents hiring Trende for research.
+- [ ] **nad.fun Skill**: Create a `nadfun-skill.json` or `skill.md` that allows Trende to be "installed" by Monad ecosystem bots.
 
 ## ⚙️ Infrastructure
 - [x] **EigenCompute Dockerization**: Created `.dockerignore` for a lean backend image.
 - [ ] **TEE Deployment**: Deploy the container to EigenCompute and verify attestation.
-- [ ] **Consensus Attestation Wiring**: Attach model-level consensus metadata and attestation payloads to API responses.
+- [x] **Consensus Attestation Wiring**: Attached model-level consensus metadata and attestation payloads to API responses.
+- [x] **Attestation Service Abstraction**: Added pluggable provider flow (`local_hmac` fallback + `eigencompute` endpoint hook).
+- [x] **Verification Endpoint**: Added `/api/attest/verify` to validate attestation payloads.
 - [ ] **OpenRouter Free Fallback**: Implement logic to switch to `free` models if balance is low.
 - [ ] **Sovereign Persona**: Define the "Trende Bot" personality for social posts.
 

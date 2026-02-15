@@ -14,6 +14,8 @@ It now supports dual Forge outputs:
 - **AI Brain**: Multi-provider failover system (Venice AI → AIsa → OpenRouter → Gemini).
 - **Data Layer**: Autonomous connectors for Twitter, NewsAPI, LinkedIn (via AIsa), and Tabstack (Deep Extraction).
 - **Security**: Private-first inference via Venice AI.
+- **Verifiability**: Pluggable attestation service with `local_hmac` fallback and `eigencompute` endpoint integration.
+- **Verification API**: `POST /api/attest/verify` validates signed attestation payloads.
 
 ## 🛠️ Setup
 
@@ -34,6 +36,9 @@ It now supports dual Forge outputs:
    pip install -r backend/requirements.txt
    ```
 4. Configure your `.env` file (see `.env.example`).
+5. Optional attestation config:
+   - `ATTESTATION_PROVIDER=local_hmac` for local signatures.
+   - `ATTESTATION_PROVIDER=eigencompute` with `EIGEN_ATTEST_URL`/`EIGEN_ATTEST_TOKEN` for remote attestations.
 
 ### Frontend Setup
 1. Navigate to `frontend/`:

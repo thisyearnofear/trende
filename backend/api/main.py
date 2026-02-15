@@ -1,14 +1,16 @@
-from fastapi import FastAPI, BackgroundTasks, Request, Response
+from fastapi import FastAPI, BackgroundTasks, Response
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 from typing import List, Optional, Dict, Any
 import uuid
 import json
 import asyncio
+import os
 from datetime import datetime
 from backend.agents.workflow import create_workflow
 from shared.models import QueryStatus, TrendItem
 from backend.services.x402_service import x402_service, X402Payment
+from backend.services.attestation_service import attestation_service
 from backend.database.repository import Repository, init_db
 
 app = FastAPI(title="Trende Agent API")
@@ -38,20 +40,48 @@ repo = Repository()
 tasks = {}
 
 class QueryRequest(BaseModel):
-    topic: str
-    platforms: List[str] = ["twitter", "news", "linkedin"]
+    topic: Optional[str] = None
+    idea: Optional[str] = None
+    platforms: List[str] = Field(default_factory=lambda: ["twitter", "newsapi", "linkedin"])
+    relevance_threshold: Optional[float] = None
+
+    @model_validator(mode="after")
+    def validate_topic(self):
+        resolved = (self.topic or self.idea or "").strip()
+        if not resolved:
+            raise ValueError("Either 'topic' or 'idea' is required")
+        self.topic = resolved
+        return self
+
+
+class AttestationVerifyRequest(BaseModel):
+    payload: Dict[str, Any]
+    attestation: Dict[str, Any]
+
+
+@app.post("/api/attest/verify")
+async def verify_attestation(request: AttestationVerifyRequest):
+    verified = attestation_service.verify(request.payload, request.attestation)
+    return {
+        "verified": verified,
+        "provider": request.attestation.get("provider"),
+        "method": request.attestation.get("method"),
+        "attestation_id": request.attestation.get("attestation_id"),
+    }
 
 @app.post("/api/trends/start")
 async def start_analysis(request: QueryRequest, background_tasks: BackgroundTasks, response: Response, payment: Optional[X402Payment] = None):
-    # If no payment is provided, return 402 Payment Required with X402 headers
-    if not payment:
+    require_x402 = os.getenv("REQUIRE_X402", "false").lower() == "true"
+
+    # If payment is required and none is provided, return 402 Payment Required with X402 headers
+    if require_x402 and not payment:
         headers = x402_service.get_payment_headers("0.1", "0xYourWalletAddress", 8453) # Base chain
         for k, v in headers.items():
             response.headers[k] = v
         return Response(status_code=402, content="Payment Required")
 
-    # Verify real payment
-    if not x402_service.verify_payment(payment):
+    # Verify real payment when x402 is enabled
+    if require_x402 and payment and not x402_service.verify_payment(payment):
         return Response(status_code=403, content="Invalid Payment")
 
     task_id = str(uuid.uuid4())
@@ -62,7 +92,8 @@ async def start_analysis(request: QueryRequest, background_tasks: BackgroundTask
         "result": None,
         "topic": request.topic,
         "platforms": request.platforms,
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": datetime.utcnow().isoformat(),
+        "updated_at": datetime.utcnow().isoformat(),
     }
     
     # Save to DB
@@ -70,7 +101,13 @@ async def start_analysis(request: QueryRequest, background_tasks: BackgroundTask
     
     background_tasks.add_task(run_agent_workflow, task_id, request.topic, request.platforms)
     
-    return {"task_id": task_id}
+    created_at = tasks[task_id]["created_at"]
+    return {
+        "task_id": task_id,
+        "id": task_id,
+        "status": QueryStatus.PENDING,
+        "createdAt": created_at,
+    }
 
 async def run_agent_workflow(task_id: str, topic: str, platforms: List[str]):
     workflow = create_workflow()
@@ -92,6 +129,8 @@ async def run_agent_workflow(task_id: str, topic: str, platforms: List[str]):
         "confidence_score": 0.0,
         "validation_results": [],
         "meme_page_data": None,
+        "consensus_data": None,
+        "attestation_data": None,
         "error": None
     }
     
@@ -101,6 +140,7 @@ async def run_agent_workflow(task_id: str, topic: str, platforms: List[str]):
             # Update the global task state with the latest changes from the agent
             for key, value in state_update.items():
                 tasks[task_id][key] = value
+            tasks[task_id]["updated_at"] = datetime.utcnow().isoformat()
             
             # Log the node completion
             if "logs" not in tasks[task_id]:
@@ -130,10 +170,11 @@ async def get_task_results(task_id: str):
     # Transform raw items into TrendResult objects
     items_by_platform = {}
     for item in res_node.get("raw_findings", []):
-        platform = item.get("platform", "web")
+        normalized_item = item.model_dump() if hasattr(item, "model_dump") else item
+        platform = normalized_item.get("platform", "web")
         if platform not in items_by_platform:
             items_by_platform[platform] = []
-        items_by_platform[platform].append(item)
+        items_by_platform[platform].append(normalized_item)
     
     results = []
     for platform, items in items_by_platform.items():
@@ -146,6 +187,14 @@ async def get_task_results(task_id: str):
             "processingTimeMs": 0 # TODO: Track this
         })
 
+    confidence_score = res_node.get("confidence_score", task.get("confidence_score", 0.0))
+    validation_results = res_node.get("validation_results", task.get("validation_results", []))
+    meme_page_data = res_node.get("meme_page_data", task.get("meme_page_data"))
+    consensus_data = res_node.get("consensus_data", task.get("consensus_data"))
+    attestation_data = res_node.get("attestation_data", task.get("attestation_data"))
+    summary_text = res_node.get("summary", task.get("summary", ""))
+    final_report_md = res_node.get("final_report_md", task.get("final_report_md", ""))
+
     # Construct response matching ResultsResponse in frontend/lib/types.ts
     return {
         "query": {
@@ -154,36 +203,99 @@ async def get_task_results(task_id: str):
             "platforms": task.get("platforms", []),
             "status": task.get("status", "pending"),
             "createdAt": task.get("created_at", ""),
-            "updatedAt": task.get("updated_at", ""),
+            "updatedAt": task.get("updated_at", task.get("created_at", "")),
             "errorMessage": task.get("error"),
             "totalResults": len(res_node.get("raw_findings", [])),
             "relevanceThreshold": 0.5
         },
         "results": results,
         "summary": {
-            "overview": res_node.get("summary", ""),
+            "overview": summary_text,
             "keyThemes": [], # TODO: Extract from report
             "topTrends": [], # TODO: Extract from report
             "sentiment": "neutral",
-            "confidenceScore": res_node.get("confidence_score", 0.0),
-            "validationResults": res_node.get("validation_results", []),
-            "finalReportMd": res_node.get("final_report_md", ""),
-            "memePageData": res_node.get("meme_page_data"),
-            "generatedAt": task.get("updated_at", "")
+            "confidenceScore": confidence_score,
+            "validationResults": validation_results,
+            "finalReportMd": final_report_md,
+            "memePageData": meme_page_data,
+            "consensusData": consensus_data,
+            "attestationData": attestation_data,
+            "generatedAt": task.get("updated_at", task.get("created_at", ""))
         }
+    }
+
+@app.get("/api/agent/alpha/{task_id}")
+async def get_agent_alpha(task_id: str, payment: Optional[X402Payment] = None):
+    """
+    Agent-to-Agent (A2A) Endpoint.
+    Returns a compact, verifiable conviction manifest for external launch bots.
+    """
+    # 1. Verification Logic
+    require_x402 = os.getenv("REQUIRE_X402", "false").lower() == "true"
+    if require_x402 and (not payment or not x402_service.verify_payment(payment)):
+        return Response(status_code=402, content="Intelligence Purchase Required (X402)")
+
+    # 2. Data Retrieval
+    task = tasks.get(task_id) or repo.get_task(task_id)
+    if not task or task.get("status") != QueryStatus.COMPLETED:
+        return Response(status_code=404, content=json.dumps({"error": "Alpha not ready or task not found"}))
+
+    data = task.get("meme_page_data", {})
+    if not data:
+        return Response(status_code=404, content=json.dumps({"error": "Architect failed to generate manifest"}))
+
+    # 3. Manifest Construction (Compatible with nad.fun Skill Spec)
+    # We embed the Trende proof link into the description to ensure permanent verifiability.
+    base_url = os.getenv("FRONTEND_URL", "https://trende.vercel.app")
+    proof_url = f"{base_url}/meme/{task_id}"
+    
+    token = data.get("token", {})
+    description = f"{token.get('description', '')}\n\n--- VERIFIED BY TRENDE ---\nProof of Multi-Model Consensus: {proof_url}"
+
+    return {
+        "manifest": {
+            "name": token.get("name"),
+            "symbol": token.get("ticker"),
+            "description": description,
+            "image_uri": "https://trende.vercel.app/api/assets/placeholder.png", # TODO: Dynamic asset generation
+            "twitter": "",
+            "telegram": "",
+            "website": proof_url,
+            "trende_proof_id": task_id,
+            "attestation": task.get("attestation_data")
+        },
+        "status": "verifiable_alpha",
+        "settlement": "X402_COMPLETED"
     }
 
 @app.get("/api/trends/history")
 async def get_history():
     """Returns a list of all past queries."""
-    return repo.get_all_tasks()
+    records = repo.get_all_tasks()
+    return {
+        "queries": [
+            {
+                "id": item.get("task_id"),
+                "idea": item.get("topic", ""),
+                "status": item.get("status", QueryStatus.PENDING),
+                "createdAt": item.get("created_at", ""),
+            }
+            for item in records
+        ]
+    }
 
 @app.get("/api/trends/stream/{task_id}")
 async def stream_status(task_id: str):
     async def event_generator():
         while True:
             if task_id not in tasks:
-                yield f"data: {json.dumps({'error': 'not_found'})}\n\n"
+                payload = {
+                    "type": "error",
+                    "message": "Task not found",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"task_id": task_id},
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
                 break
             
             state = tasks[task_id]
@@ -197,9 +309,27 @@ async def stream_status(task_id: str):
             elif state["status"] == QueryStatus.COMPLETED: progress = 100
             
             state["progress"] = progress
-            yield f"data: {json.dumps(state)}\n\n"
+            payload = {
+                "type": "status",
+                "message": f"{state['status']} ({progress}%)",
+                "timestamp": datetime.utcnow().isoformat(),
+                "data": {
+                    "task_id": task_id,
+                    "status": state["status"],
+                    "progress": progress,
+                    "logs": state.get("logs", [])[-5:],
+                },
+            }
+            yield f"data: {json.dumps(payload)}\n\n"
             
             if state["status"] in [QueryStatus.COMPLETED, QueryStatus.FAILED]:
+                result_payload = {
+                    "type": "result" if state["status"] == QueryStatus.COMPLETED else "error",
+                    "message": "Analysis completed" if state["status"] == QueryStatus.COMPLETED else "Analysis failed",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"task_id": task_id, "status": state["status"]},
+                }
+                yield f"data: {json.dumps(result_payload)}\n\n"
                 break
                 
             await asyncio.sleep(0.5)

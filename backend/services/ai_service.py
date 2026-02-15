@@ -1,9 +1,13 @@
 import os
+import asyncio
+import json
+from datetime import datetime, timezone
 import google.generativeai as genai
 from typing import List, Optional, Dict
 from backend.services.aisa_service import aisa_service
 from backend.services.venice_service import venice_service
 from backend.services.openrouter_service import openrouter_service
+from backend.services.attestation_service import attestation_service
 
 class AIService:
     def __init__(self):
@@ -94,12 +98,21 @@ class AIService:
                 {"role": "user", "content": prompt}
             ]))
 
-        if "openrouter" in providers and os.getenv('OPENROUTER_API_KEY'):
-            active_providers.append("openrouter")
-            tasks.append(openrouter_service.chat_completion(model="google/gemini-flash-1.5-exp", messages=[
-                {"role": "system", "content": system_prompt or ""},
-                {"role": "user", "content": prompt}
-            ]))
+        if os.getenv('OPENROUTER_API_KEY'):
+            # Fetch from multiple free models on OpenRouter to prove diversity
+            free_models = [
+                ("meta-llama/llama-3.3-70b-instruct:free", "openrouter_llama"),
+                ("google/gemini-2.0-flash-exp:free", "openrouter_gemini"),
+                ("openrouter/free", "openrouter_auto")
+            ]
+            
+            for model_id, provider_label in free_models:
+                if provider_label in providers or "openrouter" in providers:
+                    active_providers.append(provider_label)
+                    tasks.append(openrouter_service.chat_completion(model=model_id, messages=[
+                        {"role": "system", "content": system_prompt or ""},
+                        {"role": "user", "content": prompt}
+                    ]))
 
         if "gemini" in providers:
             self._ensure_configured()
@@ -128,32 +141,154 @@ class AIService:
         """
         Gets a synthesized consensus response from all available models.
         """
-        responses = await self.get_parallel_responses(prompt, system_prompt)
-        if not responses:
-            return "No AI providers available for consensus."
-        
-        if len(responses) == 1:
-            return list(responses.values())[0]
+        bundle = await self.get_consensus_bundle(prompt, system_prompt)
+        return str(bundle.get("consensus_report", "No AI providers available for consensus."))
 
-        # Use a meta-model (AIsa/GPT-4o) to synthesize the consensus
+    async def get_consensus_bundle(self, prompt: str, system_prompt: Optional[str] = None) -> Dict[str, object]:
+        """
+        Produces a consensus report plus verifiability metadata payload.
+        """
+        responses = await self.get_parallel_responses(prompt, system_prompt)
+        generated_at = datetime.now(timezone.utc).isoformat()
+
+        if not responses:
+            fallback = await self.get_response(prompt, system_prompt)
+            return {
+                "consensus_report": fallback,
+                "providers": [],
+                "provider_outputs": [],
+                "agreement_score": 0.0,
+                "main_divergence": "No parallel providers available.",
+                "synthesis_model": "single-provider-fallback",
+                "attestation": await self._build_attestation_payload(
+                    prompt=prompt,
+                    consensus_report=fallback,
+                    providers=[],
+                    generated_at=generated_at,
+                ),
+            }
+
+        if len(responses) == 1:
+            provider, output = next(iter(responses.items()))
+            return {
+                "consensus_report": output,
+                "providers": [provider],
+                "provider_outputs": [
+                    {"provider": provider, "response_excerpt": output[:600]}
+                ],
+                "agreement_score": 1.0,
+                "main_divergence": "Only one provider was available.",
+                "synthesis_model": "single-provider",
+                "attestation": await self._build_attestation_payload(
+                    prompt=prompt,
+                    consensus_report=output,
+                    providers=[provider],
+                    generated_at=generated_at,
+                ),
+            }
+
         synthesis_prompt = f"""
-        I have gathered insights from multiple AI models on the following request:
-        REQUEST: {prompt}
-        
-        RESPONSES:
+        I have gathered responses from multiple AI models.
+        REQUEST:
+        {prompt}
+
+        MODEL RESPONSES:
         """
         for provider, response in responses.items():
             synthesis_prompt += f"\n--- MODEL: {provider} ---\n{response}\n"
-            
+
         synthesis_prompt += """
-        TASK:
-        1. Compare these responses for common facts and diverging viewpoints.
-        2. Synthesize a neutral, unbiased consensus report.
-        3. Highlight any areas where the models disagree significantly.
-        4. List the models that contributed to this consensus.
+        Return STRICT JSON:
+        {
+          "consensus_report": "Neutral merged report in markdown.",
+          "main_divergence": "Biggest disagreement between models.",
+          "agreement_score": 0.0
+        }
         """
-        
-        # We use AIsa (GPT-4o) as the primary synthesizer of consensus
-        return await self.get_response(synthesis_prompt, system_prompt="You are a neutral consensus synthesizer.")
+
+        synthesized = await self.get_response(
+            synthesis_prompt,
+            system_prompt="You are a neutral consensus synthesizer.",
+        )
+
+        consensus_report = ""
+        main_divergence = "No major divergence detected."
+        agreement_score = self._calculate_agreement_score(list(responses.values()))
+
+        try:
+            json_str = synthesized[synthesized.find("{"):synthesized.rfind("}") + 1]
+            payload = json.loads(json_str)
+            consensus_report = str(payload.get("consensus_report", "")).strip()
+            if payload.get("main_divergence"):
+                main_divergence = str(payload["main_divergence"])
+            if isinstance(payload.get("agreement_score"), (int, float)):
+                agreement_score = max(0.0, min(1.0, float(payload["agreement_score"])))
+        except Exception:
+            consensus_report = synthesized
+
+        if not consensus_report:
+            consensus_report = synthesized
+
+        providers = list(responses.keys())
+        provider_outputs = [
+            {"provider": provider, "response_excerpt": response[:600]}
+            for provider, response in responses.items()
+        ]
+
+        return {
+            "consensus_report": consensus_report,
+            "providers": providers,
+            "provider_outputs": provider_outputs,
+            "agreement_score": agreement_score,
+            "main_divergence": main_divergence,
+            "synthesis_model": "meta-consensus",
+            "attestation": await self._build_attestation_payload(
+                prompt=prompt,
+                consensus_report=consensus_report,
+                providers=providers,
+                generated_at=generated_at,
+            ),
+        }
+
+    def _calculate_agreement_score(self, responses: List[str]) -> float:
+        if len(responses) < 2:
+            return 1.0
+
+        token_sets = []
+        for response in responses:
+            words = {w.strip(".,:;!?()[]{}\"'").lower() for w in response.split()}
+            token_sets.append({w for w in words if len(w) > 3})
+
+        overlaps = []
+        for i in range(len(token_sets)):
+            for j in range(i + 1, len(token_sets)):
+                a = token_sets[i]
+                b = token_sets[j]
+                union = len(a | b)
+                if union == 0:
+                    continue
+                overlaps.append(len(a & b) / union)
+
+        if not overlaps:
+            return 0.5
+
+        score = sum(overlaps) / len(overlaps)
+        return max(0.0, min(1.0, score))
+
+    async def _build_attestation_payload(
+        self,
+        prompt: str,
+        consensus_report: str,
+        providers: List[str],
+        generated_at: str,
+    ) -> Dict[str, object]:
+        payload = {
+            "prompt": prompt,
+            "providers": providers,
+            "consensus_report": consensus_report,
+            "generated_at": generated_at,
+            "provider_count": len(providers),
+        }
+        return await attestation_service.attest(payload)
 
 ai_service = AIService()

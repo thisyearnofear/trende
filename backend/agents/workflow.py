@@ -204,10 +204,25 @@ async def analyzer_node(state: GraphState) -> GraphState:
     ... (Markdown Content) ...
     """
     
-    # Use Consensus Engine to reduce single-model bias
-    report = await ai_service.get_consensus_response(prompt, system_prompt="You are a professional, neutral trend analyst.")
+    # Use Consensus Engine to reduce single-model bias and capture verifiability metadata
+    consensus_bundle = await ai_service.get_consensus_bundle(
+        prompt,
+        system_prompt="You are a professional, neutral trend analyst.",
+    )
+    report = str(consensus_bundle.get("consensus_report", ""))
     state['final_report_md'] = report
-    state['summary'] = report[:500] + "..." # Brief summary
+    state['summary'] = report[:500] + "..." if report else "No report generated."
+    state['consensus_data'] = {
+        "providers": consensus_bundle.get("providers", []),
+        "agreement_score": consensus_bundle.get("agreement_score", 0.0),
+        "main_divergence": consensus_bundle.get("main_divergence", ""),
+        "provider_outputs": consensus_bundle.get("provider_outputs", []),
+        "synthesis_model": consensus_bundle.get("synthesis_model", "unknown"),
+    }
+    state['attestation_data'] = consensus_bundle.get("attestation", None)
+    state['logs'].append(
+        f"Consensus generated from {len(state['consensus_data'].get('providers', []))} model outputs."
+    )
     
     # Persist findings to Vector Store for future RAG
     try:

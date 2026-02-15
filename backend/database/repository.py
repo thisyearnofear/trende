@@ -59,6 +59,11 @@ class Repository:
                 "relevance_score": state.get("relevance_score"),
                 "impact_score": state.get("impact_score"),
                 "final_report_md": state.get("final_report_md"),
+                "confidence_score": state.get("confidence_score"),
+                "validation_results": state.get("validation_results", []),
+                "meme_page_data": state.get("meme_page_data"),
+                "consensus_data": state.get("consensus_data"),
+                "attestation_data": state.get("attestation_data"),
                 "raw_findings": [item.model_dump() if hasattr(item, 'model_dump') else item for item in state.get("raw_findings", [])]
             }
             task.result = result_data
@@ -78,7 +83,8 @@ class Repository:
                 "logs": task.logs,
                 "result": task.result,
                 "platforms": task.platforms,
-                "created_at": task.created_at.isoformat()
+                "created_at": task.created_at.isoformat(),
+                "updated_at": task.updated_at.isoformat() if task.updated_at else task.created_at.isoformat(),
             }
 
     def get_all_tasks(self, limit: int = 50):

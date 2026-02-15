@@ -72,7 +72,12 @@ export function useTrendData(
   );
 
   const status = data?.query?.status ?? optimisticStatus;
-  const isProcessing = status === 'pending' || status === 'processing';
+  const isProcessing =
+    status === 'pending' ||
+    status === 'planning' ||
+    status === 'researching' ||
+    status === 'analyzing' ||
+    status === 'processing';
 
   // SSE for real-time updates
   useEffect(() => {
