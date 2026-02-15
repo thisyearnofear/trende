@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - NEWSAPI_KEY=${NEWSAPI_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - DATABASE_URL=sqlite:///./trends.db
+    volumes:
+      - ./:/app
+      - trends-data:/app/data
+    command: uvicorn backend.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  trends-data:
+  redis-data:

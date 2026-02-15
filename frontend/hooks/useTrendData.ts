@@ -1,0 +1,180 @@
+/**
+ * Custom hooks for trend data management
+ */
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import useSWR from 'swr';
+import { api, ApiError } from '@/lib/api';
+import { 
+  QueryRequest, 
+  QueryResponse, 
+  ResultsResponse, 
+  StreamEvent,
+  QueryStatus 
+} from '@/lib/types';
+
+const POLLING_INTERVAL = 30000; // 30 seconds - less aggressive for background polling
+
+interface UseTrendDataOptions {
+  /** Enable automatic polling */
+  polling?: boolean;
+  /** Polling interval in ms */
+  pollInterval?: number;
+  /** Enable SSE for real-time updates */
+  sse?: boolean;
+}
+
+interface UseTrendDataReturn {
+  /** Current query status */
+  status: QueryStatus | null;
+  /** Results data */
+  data: ResultsResponse | null;
+  /** Error state */
+  error: Error | null;
+  /** Loading state */
+  isLoading: boolean;
+  /** Is the analysis still running */
+  isProcessing: boolean;
+  /** Progress percentage (0-100) */
+  progress: number;
+  /** Stream events log */
+  events: StreamEvent[];
+  /** Start a new analysis */
+  startAnalysis: (request: QueryRequest) => Promise<QueryResponse>;
+  /** Refresh results manually */
+  refresh: () => void;
+}
+
+/**
+ * Hook for managing trend analysis data with polling and SSE support
+ */
+export function useTrendData(
+  queryId: string | null,
+  options: UseTrendDataOptions = {}
+): UseTrendDataReturn {
+  const { polling = true, pollInterval = POLLING_INTERVAL, sse = true } = options;
+  
+  const [status, setStatus] = useState<QueryStatus | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [events, setEvents] = useState<StreamEvent[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  const sseCleanupRef = useRef<(() => void) | null>(null);
+  
+  // Fetch results with SWR
+  const { data, error, isLoading, mutate } = useSWR<ResultsResponse, ApiError>(
+    queryId ? ['/api/trends', queryId] : null,
+    () => api.getResults(queryId!),
+    {
+      refreshInterval: polling && isProcessing ? pollInterval : 0,
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+    }
+  );
+
+  // Update status from data
+  useEffect(() => {
+    if (data?.query?.status) {
+      setStatus(data.query.status);
+      setIsProcessing(data.query.status === 'pending' || data.query.status === 'processing');
+    }
+  }, [data?.query?.status]);
+
+  // SSE for real-time updates
+  useEffect(() => {
+    if (!queryId || !sse || !isProcessing) return;
+
+    const handleEvent = (event: StreamEvent) => {
+      setEvents(prev => [...prev, event]);
+      
+      if (event.type === 'status' && event.message) {
+        // Parse progress from status message
+        const progressMatch = event.message.match(/(\d+)%/);
+        if (progressMatch) {
+          setProgress(parseInt(progressMatch[1], 10));
+        }
+      }
+      
+      if (event.type === 'result' || event.type === 'error') {
+        // Refresh data when we get results or errors
+        mutate();
+      }
+    };
+
+    const handleError = (err: Error) => {
+      console.error('SSE error:', err);
+    };
+
+    sseCleanupRef.current = api.subscribeToStream(queryId, handleEvent, handleError);
+
+    return () => {
+      sseCleanupRef.current?.();
+    };
+  }, [queryId, sse, isProcessing, mutate]);
+
+  // Start analysis function
+  const startAnalysis = useCallback(async (request: QueryRequest): Promise<QueryResponse> => {
+    setIsProcessing(true);
+    setProgress(0);
+    setEvents([]);
+    setStatus('pending');
+    
+    const response = await api.startAnalysis(request);
+    setStatus(response.status);
+    
+    return response;
+  }, []);
+
+  // Refresh function
+  const refresh = useCallback(() => {
+    mutate();
+  }, [mutate]);
+
+  return {
+    status,
+    data: data || null,
+    error: error || null,
+    isLoading,
+    isProcessing,
+    progress,
+    events,
+    startAnalysis,
+    refresh,
+  };
+}
+
+/**
+ * Hook for history of past analyses
+ */
+export function useTrendHistory() {
+  const { data, error, isLoading, mutate } = useSWR<{ queries: { id: string; idea: string; status: string; createdAt: string }[] }>(
+    '/api/trends/history',
+    () => api.getHistory(),
+    {
+      refreshInterval: 60000, // Refresh every minute
+    }
+  );
+
+  return {
+    queries: data?.queries || [],
+    error,
+    isLoading,
+    refresh: mutate,
+  };
+}
+
+/**
+ * Hook for platform selection
+ */
+export function usePlatforms() {
+  const { data, error, isLoading } = useSWR<{ platforms: { type: string; displayName: string; icon: string; color: string }[] }>(
+    '/api/platforms',
+    () => api.getPlatforms(),
+  );
+
+  return {
+    platforms: data?.platforms || [],
+    error,
+    isLoading,
+  };
+}
