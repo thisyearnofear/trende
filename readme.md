@@ -1,92 +1,58 @@
-# Trend Finder Agent Guide
+# Trende: Multi-Platform Trend Intelligence Platform
 
-This guide provides detailed steps to create a Trend Finder agent that leverages Composio, ChatGPT to research and find trends in Twitter and Linkedin. Ensure you have Python 3.8 or higher installed.
+Trende is an AI-powered trend research and analysis platform that autonomously searches, validates, and synthesizes market insights from across the social web.
 
-## Environment Setup
+## 🚀 Architecture
 
-1. Copy `.env.example` to `.env`:
+- **Frontend**: Next.js 16 (App Router) with a premium dark-mode dashboard.
+- **Backend**: FastAPI with a LangGraph-powered AI Agent workforce.
+- **AI Brain**: Multi-provider failover system (Venice AI → AIsa → OpenRouter → Gemini).
+- **Data Layer**: Autonomous connectors for Twitter, NewsAPI, LinkedIn (via AIsa), and Tabstack (Deep Extraction).
+- **Security**: Private-first inference via Venice AI.
 
-```sh
-cp .env.example .env
+## 🛠️ Setup
+
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
+- [Optional] Docker
+
+### Backend Setup
+1. Navigate to the root directory.
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+4. Configure your `.env` file (see `.env.example`).
+
+### Frontend Setup
+1. Navigate to `frontend/`:
+   ```bash
+   cd frontend
+   npm install
+   ```
+2. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+## 🧪 Testing the Agent
+
+You can run a live research task directly from the CLI to verify the AI backbone:
+```bash
+python3 scripts/test_agent.py "Your Research Topic"
 ```
 
-2. Fill in your API keys in `.env`:
+## 🛡️ Core Principles
+- **Enhancement First**: Prioritize improving existing components.
+- **Aggressive Consolidation**: Delete unnecessary code; no bloat.
+- **Privacy First**: Primary inference routed via Venice AI.
+- **Fact-Checked**: Every report undergoes a dedicated validation node.
 
-- `COMPOSIO_API_KEY`: Get from [Composio](https://composio.dev)
-- `OPENAI_API_KEY`: Get from [OpenAI](https://platform.openai.com/api-keys)
-- `RAPIDAPI_KEY`: Get from [RapidAPI](https://rapidapi.com)
-- `GEMINI_API_KEY`: Get from [Google AI Studio](https://makersuite.google.com/app/apikey)
-
-**Important**: Never commit your `.env` file or any files containing API keys to version control!
-
-## Steps to Run Locally
-
-**Navigate to the Project Directory:**
-Change to the directory where the `setup.sh`, `main.py`, `requirements.txt`, and `README.md` files are located. For example:
-
-```sh
-cd path/to/project/directory
-```
-
-### 1. Run the Setup File
-
-Make the setup.sh Script Executable (if necessary):
-On Linux or macOS, you might need to make the setup.sh script executable:
-
-```shell
-chmod +x setup.sh
-```
-
-Execute the setup.sh script to set up the environment, install dependencies, login to composio and
-add necessary tools:
-
-```shell
-./setup.sh
-```
-
-Now, Fill in the .env file with your secrets.
-
-### 2. Run the python script
-
-```shell
-python main.py
-```
-
-## Web Interface (Optional)
-
-You can also run Trend Finder through a web interface, which allows you to share access with others securely.
-
-### 1. Set up the Web Interface
-
-Run the web setup script to install necessary components and set up authentication:
-
-```shell
-./setup_web.sh
-```
-
-This will:
-
-- Install ttyd (requires Homebrew on macOS)
-- Generate secure credentials for web access
-- Save credentials in `.web_credentials` file
-
-### 2. Start the Web Interface
-
-Start the web interface with:
-
-```shell
-./start_web.sh
-```
-
-This will:
-
-- Start a web server on http://localhost:8080
-- Display login credentials
-- Provide a secure terminal interface in your browser
-
-### Security Notes
-
-- The web interface uses basic authentication
-- Credentials are stored locally in `.web_credentials`
-- The `.web_credentials` file is automatically added to `.gitignore`
-- All API keys and sensitive data remain secure on the server
+---
+*Built for the AI Partner Catalyst Hackathon.*

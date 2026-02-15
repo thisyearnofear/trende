@@ -6,7 +6,7 @@ from backend.integrations.base import AbstractPlatformConnector
 from shared.models import TrendItem, PlatformType
 from shared.config import get_settings
 from backend.utils.rate_limit import rate_limiter
-from composio_langgraph import ComposioToolSet, Action
+from backend.services.aisa_service import aisa_service
 
 class LinkedInConnector(AbstractPlatformConnector):
     @property
@@ -14,30 +14,27 @@ class LinkedInConnector(AbstractPlatformConnector):
         return PlatformType.LINKEDIN.value
 
     def __init__(self):
-        settings = get_settings()
-        self.toolset = ComposioToolSet(api_key=settings.composio_api_key)
+        self.aisa_key = os.getenv('AISA_API_KEY')
 
     async def search(self, query: str, limit: int = 10) -> List[TrendItem]:
-        """Search LinkedIn posts using Tavily (via Composio)."""
+        """Search LinkedIn posts using AIsa (Social Researcher pattern)."""
         # Apply Rate Limiting
         if not await rate_limiter.wait_for_slot(self.platform):
             return []
 
+        if not self.aisa_key:
+            return []
+
         try:
-            # We use Tavily to search LinkedIn specifically as native search is restricted
+            # We use AIsa's Web Search to find LinkedIn posts specifically
             tavily_query = f"{query} site:linkedin.com/posts"
+            results = await aisa_service.web_search(tavily_query, limit)
             
-            # Execute search via Composio's Tavily integration
-            result = self.toolset.execute_action(
-                action=Action.TAVILY_SEARCH,
-                params={"query": tavily_query, "search_depth": "advanced"}
-            )
-            
-            if not result or 'results' not in result:
+            if not results:
                 return []
 
             items = []
-            for res in result['results'][:limit]:
+            for res in results:
                 url = res.get('url', '')
                 author = "LinkedIn User"
                 if '/in/' in url:
@@ -47,7 +44,7 @@ class LinkedInConnector(AbstractPlatformConnector):
                     id=url,
                     platform=self.platform,
                     title=res.get('title', 'LinkedIn Post'),
-                    content=res.get('content', '') or res.get('snippet', ''),
+                    content=res.get('snippet', '') or res.get('content', ''),
                     author=author,
                     author_handle=author,
                     url=url,
@@ -58,7 +55,7 @@ class LinkedInConnector(AbstractPlatformConnector):
             return items
             
         except Exception as e:
-            print(f"LinkedIn (Tavily) search failed: {e}")
+            print(f"LinkedIn (AIsa) search failed: {e}")
             return []
 
     async def get_item_details(self, item_id: str) -> Optional[TrendItem]:

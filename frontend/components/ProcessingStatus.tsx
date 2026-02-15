@@ -1,7 +1,7 @@
 'use client';
 
 import { StreamEvent, QueryStatus } from '@/lib/types';
-import { Loader2, CheckCircle2, AlertCircle, Zap, Search, Brain, FileText } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Zap, Search, Brain, FileText, ShieldCheck } from 'lucide-react';
 
 interface ProcessingStatusProps {
   status: QueryStatus | null;
@@ -13,8 +13,8 @@ interface ProcessingStatusProps {
 const STAGES = [
   { id: 'planning', label: 'Planning', icon: Zap, description: 'Analyzing query' },
   { id: 'researching', label: 'Researching', icon: Search, description: 'Searching platforms' },
+  { id: 'validating', label: 'Validating', icon: ShieldCheck, description: 'Fact-checking' },
   { id: 'analyzing', label: 'Analyzing', icon: Brain, description: 'Processing results' },
-  { id: 'synthesizing', label: 'Synthesizing', icon: FileText, description: 'Generating report' },
 ];
 
 export function ProcessingStatus({ status, progress, events, isProcessing }: ProcessingStatusProps) {
@@ -74,13 +74,12 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
           return (
             <div key={stage.id} className="flex flex-col items-center text-center">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all ${
-                  isComplete
+                className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all ${isComplete
                     ? 'bg-green-500/20 text-green-400'
                     : isActive
-                    ? 'bg-cyan-600 text-white'
-                    : 'bg-slate-700 text-slate-500'
-                }`}
+                      ? 'bg-cyan-600 text-white'
+                      : 'bg-slate-700 text-slate-500'
+                  }`}
               >
                 {isComplete ? (
                   <CheckCircle2 className="w-5 h-5" />
@@ -89,9 +88,8 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
                 )}
               </div>
               <span
-                className={`text-xs ${
-                  isActive ? 'text-cyan-300 font-medium' : 'text-slate-500'
-                }`}
+                className={`text-xs ${isActive ? 'text-cyan-300 font-medium' : 'text-slate-500'
+                  }`}
               >
                 {stage.label}
               </span>
@@ -108,9 +106,8 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
             {recentEvents.map((event, index) => (
               <div
                 key={index}
-                className={`flex items-start gap-2 text-sm ${
-                  event.type === 'error' ? 'text-red-400' : 'text-slate-400'
-                }`}
+                className={`flex items-start gap-2 text-sm ${event.type === 'error' ? 'text-red-400' : 'text-slate-400'
+                  }`}
               >
                 {event.type === 'error' ? (
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />

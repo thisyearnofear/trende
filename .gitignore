@@ -1,8 +1,40 @@
+# Environment Variables
 .env
 .env.local
 .env.development
 .env.production
 .env.test
 .env.test.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.db
+*.sqlite
+
+# AI/Agent Data
+trends/
+data/
+.composio/
+.composio.lock
+
+# Web Application
 .web_credentials
 .web_credentials.txt
+frontend/.next/
+frontend/node_modules/
+frontend/dist/
+.next/
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

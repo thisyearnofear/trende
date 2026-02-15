@@ -87,7 +87,7 @@ export function TrendSummary({ summary, isLoading }: TrendSummaryProps) {
 
       {/* Top Trends */}
       {summary.topTrends.length > 0 && (
-        <div>
+        <div className="mb-6">
           <h4 className="text-sm font-medium text-slate-400 mb-2">Top Trends</h4>
           <div className="space-y-2">
             {summary.topTrends.map((trend, index) => (
@@ -100,14 +100,48 @@ export function TrendSummary({ summary, isLoading }: TrendSummaryProps) {
                 </span>
                 <div>
                   <p className="text-sm text-slate-200">
-                    {typeof trend === 'object' && 'title' in trend 
-                      ? (trend.title as string) 
+                    {typeof trend === 'object' && 'title' in trend
+                      ? (trend.title as string)
                       : String(trend)}
                   </p>
                 </div>
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Trust & Validation */}
+      {(summary.confidenceScore !== undefined || (summary.validationResults && summary.validationResults.length > 0)) && (
+        <div className="mt-6 pt-6 border-t border-slate-700/50">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-sm font-medium text-slate-400">Research Trust Score</h4>
+            <div className="flex items-center gap-2">
+              <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${(summary.confidenceScore || 0) > 0.7 ? 'bg-green-500' :
+                      (summary.confidenceScore || 0) > 0.4 ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}
+                  style={{ width: `${(summary.confidenceScore || 0) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs font-mono text-slate-300">
+                {Math.round((summary.confidenceScore || 0) * 100)}%
+              </span>
+            </div>
+          </div>
+
+          {summary.validationResults && summary.validationResults.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-2">Validation Logs</p>
+              {summary.validationResults.map((log, i) => (
+                <div key={i} className="text-xs text-slate-400 flex gap-2">
+                  <span className="text-cyan-500">▹</span>
+                  {log}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -8,9 +8,19 @@ class AIsaService:
     AIsa provides a single endpoint for multiple LLMs with pay-as-you-go pricing.
     """
     def __init__(self):
-        self.api_key = os.getenv('AISA_API_KEY')
+        self._api_key = os.getenv('AISA_API_KEY')
         self.base_url = "https://api.aisa.one/v1"
-        self.headers = {
+
+    @property
+    def api_key(self) -> Optional[str]:
+        # Lazy load key if not present (helps with module-level initialization)
+        if not self._api_key:
+            self._api_key = os.getenv('AISA_API_KEY')
+        return self._api_key
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
@@ -20,8 +30,10 @@ class AIsaService:
         OpenAI-compatible chat completion endpoint.
         """
         if not self.api_key:
-            print("Warning: AISA_API_KEY not set")
-            return None
+            # Try reloading one last time
+            if not os.getenv('AISA_API_KEY'):
+                print("Warning: AISA_API_KEY not set")
+                return None
 
         try:
             async with httpx.AsyncClient() as client:
@@ -48,7 +60,6 @@ class AIsaService:
             return None
 
     def get_available_models(self) -> List[str]:
-        # AIsa supports a wide range of models
         return [
             "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo",
             "claude-3-5-sonnet", "claude-3-opus",
@@ -57,16 +68,11 @@ class AIsaService:
         ]
 
     async def twitter_search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """
-        Search Twitter using AIsa's Twitter Data Connector.
-        """
         if not self.api_key:
             return []
             
         try:
             async with httpx.AsyncClient() as client:
-                # AIsa often exposes tools via a dedicated endpoint or tool-enabled chat
-                # Here we use the logical 'tools/twitter/search' pattern common in their ecosystem
                 response = await client.post(
                     f"{self.base_url}/tools/twitter/search",
                     json={"query": query, "limit": limit},
@@ -81,9 +87,6 @@ class AIsaService:
             return []
 
     async def web_search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """
-        Search the web using AIsa's Unified Search Connector.
-        """
         if not self.api_key:
             return []
             

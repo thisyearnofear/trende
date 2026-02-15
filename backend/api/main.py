@@ -124,19 +124,49 @@ async def get_task_results(task_id: str):
     # Normalize result extraction (Handle both memory state and DB state)
     res_node = task.get("result") if isinstance(task.get("result"), dict) else task
     
-    # Construct response matching TaskResponse interface in DEVELOPER_ASSIGNMENTS.md
+    # Transform raw items into TrendResult objects
+    items_by_platform = {}
+    for item in res_node.get("raw_findings", []):
+        platform = item.get("platform", "web")
+        if platform not in items_by_platform:
+            items_by_platform[platform] = []
+        items_by_platform[platform].append(item)
+    
+    results = []
+    for platform, items in items_by_platform.items():
+        results.append({
+            "queryId": task_id,
+            "platform": platform,
+            "items": items,
+            "relevanceScore": res_node.get("relevance_score", 0.0),
+            "totalFetched": len(items),
+            "processingTimeMs": 0 # TODO: Track this
+        })
+
+    # Construct response matching ResultsResponse in frontend/lib/types.ts
     return {
-        "task_id": task_id,
-        "status": task.get("status"),
-        "logs": task.get("logs", []),
-        "result": {
-            "items": res_node.get("raw_findings", []), 
-            "summary": res_node.get("summary", ""),
-            "relevance_score": res_node.get("relevance_score", 0.0),
-            "impact_score": res_node.get("impact_score", 0.0),
-            "final_report_md": res_node.get("final_report_md", "")
+        "query": {
+            "id": task_id,
+            "idea": task.get("topic", ""),
+            "platforms": task.get("platforms", []),
+            "status": task.get("status", "pending"),
+            "createdAt": task.get("created_at", ""),
+            "updatedAt": task.get("updated_at", ""),
+            "errorMessage": task.get("error"),
+            "totalResults": len(res_node.get("raw_findings", [])),
+            "relevanceThreshold": 0.5
         },
-        "error": task.get("error")
+        "results": results,
+        "summary": {
+            "overview": res_node.get("summary", ""),
+            "keyThemes": [], # TODO: Extract from report
+            "topTrends": [], # TODO: Extract from report
+            "sentiment": "neutral",
+            "confidenceScore": res_node.get("confidence_score", 0.0),
+            "validationResults": res_node.get("validation_results", []),
+            "finalReportMd": res_node.get("final_report_md", ""),
+            "generatedAt": task.get("updated_at", "")
+        }
     }
 
 @app.get("/api/trends/history")
@@ -153,12 +183,22 @@ async def stream_status(task_id: str):
                 break
             
             state = tasks[task_id]
+            
+            # Estimate progress based on current status/logs
+            progress = 0
+            if state["status"] == QueryStatus.PENDING: progress = 10
+            elif state["status"] == QueryStatus.PLANNING: progress = 25
+            elif state["status"] == QueryStatus.RESEARCHING: progress = 50
+            elif state["status"] == QueryStatus.ANALYZING: progress = 90
+            elif state["status"] == QueryStatus.COMPLETED: progress = 100
+            
+            state["progress"] = progress
             yield f"data: {json.dumps(state)}\n\n"
             
             if state["status"] in [QueryStatus.COMPLETED, QueryStatus.FAILED]:
                 break
                 
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

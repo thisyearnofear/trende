@@ -42,6 +42,9 @@ export interface TrendSummary {
   keyThemes: string[];
   topTrends: Record<string, unknown>[];
   sentiment: 'positive' | 'negative' | 'neutral';
+  confidenceScore?: number;
+  validationResults?: string[];
+  finalReportMd?: string;
   generatedAt: string;
 }
 

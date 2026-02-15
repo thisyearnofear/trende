@@ -1,14 +1,13 @@
-"""Integrations module - platform connectors."""
-
-from .base import BaseConnector, PlatformItem
-from .twitter import TwitterConnector
-from .linkedin import LinkedInConnector
-from .newsapi import NewsAPIConnector
+from .base import AbstractPlatformConnector
+from .connectors.twitter import TwitterConnector
+from .connectors.linkedin import LinkedInConnector
+from .connectors.newsapi import NewsConnector
+from .connectors.tabstack import TabstackConnector
 
 __all__ = [
-    "BaseConnector",
-    "PlatformItem",
+    "AbstractPlatformConnector",
     "TwitterConnector",
     "LinkedInConnector",
-    "NewsAPIConnector",
+    "NewsConnector",
+    "TabstackConnector"
 ]

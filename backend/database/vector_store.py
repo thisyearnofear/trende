@@ -1,5 +1,10 @@
-import chromadb
-from chromadb.config import Settings
+try:
+    import chromadb
+    from chromadb.config import Settings
+    HAS_CHROMA = True
+except ImportError:
+    HAS_CHROMA = False
+
 from typing import List, Dict, Any, Optional
 from shared.config import get_settings
 from shared.models import TrendItem
@@ -9,17 +14,24 @@ settings = get_settings()
 
 class VectorStore:
     def __init__(self):
-        # Initialize ChromaDB client
-        # In a real environment, this might point to a persistent server
-        # For now, we use a local persistent directory
-        self.client = chromadb.PersistentClient(path="./chroma_db")
-        self.collection = self.client.get_or_create_collection(
-            name="trend_findings",
-            metadata={"hnsw:space": "cosine"}
-        )
+        if HAS_CHROMA:
+            try:
+                self.client = chromadb.PersistentClient(path="./chroma_db")
+                self.collection = self.client.get_or_create_collection(
+                    name="trend_findings",
+                    metadata={"hnsw:space": "cosine"}
+                )
+            except Exception as e:
+                print(f"Warning: ChromaDB initialization failed: {e}")
+                self.collection = None
+        else:
+            print("Warning: ChromaDB not installed. VectorStore will operate in Mock mode.")
+            self.collection = None
 
     def add_findings(self, findings: List[TrendItem], task_id: str):
-        """Adds findings to the vector store for future RAG queries."""
+        if not HAS_CHROMA or not self.collection:
+            return
+        
         if not findings:
             return
 
@@ -45,13 +57,14 @@ class VectorStore:
         )
 
     def query_historical_context(self, query: str, n_results: int = 5) -> List[Dict[str, Any]]:
-        """Queries the vector store for relevant historical trends."""
+        if not HAS_CHROMA or not self.collection:
+            return []
+
         results = self.collection.query(
             query_texts=[query],
             n_results=n_results
         )
         
-        # Flatten results into a more usable list of matches
         matches = []
         if results['documents']:
             for i in range(len(results['documents'][0])):
