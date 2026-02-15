@@ -2,9 +2,14 @@
 
 Trende is an AI-powered trend research and analysis platform that autonomously searches, validates, and synthesizes market insights from across the social web.
 
+It now supports dual Forge outputs:
+- **Meme Thesis Page** for narrative-driven token and community positioning.
+- **Verifiable News Synthesizer** for multi-model, bias-reduced, attestation-ready news aggregation.
+
 ## 🚀 Architecture
 
 - **Frontend**: Next.js 16 (App Router) with a premium dark-mode dashboard.
+- **Forge UI**: `/meme/[queryId]` includes both Meme Thesis and Verifiable News views.
 - **Backend**: FastAPI with a LangGraph-powered AI Agent workforce.
 - **AI Brain**: Multi-provider failover system (Venice AI → AIsa → OpenRouter → Gemini).
 - **Data Layer**: Autonomous connectors for Twitter, NewsAPI, LinkedIn (via AIsa), and Tabstack (Deep Extraction).

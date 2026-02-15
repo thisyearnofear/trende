@@ -89,6 +89,9 @@ async def run_agent_workflow(task_id: str, topic: str, platforms: List[str]):
         "final_report_md": None,
         "relevance_score": 0.0,
         "impact_score": 0.0,
+        "confidence_score": 0.0,
+        "validation_results": [],
+        "meme_page_data": None,
         "error": None
     }
     
@@ -165,6 +168,7 @@ async def get_task_results(task_id: str):
             "confidenceScore": res_node.get("confidence_score", 0.0),
             "validationResults": res_node.get("validation_results", []),
             "finalReportMd": res_node.get("final_report_md", ""),
+            "memePageData": res_node.get("meme_page_data"),
             "generatedAt": task.get("updated_at", "")
         }
     }

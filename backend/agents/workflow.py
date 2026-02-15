@@ -26,12 +26,17 @@ async def planner_node(state: GraphState) -> GraphState:
     Historical Context (Past reports):
     {historical_context if historical_context else "No historical data found."}
     
-    Generate a research plan in JSON format:
+    Generate a research plan in JSON format.
+    You MUST include search queries for each of the requested platforms.
+    Available platforms: twitter, linkedin, news, tiktok, youtube, web.
+    If the user asked for a specific platform, prioritize it.
+    
+    JSON format:
     {{
         "focus_areas": ["area1", "area2"],
         "search_queries": [
             {{"platform": "twitter", "query": "query string"}},
-            {{"platform": "news", "query": "query string"}}
+            {{"platform": "tiktok", "query": "trending hashtags for topic"}}
         ]
     }}
     """
@@ -59,11 +64,15 @@ async def researcher_node(state: GraphState) -> GraphState:
     from backend.integrations.connectors.linkedin import LinkedInConnector
     from backend.integrations.connectors.newsapi import NewsConnector
     from backend.integrations.connectors.tabstack import TabstackConnector
+    from backend.integrations.connectors.tiktok import TikTokConnector
+    from backend.integrations.connectors.youtube import YouTubeConnector
     
     twitter = TwitterConnector()
     linkedin = LinkedInConnector()
     news = NewsConnector()
     tabstack = TabstackConnector()
+    tiktok = TikTokConnector()
+    youtube = YouTubeConnector()
     
     tasks = []
     for sq in state['search_queries']:
@@ -75,6 +84,10 @@ async def researcher_node(state: GraphState) -> GraphState:
             tasks.append(news.search(sq['query'], limit=5))
         elif sq['platform'] == 'web':
             tasks.append(tabstack.search(sq['query'], limit=5))
+        elif sq['platform'] == 'tiktok':
+            tasks.append(tiktok.search(sq['query'], limit=5))
+        elif sq['platform'] == 'youtube':
+            tasks.append(youtube.search(sq['query'], limit=5))
             
     if tasks:
         results = await asyncio.gather(*tasks)
@@ -177,20 +190,22 @@ async def analyzer_node(state: GraphState) -> GraphState:
     Findings:
     {context}
     
-    Task: Create a detailed Trend Report in Markdown.
+    Task: Create a detailed, UNBIASED Trend Report in Markdown.
     Include:
     - Executive Summary
     - Platform-specific insights
     - Impact Score (1-10)
     - Relevance Score (1-10)
     - Confidence Analysis (based on the provided research confidence)
+    - Bias Mitigation: Briefly explain how multi-model consensus was used to ensure neutrality.
     
     Output format:
     # Trend Report: {state['topic']}
     ... (Markdown Content) ...
     """
     
-    report = await ai_service.get_response(prompt, system_prompt="You are a professional trend analyst.")
+    # Use Consensus Engine to reduce single-model bias
+    report = await ai_service.get_consensus_response(prompt, system_prompt="You are a professional, neutral trend analyst.")
     state['final_report_md'] = report
     state['summary'] = report[:500] + "..." # Brief summary
     
@@ -207,17 +222,21 @@ async def analyzer_node(state: GraphState) -> GraphState:
     return state
 
 def create_workflow():
+    from backend.agents.nodes.architect import architect_node
+    
     workflow = StateGraph(GraphState)
     
     workflow.add_node("planner", planner_node)
     workflow.add_node("researcher", researcher_node)
     workflow.add_node("validator", validator_node)
     workflow.add_node("analyzer", analyzer_node)
+    workflow.add_node("architect", architect_node)
     
     workflow.set_entry_point("planner")
     workflow.add_edge("planner", "researcher")
     workflow.add_edge("researcher", "validator")
     workflow.add_edge("validator", "analyzer")
-    workflow.add_edge("analyzer", END)
+    workflow.add_edge("analyzer", "architect")
+    workflow.add_edge("architect", END)
     
     return workflow.compile()

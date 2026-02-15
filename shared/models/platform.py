@@ -12,6 +12,7 @@ class PlatformType(str, Enum):
     FACEBOOK = "facebook"
     NEWSAPI = "newsapi"
     TIKTOK = "tiktok"
+    YOUTUBE = "youtube"
     WEB = "web"  # General web search (Serper/Tavily)
 
 
@@ -79,6 +80,13 @@ PLATFORMS: dict[PlatformType, Platform] = {
         "TikTok",
         "🎵",
         "#000000",
+        supports_embed=True,
+    ),
+    PlatformType.YOUTUBE: Platform(
+        PlatformType.YOUTUBE,
+        "YouTube",
+        "📺",
+        "#FF0000",
         supports_embed=True,
     ),
     PlatformType.WEB: Platform(

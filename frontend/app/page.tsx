@@ -1,13 +1,24 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTrendData, useTrendHistory } from '@/hooks/useTrendData';
 import { QueryInput } from '@/components/QueryInput';
 import { PlatformTabs } from '@/components/PlatformTabs';
 import { TrendSummary } from '@/components/TrendSummary';
 import { ProcessingStatus } from '@/components/ProcessingStatus';
 import { QueryRequest } from '@/lib/types';
-import { RefreshCw, History, Zap } from 'lucide-react';
+import {
+  RefreshCw,
+  History,
+  Zap,
+  FlaskConical,
+  Hammer,
+  Rocket,
+  ArrowRight,
+  Sparkles,
+  ShieldCheck,
+} from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
   const [queryId, setQueryId] = useState<string | null>(null);
@@ -39,21 +50,55 @@ export default function Home() {
     setShowHistory(false);
   };
 
+  const stats = useMemo(() => {
+    const platforms = new Set(data?.results.map((result) => result.platform) || []);
+    const itemCount = data?.results.reduce((sum, result) => sum + result.items.length, 0) || 0;
+
+    return {
+      platforms: platforms.size,
+      itemCount,
+      confidence: Math.round((data?.summary?.confidenceScore || 0) * 100),
+    };
+  }, [data]);
+
+  const steps = [
+    {
+      title: 'Laboratory',
+      description: 'Source signal from social gravity and structured data.',
+      icon: FlaskConical,
+      isActive: !queryId || isProcessing,
+    },
+    {
+      title: 'Forge',
+      description: 'Synthesize conviction with validated narratives and trends.',
+      icon: Hammer,
+      isActive: Boolean(data && !isProcessing),
+    },
+    {
+      title: 'Launchpad',
+      description: 'Prepare token metadata and execution context from insights.',
+      icon: Rocket,
+      isActive: Boolean(data?.summary && !isProcessing),
+    },
+  ];
+
+  const activeQueryId = data?.query?.id || queryId;
+
   return (
-    <div className="min-h-screen text-slate-100">
-      {/* Header */}
-      <header className="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-sm sticky top-0 z-40">
+    <div className="min-h-screen text-slate-100 pb-10">
+      <header className="border-b border-white/10 bg-slate-950/70 backdrop-blur-xl sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-700/30">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-700/30 shrink-0">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-100">Trende</h1>
-                <p className="text-xs text-slate-400">AI Trend Intelligence Workspace</p>
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold text-slate-100 truncate">Trende Control Room</h1>
+                <p className="text-xs text-slate-400 truncate">Intelligence-to-Asset Pipeline</p>
               </div>
             </div>
+
             <div className="flex items-center gap-2">
               <button
                 onClick={() => refresh()}
@@ -75,15 +120,14 @@ export default function Home() {
         </div>
       </header>
 
-      {/* History Sidebar */}
       {showHistory && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div
-            className="absolute inset-0 bg-black/50 animate-overlay"
+            className="absolute inset-0 bg-black/55 animate-overlay"
             onClick={() => setShowHistory(false)}
           />
-          <div className="relative w-full sm:w-80 bg-slate-900 border-l border-slate-800 p-4 overflow-y-auto shadow-2xl animate-slide-in-right">
-            <h3 className="font-semibold text-slate-100 mb-4">Recent Analyses</h3>
+          <div className="relative w-full sm:w-96 bg-slate-900/95 border-l border-slate-700/70 p-5 overflow-y-auto shadow-2xl animate-slide-in-right">
+            <h3 className="font-semibold text-slate-100 mb-4">Recent Missions</h3>
             {historyLoading ? (
               <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
@@ -93,21 +137,21 @@ export default function Home() {
             ) : history.length === 0 ? (
               <p className="text-slate-500 text-sm">No recent analyses</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {history.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => handleSelectHistory(item.id)}
-                    className="w-full text-left p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700"
+                    className="w-full text-left p-3 bg-slate-800/85 rounded-xl hover:bg-slate-700 transition-colors border border-slate-700"
                   >
                     <p className="text-sm text-slate-200 line-clamp-2">{item.idea}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span
-                        className={`text-xs px-2 py-0.5 rounded ${
+                        className={`text-xs px-2 py-0.5 rounded-full ${
                           item.status === 'completed'
-                            ? 'bg-green-500/20 text-green-400'
+                            ? 'bg-green-500/20 text-green-300'
                             : item.status === 'processing'
-                            ? 'bg-yellow-500/20 text-yellow-400'
+                            ? 'bg-yellow-500/20 text-yellow-300'
                             : 'bg-slate-700 text-slate-400'
                         }`}
                       >
@@ -125,68 +169,150 @@ export default function Home() {
         </div>
       )}
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
-        {/* Query Input */}
-        <div className="mb-8 animate-fade-up">
+      <main className="max-w-7xl mx-auto px-4 py-7 sm:py-10 space-y-8">
+        <section className="rounded-3xl border border-cyan-500/20 bg-slate-900/60 p-5 sm:p-7 shadow-[0_25px_70px_-35px_rgba(16,185,129,0.65)] animate-fade-up">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-xs uppercase tracking-[0.25em] text-cyan-300/90 mb-3">Source. Synthesize. Sovereignize.</p>
+              <h2 className="text-2xl sm:text-3xl font-semibold leading-tight text-slate-100">
+                Turn social signal into a conviction-ready thesis.
+              </h2>
+              <p className="mt-3 text-slate-300">
+                Run multi-platform research, validate confidence, then prepare the output for the Forge and Launchpad workflows.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full lg:w-auto">
+              {steps.map((step) => {
+                const Icon = step.icon;
+                return (
+                  <div
+                    key={step.title}
+                    className={`rounded-2xl border p-3 sm:p-4 transition-colors ${
+                      step.isActive
+                        ? 'bg-cyan-500/10 border-cyan-400/30'
+                        : 'bg-slate-800/70 border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 text-slate-200 mb-2">
+                      <Icon className="w-4 h-4" />
+                      <span className="text-sm font-medium">{step.title}</span>
+                    </div>
+                    <p className="text-xs text-slate-400 leading-relaxed">{step.description}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="animate-fade-up" style={{ animationDelay: '80ms' }}>
           <QueryInput
             onSubmit={handleSubmit}
             isLoading={isProcessing}
             disabled={isProcessing}
           />
-        </div>
+        </section>
 
-        {/* Processing Status */}
         {(isProcessing || status === 'processing') && (
-          <div className="mb-8 animate-fade-up">
+          <section className="animate-fade-up" style={{ animationDelay: '120ms' }}>
             <ProcessingStatus
               status={status}
               progress={progress}
               events={events}
               isProcessing={isProcessing}
             />
-          </div>
+          </section>
         )}
 
-        {/* Results */}
         {data && data.results && data.results.length > 0 && !isProcessing && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 animate-fade-up">
-            {/* Summary */}
-            <div className="lg:col-span-1">
-              <TrendSummary summary={data.summary} />
+          <section className="space-y-5 animate-fade-up" style={{ animationDelay: '120ms' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-400">Sources analyzed</p>
+                <p className="text-2xl font-semibold mt-1 text-slate-100">{stats.platforms}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-400">Signals captured</p>
+                <p className="text-2xl font-semibold mt-1 text-slate-100">{stats.itemCount}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-400">Confidence</p>
+                <p className="text-2xl font-semibold mt-1 text-emerald-300">{stats.confidence}%</p>
+              </div>
             </div>
 
-            {/* Results List */}
-            <div className="lg:col-span-2">
-              <PlatformTabs results={data.results} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+              <div className="lg:col-span-1 space-y-4">
+                <TrendSummary summary={data.summary} />
+
+                <div className="rounded-2xl border border-slate-700 bg-gradient-to-b from-slate-900 to-slate-900/70 p-4">
+                  <div className="flex items-center gap-2 text-cyan-300 mb-2">
+                    <Sparkles className="w-4 h-4" />
+                    <p className="text-sm font-medium">Forge Preview</p>
+                  </div>
+                  <p className="text-sm text-slate-300 mb-4">
+                    Your conviction dashboard is ready to be shaped into a public thesis page for memes, news, and hybrid narratives.
+                  </p>
+                  <Link
+                    href={activeQueryId ? `/meme/${activeQueryId}?view=meme` : '#'}
+                    aria-disabled={!activeQueryId}
+                    className={`w-full rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-200 hover:bg-cyan-500/20 transition-colors inline-flex items-center justify-center ${
+                      !activeQueryId ? 'pointer-events-none opacity-50' : ''
+                    }`}
+                  >
+                    Open Meme Page Builder <ArrowRight className="w-4 h-4 inline ml-1" />
+                  </Link>
+                </div>
+
+                <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-4">
+                  <div className="flex items-center gap-2 text-emerald-300 mb-2">
+                    <ShieldCheck className="w-4 h-4" />
+                    <p className="text-sm font-medium">Launchpad Readiness</p>
+                  </div>
+                  <p className="text-sm text-slate-300">
+                    Token-launch integration is pending, but this report can already act as your metadata base and social proof layer.
+                  </p>
+                  <Link
+                    href={activeQueryId ? `/meme/${activeQueryId}?view=news` : '#'}
+                    aria-disabled={!activeQueryId}
+                    className={`mt-3 inline-flex items-center text-sm text-emerald-300 hover:text-emerald-200 ${
+                      !activeQueryId ? 'pointer-events-none opacity-50' : ''
+                    }`}
+                  >
+                    Open Verifiable News Synthesizer <ArrowRight className="w-4 h-4 ml-1" />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="lg:col-span-2">
+                <PlatformTabs results={data.results} />
+              </div>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Empty State */}
         {!queryId && !isProcessing && (
-          <div className="text-center py-16 animate-fade-up">
+          <section className="rounded-3xl border border-slate-700 bg-slate-900/70 p-8 text-center animate-fade-up" style={{ animationDelay: '120ms' }}>
             <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-700">
               <Zap className="w-10 h-10 text-cyan-400" />
             </div>
-            <h2 className="text-xl font-semibold text-slate-200 mb-2">
-              Discover Trends with AI
-            </h2>
-            <p className="text-slate-400 max-w-md mx-auto">
-              Enter a topic or idea above to analyze trends across Twitter, LinkedIn,
-              news sources, and the web using AI agents.
+            <h3 className="text-xl font-semibold text-slate-200 mb-2">
+              Start in the Laboratory
+            </h3>
+            <p className="text-slate-400 max-w-xl mx-auto">
+              Submit a precise brief, select your worlds, and Trende will map signal, validate cross-references, and generate an actionable conviction summary.
             </p>
-          </div>
+          </section>
         )}
 
-        {/* Error State */}
         {data?.query?.status === 'failed' && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
+          <section className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center">
             <h3 className="text-red-400 font-semibold mb-2">Analysis Failed</h3>
             <p className="text-slate-400 text-sm">
               {data.query.errorMessage || 'An error occurred while processing your request.'}
             </p>
-          </div>
+          </section>
         )}
       </main>
     </div>

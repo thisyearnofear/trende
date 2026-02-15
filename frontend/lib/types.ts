@@ -45,6 +45,7 @@ export interface TrendSummary {
   confidenceScore?: number;
   validationResults?: string[];
   finalReportMd?: string;
+  memePageData?: Record<string, unknown>;
   generatedAt: string;
 }
 

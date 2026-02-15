@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TrendResult, TrendItem } from '@/lib/types';
 import { ContentCard } from './ContentCard';
+import { ArrowUpRight } from 'lucide-react';
 
 interface PlatformTabsProps {
   results: TrendResult[];
@@ -24,7 +25,6 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
-  // Aggregate all items by platform
   const platformData = useMemo(() => {
     const data: Record<string, TrendItem[]> = {};
     let totalCount = 0;
@@ -40,16 +40,20 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
     return { data, totalCount };
   }, [results]);
 
-  // Get items for active tab
   const activeItems = useMemo(() => {
-    if (activeTab === 'all') {
-      return Object.values(platformData.data).flat();
-    }
-    return platformData.data[activeTab] || [];
+    const items = activeTab === 'all'
+      ? Object.values(platformData.data).flat()
+      : platformData.data[activeTab] || [];
+
+    return [...items].sort((a, b) => {
+      const scoreA = a.relevanceScore || 0;
+      const scoreB = b.relevanceScore || 0;
+      return scoreB - scoreA;
+    });
   }, [activeTab, platformData]);
 
   const tabs = [
-    { id: 'all', label: 'All', count: platformData.totalCount },
+    { id: 'all', label: 'All Sources', count: platformData.totalCount },
     ...Object.entries(platformData.data).map(([platform, items]) => ({
       id: platform,
       label: PLATFORM_CONFIG[platform]?.label || platform,
@@ -112,18 +116,12 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
       <div className="space-y-4">
         <div className="flex gap-2 overflow-x-auto pb-2">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className="h-10 w-20 bg-slate-800 rounded-lg animate-pulse"
-            />
+            <div key={i} className="h-10 w-20 bg-slate-800 rounded-lg animate-pulse" />
           ))}
         </div>
         <div className="grid gap-4">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-48 bg-slate-800 rounded-xl animate-pulse"
-            />
+            <div key={i} className="h-48 bg-slate-800 rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -132,57 +130,62 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
 
   return (
     <div className="space-y-4">
-      {/* Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory" role="tablist" aria-label="Result platforms">
-        {tabs.map((tab) => {
-          const tabIndex = tabs.findIndex((candidate) => candidate.id === tab.id);
-          const config = tab.id === 'all' ? null : PLATFORM_CONFIG[tab.id];
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              onKeyDown={(event) => handleTabKeyDown(event, tabIndex)}
-              role="tab"
-              id={`tab-${tab.id}`}
-              aria-selected={isActive}
-              aria-controls={`tabpanel-${tab.id}`}
-              tabIndex={isActive ? 0 : -1}
-              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border snap-start ${
-                isActive
-                  ? 'bg-cyan-600 text-white border-cyan-400/40'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'
-              }`}
-              style={
-                isActive && config
-                  ? { backgroundColor: config.color }
-                  : undefined
-              }
-            >
-              {tab.id === 'all' ? (
-                tab.label
-              ) : (
-                <span className="flex items-center gap-2">
-                  <span>{config?.icon}</span>
-                  <span>{tab.label}</span>
-                </span>
-              )}
-              <span className="ml-2 text-xs opacity-70">({tab.count})</span>
-            </button>
-          );
-        })}
+      <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-3 sm:p-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h3 className="text-sm font-medium text-slate-200">Signal Feed</h3>
+          <p className="text-xs text-slate-500">Sorted by relevance</p>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory" role="tablist" aria-label="Result platforms">
+          {tabs.map((tab) => {
+            const tabIndex = tabs.findIndex((candidate) => candidate.id === tab.id);
+            const config = tab.id === 'all' ? null : PLATFORM_CONFIG[tab.id];
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                onKeyDown={(event) => handleTabKeyDown(event, tabIndex)}
+                role="tab"
+                id={`tab-${tab.id}`}
+                aria-selected={isActive}
+                aria-controls={`tabpanel-${tab.id}`}
+                tabIndex={isActive ? 0 : -1}
+                className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all border snap-start ${
+                  isActive
+                    ? 'text-white border-transparent'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'
+                }`}
+                style={
+                  isActive
+                    ? { backgroundColor: config?.color || '#0e7490' }
+                    : undefined
+                }
+              >
+                {tab.id === 'all' ? (
+                  tab.label
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <span>{config?.icon}</span>
+                    <span>{tab.label}</span>
+                  </span>
+                )}
+                <span className="ml-2 text-xs opacity-80">({tab.count})</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Content Grid */}
       <div
         id={`tabpanel-${activeTab}`}
         role="tabpanel"
         aria-labelledby={`tab-${activeTab}`}
-        className="grid gap-4 md:grid-cols-2 lg:grid-cols-1"
+        className="grid gap-4"
       >
         {activeItems.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
-            No results found. Try a different search or platform.
+          <div className="text-center py-12 text-slate-500 border border-slate-700 rounded-2xl bg-slate-900/60">
+            No results found. Try another source combination.
           </div>
         ) : (
           activeItems.map((item, index) => (
@@ -190,20 +193,19 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
               key={item.id}
               item={item}
               onClick={() => setSelectedItem(item)}
-              animationDelayMs={index * 40}
+              animationDelayMs={index * 35}
             />
           ))
         )}
       </div>
 
-      {/* Selected Item Modal */}
       {selectedItem && (
         <div
-          className="fixed inset-0 bg-black/50 animate-overlay flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+          className="fixed inset-0 bg-black/60 animate-overlay flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
           onClick={() => setSelectedItem(null)}
         >
           <div
-            className="bg-slate-900 rounded-t-2xl sm:rounded-xl max-w-2xl w-full max-h-[88vh] sm:max-h-[80vh] overflow-y-auto p-5 sm:p-6 border border-slate-700 animate-scale-in"
+            className="bg-slate-900 rounded-t-2xl sm:rounded-2xl max-w-3xl w-full max-h-[88vh] sm:max-h-[84vh] overflow-y-auto p-5 sm:p-6 border border-slate-700 animate-scale-in"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -212,14 +214,14 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
             ref={dialogRef}
           >
             <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <span
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold text-white"
                   style={{ backgroundColor: PLATFORM_CONFIG[selectedItem.platform]?.color || '#6366F1' }}
                 >
                   {PLATFORM_CONFIG[selectedItem.platform]?.icon || '🌐'}
                 </span>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-semibold text-slate-100 break-words">{selectedItem.author}</h3>
                   <p className="text-sm text-slate-500 break-all">{selectedItem.authorHandle}</p>
                 </div>
@@ -233,33 +235,21 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
                 ✕
               </button>
             </div>
-            <h2 id="content-modal-title" className="text-xl font-bold text-slate-100 mb-3 break-words">
+
+            <h2 id="content-modal-title" className="text-xl font-semibold text-slate-100 mb-3 break-words">
               {selectedItem.title}
             </h2>
             <p id="content-modal-body" className="text-slate-300 whitespace-pre-wrap mb-4">
               {selectedItem.content}
             </p>
-            <div className="flex gap-4 text-sm text-slate-500 mb-4">
-              {selectedItem.metrics.likes && (
-                <span>❤️ {selectedItem.metrics.likes}</span>
-              )}
-              {selectedItem.metrics.shares && (
-                <span>🔄 {selectedItem.metrics.shares}</span>
-              )}
-              {selectedItem.metrics.comments && (
-                <span>💬 {selectedItem.metrics.comments}</span>
-              )}
-              {selectedItem.metrics.views && (
-                <span>👁️ {selectedItem.metrics.views}</span>
-              )}
-            </div>
+
             <a
               href={selectedItem.url}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-cyan-300 hover:text-cyan-200"
             >
-              View original →
+              View original <ArrowUpRight className="w-4 h-4" />
             </a>
           </div>
         </div>

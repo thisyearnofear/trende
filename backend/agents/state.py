@@ -25,4 +25,5 @@ class GraphState(TypedDict):
     impact_score: float
     confidence_score: float
     validation_results: List[Dict[str, Any]]
+    meme_page_data: Optional[Dict[str, Any]]
     error: Optional[str]

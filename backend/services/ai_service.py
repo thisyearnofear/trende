@@ -71,4 +71,89 @@ class AIService:
 
         return "No AI provider configured or available."
 
+    async def get_parallel_responses(self, prompt: str, system_prompt: Optional[str] = None, providers: Optional[List[str]] = None) -> Dict[str, str]:
+        """
+        Gets responses from multiple providers in parallel.
+        Used for bias-free consensus synthesis.
+        """
+        if not providers:
+            providers = ["venice", "aisa", "openrouter", "gemini"]
+            
+        tasks = []
+        active_providers = []
+
+        # Check availability and build task list
+        if "venice" in providers and os.getenv('VENICE_API_KEY'):
+            active_providers.append("venice")
+            tasks.append(self.get_response(prompt, system_prompt, provider="venice"))
+        
+        if "aisa" in providers and os.getenv('AISA_API_KEY'):
+            active_providers.append("aisa")
+            tasks.append(aisa_service.chat_completion(model="gpt-4o", messages=[
+                {"role": "system", "content": system_prompt or ""},
+                {"role": "user", "content": prompt}
+            ]))
+
+        if "openrouter" in providers and os.getenv('OPENROUTER_API_KEY'):
+            active_providers.append("openrouter")
+            tasks.append(openrouter_service.chat_completion(model="google/gemini-flash-1.5-exp", messages=[
+                {"role": "system", "content": system_prompt or ""},
+                {"role": "user", "content": prompt}
+            ]))
+
+        if "gemini" in providers:
+            self._ensure_configured()
+            if self._gemini_model:
+                active_providers.append("gemini")
+                full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+                # Wrap sync call in async
+                loop = asyncio.get_event_loop()
+                tasks.append(loop.run_in_executor(None, lambda: self._gemini_model.generate_content(full_prompt).text))
+
+        if not tasks:
+            return {}
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        provider_responses = {}
+        for provider, res in zip(active_providers, results):
+            if isinstance(res, Exception):
+                print(f"Provider {provider} failed in parallel batch: {res}")
+                continue
+            provider_responses[provider] = str(res)
+            
+        return provider_responses
+
+    async def get_consensus_response(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        """
+        Gets a synthesized consensus response from all available models.
+        """
+        responses = await self.get_parallel_responses(prompt, system_prompt)
+        if not responses:
+            return "No AI providers available for consensus."
+        
+        if len(responses) == 1:
+            return list(responses.values())[0]
+
+        # Use a meta-model (AIsa/GPT-4o) to synthesize the consensus
+        synthesis_prompt = f"""
+        I have gathered insights from multiple AI models on the following request:
+        REQUEST: {prompt}
+        
+        RESPONSES:
+        """
+        for provider, response in responses.items():
+            synthesis_prompt += f"\n--- MODEL: {provider} ---\n{response}\n"
+            
+        synthesis_prompt += """
+        TASK:
+        1. Compare these responses for common facts and diverging viewpoints.
+        2. Synthesize a neutral, unbiased consensus report.
+        3. Highlight any areas where the models disagree significantly.
+        4. List the models that contributed to this consensus.
+        """
+        
+        # We use AIsa (GPT-4o) as the primary synthesizer of consensus
+        return await self.get_response(synthesis_prompt, system_prompt="You are a neutral consensus synthesizer.")
+
 ai_service = AIService()
