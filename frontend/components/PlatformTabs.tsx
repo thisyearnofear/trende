@@ -133,7 +133,7 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
   return (
     <div className="space-y-4">
       {/* Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide" role="tablist" aria-label="Result platforms">
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory" role="tablist" aria-label="Result platforms">
         {tabs.map((tab) => {
           const tabIndex = tabs.findIndex((candidate) => candidate.id === tab.id);
           const config = tab.id === 'all' ? null : PLATFORM_CONFIG[tab.id];
@@ -148,7 +148,7 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
               aria-selected={isActive}
               aria-controls={`tabpanel-${tab.id}`}
               tabIndex={isActive ? 0 : -1}
-              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border snap-start ${
                 isActive
                   ? 'bg-cyan-600 text-white border-cyan-400/40'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'
@@ -185,11 +185,12 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
             No results found. Try a different search or platform.
           </div>
         ) : (
-          activeItems.map((item) => (
+          activeItems.map((item, index) => (
             <ContentCard
               key={item.id}
               item={item}
               onClick={() => setSelectedItem(item)}
+              animationDelayMs={index * 40}
             />
           ))
         )}
@@ -198,11 +199,11 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
       {/* Selected Item Modal */}
       {selectedItem && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 animate-overlay flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
           onClick={() => setSelectedItem(null)}
         >
           <div
-            className="bg-slate-900 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6 border border-slate-700"
+            className="bg-slate-900 rounded-t-2xl sm:rounded-xl max-w-2xl w-full max-h-[88vh] sm:max-h-[80vh] overflow-y-auto p-5 sm:p-6 border border-slate-700 animate-scale-in"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -219,8 +220,8 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
                   {PLATFORM_CONFIG[selectedItem.platform]?.icon || '🌐'}
                 </span>
                 <div>
-                  <h3 className="font-semibold text-slate-100">{selectedItem.author}</h3>
-                  <p className="text-sm text-slate-500">{selectedItem.authorHandle}</p>
+                  <h3 className="font-semibold text-slate-100 break-words">{selectedItem.author}</h3>
+                  <p className="text-sm text-slate-500 break-all">{selectedItem.authorHandle}</p>
                 </div>
               </div>
               <button
@@ -232,7 +233,7 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
                 ✕
               </button>
             </div>
-            <h2 id="content-modal-title" className="text-xl font-bold text-slate-100 mb-3">
+            <h2 id="content-modal-title" className="text-xl font-bold text-slate-100 mb-3 break-words">
               {selectedItem.title}
             </h2>
             <p id="content-modal-body" className="text-slate-300 whitespace-pre-wrap mb-4">

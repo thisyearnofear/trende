@@ -23,4 +23,6 @@ class GraphState(TypedDict):
     final_report_md: Optional[str]
     relevance_score: float
     impact_score: float
+    confidence_score: float
+    validation_results: List[Dict[str, Any]]
     error: Optional[str]

@@ -47,7 +47,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 animate-fade-up">
         {/* Query Input */}
         <div className="relative">
           <label htmlFor="trend-idea" className="mb-2 block text-sm font-medium text-slate-300">
@@ -66,14 +66,14 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
               }
             }}
             placeholder="What trends are you interested in? (e.g., AI agents in blockchain)"
-            className="w-full h-32 px-4 py-3 bg-slate-900/80 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
+            className="w-full h-32 px-4 py-3 pr-36 bg-slate-900/80 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
             disabled={disabled}
             aria-describedby="brief-help-text"
           />
           <button
             type="submit"
             disabled={!idea.trim() || isLoading || disabled || !hasPlatforms}
-            className="absolute bottom-3 right-3 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
+            className="absolute bottom-3 right-3 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-cyan-900/40"
           >
             {isLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -85,7 +85,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
             </span>
           </button>
         </div>
-        <div id="brief-help-text" className="flex items-center justify-between text-xs text-slate-400">
+        <div id="brief-help-text" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-slate-400">
           <span>Use a specific angle and audience to get better trend signals.</span>
           <span>{idea.trim().length} chars • Press Cmd/Ctrl + Enter</span>
         </div>
@@ -106,7 +106,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
               onClick={() => togglePlatform(platform.id)}
               disabled={disabled}
               aria-pressed={platforms.includes(platform.id)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border min-h-10 ${
                 platforms.includes(platform.id)
                   ? 'bg-opacity-20 ring-1 ring-offset-2 ring-offset-slate-900 border-slate-600'
                   : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700 border-slate-700'

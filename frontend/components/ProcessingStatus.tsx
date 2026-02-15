@@ -65,14 +65,14 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
       </div>
 
       {/* Stage Indicators */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-6">
         {STAGES.map((stage, index) => {
           const isActive = index === currentStageIndex;
           const isComplete = index < currentStageIndex;
           const StageIcon = stage.icon;
 
           return (
-            <div key={stage.id} className="flex flex-col items-center">
+            <div key={stage.id} className="flex flex-col items-center text-center">
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all ${
                   isComplete

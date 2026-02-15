@@ -7,13 +7,16 @@ from backend.integrations.base import AbstractPlatformConnector
 from shared.models import TrendItem, PlatformType
 from backend.utils.rate_limit import rate_limiter
 
+from backend.services.aisa_service import aisa_service
+
 class TwitterConnector(AbstractPlatformConnector):
     @property
     def platform(self) -> str:
         return PlatformType.TWITTER.value
 
     def __init__(self):
-        self.api_key = os.getenv('RAPIDAPI_KEY')
+        self.aisa_key = os.getenv('AISA_API_KEY')
+        self.rapid_api_key = os.getenv('RAPIDAPI_KEY')
         self.host = "twitter-api45.p.rapidapi.com"
 
     async def search(self, query: str, limit: int = 10) -> List[TrendItem]:
@@ -22,8 +25,29 @@ class TwitterConnector(AbstractPlatformConnector):
             print(f"Rate limit hit for {self.platform}")
             return []
 
-        if not self.api_key:
-            print("Warning: RAPIDAPI_KEY not set")
+        # 1. Try AIsa first
+        if self.aisa_key:
+            results = await aisa_service.twitter_search(query, limit)
+            if results:
+                items = []
+                for tweet in results:
+                    items.append(TrendItem(
+                        id=tweet.get('id', 'unknown'),
+                        platform=self.platform,
+                        title=f"Tweet by {tweet.get('author_name', 'unknown')}",
+                        content=tweet.get('text', ''),
+                        author=tweet.get('author_name', 'unknown'),
+                        author_handle=tweet.get('author_handle', 'unknown'),
+                        url=tweet.get('url', ''),
+                        timestamp=datetime.now(),
+                        metrics=tweet.get('metrics', {}),
+                        raw_data=tweet
+                    ))
+                return items
+
+        # 2. Fallback to RapidAPI
+        if not self.rapid_api_key:
+            print("Warning: Neither AISA_API_KEY nor RAPIDAPI_KEY set")
             return []
 
         try:
@@ -31,7 +55,7 @@ class TwitterConnector(AbstractPlatformConnector):
             # For this skeleton, using http.client to match existing logic
             conn = http.client.HTTPSConnection(self.host)
             headers = {
-                'x-rapidapi-key': self.api_key,
+                'x-rapidapi-key': self.rapid_api_key,
                 'x-rapidapi-host': self.host
             }
             
@@ -48,7 +72,6 @@ class TwitterConnector(AbstractPlatformConnector):
             items = []
             
             # Placeholder: Adjust parsing based on actual RapidAPI 'search.php' response structure
-            # mimicking the timeline logic from main.py
             raw_tweets = data.get('search_results', []) or data.get('timeline', [])
             
             for tweet in raw_tweets[:limit]:
@@ -60,7 +83,7 @@ class TwitterConnector(AbstractPlatformConnector):
                     author=tweet.get('user', {}).get('name', 'unknown'),
                     author_handle=tweet.get('user', {}).get('screen_name', 'unknown'),
                     url=f"https://twitter.com/i/web/status/{tweet.get('id_str', '')}",
-                    timestamp=datetime.now(), # Map properly if available
+                    timestamp=datetime.now(),
                     metrics={
                         'likes': int(tweet.get('favorites', 0)),
                         'retweets': int(tweet.get('retweets', 0)),

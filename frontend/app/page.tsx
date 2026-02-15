@@ -44,7 +44,7 @@ export default function Home() {
       {/* Header */}
       <header className="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-700/30">
                 <Zap className="w-5 h-5 text-white" />
@@ -79,10 +79,10 @@ export default function Home() {
       {showHistory && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/50 animate-overlay"
             onClick={() => setShowHistory(false)}
           />
-          <div className="relative w-80 bg-slate-900 border-l border-slate-800 p-4 overflow-y-auto shadow-2xl">
+          <div className="relative w-full sm:w-80 bg-slate-900 border-l border-slate-800 p-4 overflow-y-auto shadow-2xl animate-slide-in-right">
             <h3 className="font-semibold text-slate-100 mb-4">Recent Analyses</h3>
             {historyLoading ? (
               <div className="space-y-2">
@@ -126,9 +126,9 @@ export default function Home() {
       )}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
         {/* Query Input */}
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-up">
           <QueryInput
             onSubmit={handleSubmit}
             isLoading={isProcessing}
@@ -138,7 +138,7 @@ export default function Home() {
 
         {/* Processing Status */}
         {(isProcessing || status === 'processing') && (
-          <div className="mb-8">
+          <div className="mb-8 animate-fade-up">
             <ProcessingStatus
               status={status}
               progress={progress}
@@ -150,7 +150,7 @@ export default function Home() {
 
         {/* Results */}
         {data && data.results && data.results.length > 0 && !isProcessing && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 animate-fade-up">
             {/* Summary */}
             <div className="lg:col-span-1">
               <TrendSummary summary={data.summary} />
@@ -165,7 +165,7 @@ export default function Home() {
 
         {/* Empty State */}
         {!queryId && !isProcessing && (
-          <div className="text-center py-16">
+          <div className="text-center py-16 animate-fade-up">
             <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-700">
               <Zap className="w-10 h-10 text-cyan-400" />
             </div>

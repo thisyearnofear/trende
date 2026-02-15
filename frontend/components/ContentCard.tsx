@@ -7,6 +7,7 @@ import { ExternalLink, MessageCircle, Repeat, Heart, Eye } from 'lucide-react';
 interface ContentCardProps {
   item: TrendItem;
   onClick?: () => void;
+  animationDelayMs?: number;
 }
 
 const PLATFORM_CONFIG: Record<string, { color: string; icon: string }> = {
@@ -17,7 +18,7 @@ const PLATFORM_CONFIG: Record<string, { color: string; icon: string }> = {
   web: { color: '#6366F1', icon: '🌐' },
 };
 
-export function ContentCard({ item, onClick }: ContentCardProps) {
+export function ContentCard({ item, onClick, animationDelayMs = 0 }: ContentCardProps) {
   const config = PLATFORM_CONFIG[item.platform] || { color: '#6366F1', icon: '🌐' };
 
   const formatNumber = (num?: number): string => {
@@ -36,24 +37,27 @@ export function ContentCard({ item, onClick }: ContentCardProps) {
   };
 
   return (
-    <article className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-all hover:shadow-lg hover:shadow-cyan-500/10">
+    <article
+      className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-all hover:shadow-lg hover:shadow-cyan-500/10 animate-fade-up"
+      style={{ animationDelay: `${animationDelayMs}ms` }}
+    >
       {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-3 min-w-0">
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
             style={{ backgroundColor: config.color }}
           >
             {config.icon}
           </div>
-          <div>
-            <h4 className="font-medium text-slate-100">{item.author}</h4>
-            <p className="text-sm text-slate-500">
+          <div className="min-w-0">
+            <h4 className="font-medium text-slate-100 truncate">{item.author}</h4>
+            <p className="text-sm text-slate-500 truncate">
               {item.authorHandle && `@${item.authorHandle}`}
             </p>
           </div>
         </div>
-        <span className="text-xs text-slate-500">{formatDate(item.timestamp)}</span>
+        <span className="text-xs text-slate-500 shrink-0">{formatDate(item.timestamp)}</span>
       </div>
 
       {/* Content */}
@@ -65,7 +69,7 @@ export function ContentCard({ item, onClick }: ContentCardProps) {
       </p>
 
       {/* Metrics */}
-      <div className="flex items-center gap-4 text-sm text-slate-500">
+      <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-slate-400">
         {item.metrics.likes !== undefined && (
           <span className="flex items-center gap-1">
             <Heart className="w-4 h-4" />
@@ -96,7 +100,7 @@ export function ContentCard({ item, onClick }: ContentCardProps) {
           <div className="ml-auto flex items-center gap-1">
             <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
               <div
-                className="h-full bg-indigo-500 rounded-full"
+                className="h-full bg-cyan-500 rounded-full"
                 style={{ width: `${item.relevanceScore * 100}%` }}
               />
             </div>

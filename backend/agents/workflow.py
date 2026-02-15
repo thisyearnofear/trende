@@ -87,9 +87,65 @@ async def researcher_node(state: GraphState) -> GraphState:
         
     return state
 
+async def validator_node(state: GraphState) -> GraphState:
+    state['logs'].append("Validating research findings...")
+    
+    if not state['raw_findings']:
+        state['filtered_findings'] = []
+        state['confidence_score'] = 0.0
+        return state
+
+    # Construct context for validation
+    findings_context = "\n".join([
+        f"SOURCE [{f.platform}] @{f.author}: {f.content[:200]}"
+        for f in state['raw_findings']
+    ])
+
+    prompt = f"""
+    You are a Fact-Checking Agent. Review these research findings for the topic: {state['topic']}
+    
+    Findings:
+    {findings_context}
+    
+    TASKS:
+    1. Identify any contradictory information.
+    2. Score the reliability of each source (High/Medium/Low).
+    3. Filter out clearly platform-spam or irrelevant content.
+    4. Provide an overall confidence score (0.0 to 1.0).
+    5. Return a list of indices representing valid sources.
+
+    Output as JSON:
+    {{
+        "confidence_score": 0.85,
+        "valid_indices": [0, 2, 3],
+        "validation_logs": ["Source 1 flagged for low reliability", "Source 2 confirmed by multiple platforms"]
+    }}
+    """
+    
+    response = await ai_service.get_response(prompt, system_prompt="You are a strict data validator.")
+    try:
+        val_json = response[response.find("{"):response.rfind("}")+1]
+        data = json.loads(val_json)
+        
+        state['confidence_score'] = data.get('confidence_score', 0.5)
+        valid_indices = data.get('valid_indices', [])
+        state['validation_results'] = data.get('validation_logs', [])
+        
+        # Filter findings
+        state['filtered_findings'] = [state['raw_findings'][i] for i in valid_indices if i < len(state['raw_findings'])]
+        state['logs'].append(f"Validation complete. Confidence: {state['confidence_score']}. Filtered to {len(state['filtered_findings'])} reliable items.")
+    except Exception as e:
+        state['logs'].append(f"Validation parsing failed: {e}. Using all raw findings as fallback.")
+        state['filtered_findings'] = state['raw_findings']
+        state['confidence_score'] = 0.5
+        
+    return state
+
 async def analyzer_node(state: GraphState) -> GraphState:
     state['status'] = QueryStatus.ANALYZING
     state['logs'].append("Synthesizing findings into a final report...")
+    
+    findings_to_use = state['filtered_findings'] or state['raw_findings']
     
     # Deep Enrichment: If we have Tabstack, enrich the top 3 most relevant-looking items
     from backend.integrations.connectors.tabstack import TabstackConnector
@@ -97,7 +153,7 @@ async def analyzer_node(state: GraphState) -> GraphState:
     
     enriched_context = []
     # Sort by metrics (e.g. likes/retweets) or just take first few
-    to_enrich = [f for f in state['raw_findings'] if f.url and len(f.content) < 500][:3]
+    to_enrich = [f for f in findings_to_use if f.url and len(f.content) < 500][:3]
     
     if to_enrich and tabstack.api_key:
         state['logs'].append(f"Enriching {len(to_enrich)} findings with full-text extraction...")
@@ -108,7 +164,7 @@ async def analyzer_node(state: GraphState) -> GraphState:
     
     context = "\n\n".join([
         f"[{item.platform}] @{item.author}: {item.content}"
-        for item in state['raw_findings']
+        for item in findings_to_use
     ])
     
     if enriched_context:
@@ -116,6 +172,7 @@ async def analyzer_node(state: GraphState) -> GraphState:
     
     prompt = f"""
     Analyze the following research findings for the topic: {state['topic']}
+    Overall Research Confidence: {state.get('confidence_score', 'N/A')}
     
     Findings:
     {context}
@@ -126,6 +183,7 @@ async def analyzer_node(state: GraphState) -> GraphState:
     - Platform-specific insights
     - Impact Score (1-10)
     - Relevance Score (1-10)
+    - Confidence Analysis (based on the provided research confidence)
     
     Output format:
     # Trend Report: {state['topic']}
@@ -138,7 +196,7 @@ async def analyzer_node(state: GraphState) -> GraphState:
     
     # Persist findings to Vector Store for future RAG
     try:
-        vector_store.add_findings(state['raw_findings'], state['query_id'])
+        vector_store.add_findings(findings_to_use, state['query_id'])
         state['logs'].append("Findings persisted to vector store for historical correlation.")
     except Exception as e:
         state['logs'].append(f"Warning: Failed to persist to vector store: {e}")
@@ -153,11 +211,13 @@ def create_workflow():
     
     workflow.add_node("planner", planner_node)
     workflow.add_node("researcher", researcher_node)
+    workflow.add_node("validator", validator_node)
     workflow.add_node("analyzer", analyzer_node)
     
     workflow.set_entry_point("planner")
     workflow.add_edge("planner", "researcher")
-    workflow.add_edge("researcher", "analyzer")
+    workflow.add_edge("researcher", "validator")
+    workflow.add_edge("validator", "analyzer")
     workflow.add_edge("analyzer", END)
     
     return workflow.compile()

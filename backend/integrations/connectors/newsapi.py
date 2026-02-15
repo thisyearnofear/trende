@@ -7,6 +7,8 @@ from shared.models import TrendItem, PlatformType
 from shared.config import get_settings
 from backend.utils.rate_limit import rate_limiter
 
+from backend.services.aisa_service import aisa_service
+
 class NewsConnector(AbstractPlatformConnector):
     @property
     def platform(self) -> str:
@@ -14,16 +16,38 @@ class NewsConnector(AbstractPlatformConnector):
 
     def __init__(self):
         self.settings = get_settings()
+        self.aisa_key = os.getenv('AISA_API_KEY')
         self.news_api_key = self.settings.newsapi_key
 
     async def search(self, query: str, limit: int = 10) -> List[TrendItem]:
-        """Search news articles using NewsAPI.org."""
+        """Search news articles using AIsa first, fallback to NewsAPI.org."""
         # Apply Rate Limiting
         if not await rate_limiter.wait_for_slot(self.platform):
             return []
 
+        # 1. Try AIsa first
+        if self.aisa_key:
+            results = await aisa_service.web_search(query, limit)
+            if results:
+                items = []
+                for res in results:
+                    items.append(TrendItem(
+                        id=res.get('url', 'unknown'),
+                        platform=self.platform,
+                        title=res.get('title', 'Unknown News'),
+                        content=res.get('snippet', '') or res.get('content', ''),
+                        author=res.get('source', 'Web'),
+                        author_handle=res.get('source', 'Web'),
+                        url=res.get('url', ''),
+                        timestamp=datetime.now(),
+                        metrics={},
+                        raw_data=res
+                    ))
+                return items
+
+        # 2. Fallback to NewsAPI
         if not self.news_api_key:
-            print("Warning: NEWSAPI_KEY not set")
+            print("Warning: Neither AISA_API_KEY nor NEWSAPI_KEY set")
             return []
 
         try:
@@ -33,7 +57,6 @@ class NewsConnector(AbstractPlatformConnector):
                 
                 if response.status_code != 200:
                     print(f"NewsAPI error: {response.status_code}")
-                    # TODO: Trigger Tavily fallback here if needed
                     return []
 
                 data = response.json()
@@ -50,7 +73,7 @@ class NewsConnector(AbstractPlatformConnector):
                         author_handle=art.get('source', {}).get('name'),
                         url=art.get('url', ''),
                         timestamp=datetime.fromisoformat(art.get('publishedAt').replace('Z', '+00:00')) if art.get('publishedAt') else datetime.now(),
-                        metrics={}, # News doesn't always have easy metrics
+                        metrics={},
                         raw_data=art
                     ))
                 return items
