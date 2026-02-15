@@ -12,9 +12,12 @@ class QueryStatus(str, Enum):
     """Status of a trend query."""
 
     PENDING = "pending"
-    PROCESSING = "processing"
+    PLANNING = "planning"
+    RESEARCHING = "researching"
+    ANALYZING = "analyzing"
     COMPLETED = "completed"
     FAILED = "failed"
+    PROCESSING = "processing"
 
 
 class Query(BaseModel):

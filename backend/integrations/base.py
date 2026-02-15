@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from shared.models.models import TrendItem, PlatformType
+from shared.models import TrendItem, PlatformType
 
 class AbstractPlatformConnector(ABC):
     @property

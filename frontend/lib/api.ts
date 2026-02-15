@@ -6,8 +6,7 @@ import {
   QueryRequest, 
   QueryResponse, 
   ResultsResponse, 
-  StreamEvent,
-  TrendResult 
+  StreamEvent
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -83,7 +82,7 @@ export const api = {
       }
     };
 
-    eventSource.onerror = (e) => {
+    eventSource.onerror = () => {
       const error = new Error('SSE connection error');
       onError?.(error);
       // Don't reconnect on error

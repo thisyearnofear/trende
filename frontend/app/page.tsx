@@ -6,7 +6,7 @@ import { QueryInput } from '@/components/QueryInput';
 import { PlatformTabs } from '@/components/PlatformTabs';
 import { TrendSummary } from '@/components/TrendSummary';
 import { ProcessingStatus } from '@/components/ProcessingStatus';
-import { QueryRequest, QueryStatus } from '@/lib/types';
+import { QueryRequest } from '@/lib/types';
 import { RefreshCw, History, Zap } from 'lucide-react';
 
 export default function Home() {
@@ -16,7 +16,6 @@ export default function Home() {
   const {
     status,
     data,
-    isLoading,
     isProcessing,
     progress,
     events,
@@ -41,32 +40,32 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen text-slate-100">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
+      <header className="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-700/30">
                 <Zap className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-100">Trende</h1>
-                <p className="text-xs text-slate-500">AI Trend Intelligence</p>
+                <p className="text-xs text-slate-400">AI Trend Intelligence Workspace</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => refresh()}
                 disabled={!queryId}
-                className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Refresh"
               >
                 <RefreshCw className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setShowHistory(!showHistory)}
-                className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+                className="p-2 text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-lg transition-colors"
                 title="History"
               >
                 <History className="w-5 h-5" />
@@ -83,7 +82,7 @@ export default function Home() {
             className="absolute inset-0 bg-black/50"
             onClick={() => setShowHistory(false)}
           />
-          <div className="relative w-80 bg-slate-900 border-l border-slate-800 p-4 overflow-y-auto">
+          <div className="relative w-80 bg-slate-900 border-l border-slate-800 p-4 overflow-y-auto shadow-2xl">
             <h3 className="font-semibold text-slate-100 mb-4">Recent Analyses</h3>
             {historyLoading ? (
               <div className="space-y-2">
@@ -99,7 +98,7 @@ export default function Home() {
                   <button
                     key={item.id}
                     onClick={() => handleSelectHistory(item.id)}
-                    className="w-full text-left p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors"
+                    className="w-full text-left p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700"
                   >
                     <p className="text-sm text-slate-200 line-clamp-2">{item.idea}</p>
                     <div className="flex items-center gap-2 mt-2">
@@ -167,13 +166,13 @@ export default function Home() {
         {/* Empty State */}
         {!queryId && !isProcessing && (
           <div className="text-center py-16">
-            <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Zap className="w-10 h-10 text-indigo-500" />
+            <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-700">
+              <Zap className="w-10 h-10 text-cyan-400" />
             </div>
             <h2 className="text-xl font-semibold text-slate-200 mb-2">
               Discover Trends with AI
             </h2>
-            <p className="text-slate-500 max-w-md mx-auto">
+            <p className="text-slate-400 max-w-md mx-auto">
               Enter a topic or idea above to analyze trends across Twitter, LinkedIn,
               news sources, and the web using AI agents.
             </p>

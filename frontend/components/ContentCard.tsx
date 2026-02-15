@@ -36,10 +36,7 @@ export function ContentCard({ item, onClick }: ContentCardProps) {
   };
 
   return (
-    <div
-      onClick={onClick}
-      className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-all cursor-pointer hover:shadow-lg hover:shadow-indigo-500/10"
-    >
+    <article className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-all hover:shadow-lg hover:shadow-cyan-500/10">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
@@ -110,17 +107,26 @@ export function ContentCard({ item, onClick }: ContentCardProps) {
 
       {/* Footer */}
       <div className="mt-3 pt-3 border-t border-slate-700/50 flex items-center justify-between">
+        {onClick && (
+          <button
+            type="button"
+            onClick={onClick}
+            className="text-sm text-slate-200 hover:text-white bg-slate-700/60 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors"
+            aria-label={`Open details for ${item.title}`}
+          >
+            Open details
+          </button>
+        )}
         <a
           href={item.url}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-1 text-sm text-indigo-400 hover:text-indigo-300"
+          className="flex items-center gap-1 text-sm text-cyan-300 hover:text-cyan-200"
         >
           <ExternalLink className="w-3 h-3" />
           View original
         </a>
       </div>
-    </div>
+    </article>
   );
 }

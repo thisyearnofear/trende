@@ -29,7 +29,6 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
   );
 
   const currentStage = STAGES[currentStageIndex];
-  const StageIcon = currentStage.icon;
 
   // Get recent events
   const recentEvents = events.slice(-5);
@@ -39,7 +38,7 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 bg-cyan-600 rounded-full flex items-center justify-center">
             <Loader2 className="w-5 h-5 text-white animate-spin" />
           </div>
           <div>
@@ -50,7 +49,7 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
           </div>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-indigo-400">{progress}%</div>
+          <div className="text-2xl font-bold text-cyan-300">{progress}%</div>
           <div className="text-xs text-slate-500">Complete</div>
         </div>
       </div>
@@ -59,7 +58,7 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
       <div className="mb-6">
         <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+            className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -79,7 +78,7 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
                   isComplete
                     ? 'bg-green-500/20 text-green-400'
                     : isActive
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-cyan-600 text-white'
                     : 'bg-slate-700 text-slate-500'
                 }`}
               >
@@ -91,7 +90,7 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
               </div>
               <span
                 className={`text-xs ${
-                  isActive ? 'text-indigo-400 font-medium' : 'text-slate-500'
+                  isActive ? 'text-cyan-300 font-medium' : 'text-slate-500'
                 }`}
               >
                 {stage.label}

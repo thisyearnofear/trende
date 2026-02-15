@@ -12,5 +12,6 @@ python-dotenv
 chromadb
 httpx
 redis
-motor # for MongoDB if we go that way, or just use json for now as per DRY
+sqlalchemy
+aiosqlite
 rich

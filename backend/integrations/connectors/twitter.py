@@ -4,18 +4,24 @@ import json
 from datetime import datetime
 from typing import List, Optional
 from backend.integrations.base import AbstractPlatformConnector
-from shared.models.models import TrendItem, PlatformType
+from shared.models import TrendItem, PlatformType
+from backend.utils.rate_limit import rate_limiter
 
 class TwitterConnector(AbstractPlatformConnector):
     @property
-    def platform(self) -> PlatformType:
-        return PlatformType.TWITTER
+    def platform(self) -> str:
+        return PlatformType.TWITTER.value
 
     def __init__(self):
         self.api_key = os.getenv('RAPIDAPI_KEY')
         self.host = "twitter-api45.p.rapidapi.com"
 
     async def search(self, query: str, limit: int = 10) -> List[TrendItem]:
+        # Apply Rate Limiting
+        if not await rate_limiter.wait_for_slot(self.platform):
+            print(f"Rate limit hit for {self.platform}")
+            return []
+
         if not self.api_key:
             print("Warning: RAPIDAPI_KEY not set")
             return []
@@ -51,13 +57,14 @@ class TwitterConnector(AbstractPlatformConnector):
                     platform=self.platform,
                     title=f"Tweet by {tweet.get('user', {}).get('screen_name', 'unknown')}",
                     content=tweet.get('text', ''),
-                    author=tweet.get('user', {}).get('screen_name', 'unknown'),
+                    author=tweet.get('user', {}).get('name', 'unknown'),
+                    author_handle=tweet.get('user', {}).get('screen_name', 'unknown'),
                     url=f"https://twitter.com/i/web/status/{tweet.get('id_str', '')}",
                     timestamp=datetime.now(), # Map properly if available
                     metrics={
-                        'likes': tweet.get('favorites', 0),
-                        'retweets': tweet.get('retweets', 0),
-                        'views': tweet.get('views', 0)
+                        'likes': int(tweet.get('favorites', 0)),
+                        'retweets': int(tweet.get('retweets', 0)),
+                        'views': int(tweet.get('views', 0))
                     },
                     raw_data=tweet
                 ))

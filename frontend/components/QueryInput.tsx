@@ -21,16 +21,17 @@ const SUGGESTIONS = [
 export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [idea, setIdea] = useState('');
   const [platforms, setPlatforms] = useState<string[]>(['twitter', 'newsapi']);
+  const hasPlatforms = platforms.length > 0;
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    if (!idea.trim() || isLoading || disabled) return;
+    if (!idea.trim() || isLoading || disabled || !hasPlatforms) return;
 
     onSubmit({
       idea: idea.trim(),
       platforms,
     });
-  }, [idea, platforms, onSubmit, isLoading, disabled]);
+  }, [idea, platforms, onSubmit, isLoading, disabled, hasPlatforms]);
 
   const handleSuggestion = (suggestion: string) => {
     setIdea(suggestion);
@@ -49,17 +50,30 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Query Input */}
         <div className="relative">
+          <label htmlFor="trend-idea" className="mb-2 block text-sm font-medium text-slate-300">
+            Research brief
+          </label>
           <textarea
+            id="trend-idea"
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                e.preventDefault();
+                if (!disabled && !isLoading && idea.trim() && hasPlatforms) {
+                  onSubmit({ idea: idea.trim(), platforms });
+                }
+              }
+            }}
             placeholder="What trends are you interested in? (e.g., AI agents in blockchain)"
-            className="w-full h-32 px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+            className="w-full h-32 px-4 py-3 bg-slate-900/80 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
             disabled={disabled}
+            aria-describedby="brief-help-text"
           />
           <button
             type="submit"
-            disabled={!idea.trim() || isLoading || disabled}
-            className="absolute bottom-3 right-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
+            disabled={!idea.trim() || isLoading || disabled || !hasPlatforms}
+            className="absolute bottom-3 right-3 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
           >
             {isLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -71,9 +85,15 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
             </span>
           </button>
         </div>
+        <div id="brief-help-text" className="flex items-center justify-between text-xs text-slate-400">
+          <span>Use a specific angle and audience to get better trend signals.</span>
+          <span>{idea.trim().length} chars • Press Cmd/Ctrl + Enter</span>
+        </div>
 
         {/* Platform Selection */}
-        <div className="flex flex-wrap gap-2">
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-slate-300">Sources</p>
+          <div className="flex flex-wrap gap-2">
           {[
             { id: 'twitter', label: '𝕏 Twitter', color: '#1DA1F2' },
             { id: 'linkedin', label: 'in LinkedIn', color: '#0A66C2' },
@@ -85,10 +105,11 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
               type="button"
               onClick={() => togglePlatform(platform.id)}
               disabled={disabled}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              aria-pressed={platforms.includes(platform.id)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
                 platforms.includes(platform.id)
-                  ? 'bg-opacity-20 ring-1 ring-offset-2 ring-offset-slate-900'
-                  : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700'
+                  ? 'bg-opacity-20 ring-1 ring-offset-2 ring-offset-slate-900 border-slate-600'
+                  : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700 border-slate-700'
               }`}
               style={{
                 backgroundColor: platforms.includes(platform.id) ? `${platform.color}33` : undefined,
@@ -98,6 +119,10 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
               {platform.label}
             </button>
           ))}
+          </div>
+          {!hasPlatforms && (
+            <p className="text-xs text-amber-400">Select at least one source to run analysis.</p>
+          )}
         </div>
 
         {/* Suggestions */}
@@ -110,7 +135,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
               type="button"
               onClick={() => handleSuggestion(suggestion)}
               disabled={disabled}
-              className="text-sm text-indigo-400 hover:text-indigo-300 hover:underline"
+              className="text-sm text-cyan-300 hover:text-cyan-200 bg-slate-900/60 border border-slate-700 rounded-full px-3 py-1 transition-colors"
             >
               {suggestion}
             </button>

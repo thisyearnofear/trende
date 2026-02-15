@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict, Any, TypedDict
-from shared.models.models import TrendItem, QueryStatus
+from shared.models import TrendItem, QueryStatus
 
 class GraphState(TypedDict):
     # Input
@@ -8,6 +8,7 @@ class GraphState(TypedDict):
     
     # Internal State
     query_id: str
+    created_at: str
     plan: Optional[Dict[str, Any]]
     search_queries: List[Dict[str, Any]]
     raw_findings: List[TrendItem]

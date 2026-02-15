@@ -56,7 +56,7 @@ export function TrendSummary({ summary, isLoading }: TrendSummaryProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Lightbulb className="w-5 h-5 text-indigo-400" />
+          <Lightbulb className="w-5 h-5 text-cyan-300" />
           <h3 className="font-semibold text-slate-100">AI Analysis</h3>
         </div>
         <div className={`flex items-center gap-2 ${getSentimentColor()}`}>
@@ -76,7 +76,7 @@ export function TrendSummary({ summary, isLoading }: TrendSummaryProps) {
             {summary.keyThemes.map((theme, index) => (
               <span
                 key={index}
-                className="px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-sm"
+                className="px-3 py-1 bg-cyan-500/20 text-cyan-200 rounded-full text-sm border border-cyan-500/25"
               >
                 {theme}
               </span>
@@ -95,7 +95,7 @@ export function TrendSummary({ summary, isLoading }: TrendSummaryProps) {
                 key={index}
                 className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg"
               >
-                <span className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                <span className="w-6 h-6 bg-cyan-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
                   {index + 1}
                 </span>
                 <div>

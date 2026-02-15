@@ -54,10 +54,9 @@ export function useTrendData(
 ): UseTrendDataReturn {
   const { polling = true, pollInterval = POLLING_INTERVAL, sse = true } = options;
   
-  const [status, setStatus] = useState<QueryStatus | null>(null);
+  const [optimisticStatus, setOptimisticStatus] = useState<QueryStatus | null>(null);
   const [progress, setProgress] = useState(0);
   const [events, setEvents] = useState<StreamEvent[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
   
   const sseCleanupRef = useRef<(() => void) | null>(null);
   
@@ -72,13 +71,8 @@ export function useTrendData(
     }
   );
 
-  // Update status from data
-  useEffect(() => {
-    if (data?.query?.status) {
-      setStatus(data.query.status);
-      setIsProcessing(data.query.status === 'pending' || data.query.status === 'processing');
-    }
-  }, [data?.query?.status]);
+  const status = data?.query?.status ?? optimisticStatus;
+  const isProcessing = status === 'pending' || status === 'processing';
 
   // SSE for real-time updates
   useEffect(() => {
@@ -114,13 +108,12 @@ export function useTrendData(
 
   // Start analysis function
   const startAnalysis = useCallback(async (request: QueryRequest): Promise<QueryResponse> => {
-    setIsProcessing(true);
+    setOptimisticStatus('pending');
     setProgress(0);
     setEvents([]);
-    setStatus('pending');
     
     const response = await api.startAnalysis(request);
-    setStatus(response.status);
+    setOptimisticStatus(response.status);
     
     return response;
   }, []);
