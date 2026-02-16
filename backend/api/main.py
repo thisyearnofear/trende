@@ -523,11 +523,11 @@ async def get_history(saved_only: bool = False) -> dict[str, Any]:
     }
 
 
-@app.get("/api/trends/saved")
+@app.get("/api/trends/saved", response_model=None)
 async def get_saved_research(
     limit: int = 100,
     x_wallet_address: str | None = Header(None, alias="X-Wallet-Address"),
-) -> dict[str, Any] | Response:
+) -> Any:
     if not x_wallet_address:
         return Response(
             status_code=401,
@@ -556,12 +556,12 @@ async def get_saved_research(
     }
 
 
-@app.post("/api/trends/{task_id}/save")
+@app.post("/api/trends/{task_id}/save", response_model=None)
 async def save_research(
     task_id: str,
     request: SaveResearchRequest,
     x_wallet_address: str | None = Header(None, alias="X-Wallet-Address"),
-) -> dict[str, Any] | Response:
+) -> Any:
     if not x_wallet_address:
         return Response(
             status_code=401,
