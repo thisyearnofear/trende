@@ -1,69 +1,326 @@
-# System Architecture
+# Technical Architecture
 
-## 🛠️ The Quadrant Workflow
-Trende is built on a 4-Stage Agentic Pipeline (LangGraph):
+## System Overview
 
-1. **The Planner (Strategist)**: Analyzes the user prompt and selects which integrations (TikTok, LinkedIn, News) are relevant.
-2. **The Researcher (Data Harvester)**: Executes multi-threaded search across selected APIs (Twitter API, NewsAPI, AIsa Web Search, Tabstack).
-3. **The Validator (Fact-Checker)**: A logic node that verifies sources, counts cross-references, and generates the **Confidence Score**.
-4. **The Consensus Engine (Optional/Pro)**: A parallel processing node that queries multiple AI models (GPT-4o, Llama 3, Gemini) simultaneously and synthesizes a bias-free summary.
-5. **The Architect (Visualizer)**: Synthesizes the finding into a **Meme Page Template** or a **Verified News Brief**.
+Trende is built on a 4-stage agentic pipeline (LangGraph) with TEE-attested consensus.
 
-## 🧪 Output Lenses
-Trende ships two output lenses from the same validated evidence graph:
-1. **Meme Thesis Lens**: Narrative-first output for social conviction and token-community storytelling.
-2. **Verifiable News Lens**: Multi-model consensus digest with explicit anti-bias and attestation metadata.
+```
+┌──────────────────────┐     ┌──────────────────────┐
+│  Frontend (Vercel)   │     │  TEE Attestation     │
+│   Next.js + React    │     │  baseline-attested   │
+└──────────┬───────────┘     │  (Port 8082)         │
+           │                 └──────────▲───────────┘
+┌──────────▼───────────┐                           │
+│  Backend API         │◄──────────────────────────┘
+│  FastAPI (Port 8000) │         HTTP POST /attest
+│  - Trend Analysis    │
+│  - Consensus Engine  │
+│  - ACP Integration   │
+└──────────┬───────────┘
+           │
+    ┌──────┴──────┐
+    ▼             ▼
+┌───────┐   ┌──────────┐
+│ APIs  │   │ AI Models│
+│Twitter│   │Venice    │
+│TikTok │   │AIsa      │
+│LinkedIn│  │OpenRouter│
+│News   │   │          │
+└───────┘   └──────────┘
+```
 
-## 🧬 Frontend: The "Commitment to Token" Flow
-Users don't just "see" results; they "act" on them:
+---
 
-1. **The Laboratory**: The research dashboard (What we have now).
-2. **The Forge (Meme Page)**: Users customize a generated "Conviction Dashboard" (Charts, Citations, Viral Highlights).
-3. **The Forge (Verifiable News Synthesizer)**: Users switch to a consensus digest that cross-verifies model outputs and displays attestation preview metadata.
-4. **The Execute (Agent Interop)**: 
-   - Exposes a **Verifiable Alpha API** for other Monad agents (e.g., `nad.fun` bots) to query research for a fee.
-   - Generates an **Attested Metadata URL** (Permanent Link) that tokens use as their "Source of Authority" on-chain.
-   - Trends are no longer "copied"; they are **Verified** and **Settled** between sovereign agents.
+## The Quadrant Workflow
 
-## 🏆 Strategic Positioning (The Moltiverse Narrative)
-Trende is built to excel in the **Agentic Economy** by addressing three core archetypes:
+### 1. Planner (Strategist)
+Analyzes user query and selects relevant integrations:
+- Platform selection (Twitter, TikTok, LinkedIn, News)
+- Depth determination (standard vs deep)
+- Resource allocation
 
-### 1. Self-Sovereign Intelligence
-- **Mechanic**: The **Verifiable News Synthesizer** runs multi-model consensus inside **EigenCompute (TEEs)**.
-- **Goal**: Provide "Attested Truth." Trende is a sovereign entity that can cryptographically prove its reasoning is free from single-model or human bias.
+### 2. Researcher (Data Harvester)
+Executes multi-threaded search across selected APIs:
+- Twitter API - Real-time posts and sentiment
+- TikTok/YouTube - Video trend metadata
+- LinkedIn - Professional discussions
+- NewsAPI/AIsa Web - News articles and research
 
-### 2. Multiplayer Coordination
-- **Mechanic**: The **X402 (EIP-3009)** payment layer.
-- **Goal**: Enable an agent-to-agent economy. Trading bots, DAO governors, and gaming agents hire Trende to provide the "Social Truth" needed for their on-chain decisions.
+### 3. Validator (Fact-Checker)
+Logic node for verification:
+- Source credibility scoring
+- Cross-reference counting
+- Confidence score generation (0.0 - 1.0)
 
-### 3. Zero-Player Autonomy
-- **Mechanic**: **Auto-Forge Pipeline**.
-- **Goal**: A perpetual loop that bridges TikTok/X trends, validates them across 4+ models, and autonomously launches high-conviction token theses on `nad.fun` without human intervention.
+### 4. Consensus Engine
+Parallel multi-model synthesis:
+- Simultaneous queries to Venice, AIsa, OpenRouter
+- Triangulated archetype analysis (Pillars vs Anomalies)
+- Lexical agreement hardening
+- Bias detection and mitigation
 
-## 🧠 Infrastructure Layer
-- **Verifiable Execution**: **Baseline-attested** service (Fastify/Node.js) runs in Docker on Hetzner. Derives a signer from a BIP39 mnemonic, generates cryptographic random beacons, and signs them with the app wallet. Exposed via nginx reverse proxy at `https://attest.famile.xyz` with Let's Encrypt SSL.
-  - **Future**: EigenCompute TEE deployment via **ecloud CLI** (`@layr-labs/ecloud-cli`).
-  - **Auth Model**: Developer Auth Key (secp256k1) for deployments; TEE Mnemonic (persistent MNEMONIC env) for app secrets.
-- **Inference**: Venice AI (Primary/Private) + AIsa/OpenRouter (Failover).
-- **Extraction**: Tabstack (Full-text Markdown extraction).
-- **Payment/Monetization**: X402 (EIP-3009) for agent-to-agent hiring.
-- **Sovereignty**: Integration with **OpenRouter** and **Venice** ensures no centralized "shut-off" switch for the agent's logic.
+### 5. Architect (Visualizer)
+Output synthesis into two lenses:
+- **Meme Page Template**: High-conviction thesis layout
+- **Verifiable News Brief**: Consensus digest with attestation
 
-## 🌐 Deployment Topology
-- **Attestation Service**: `baseline-attested` Docker container → nginx reverse proxy → `https://attest.famile.xyz`
-- **Backend API**: Python/FastAPI (local dev or containerized)
-- **Frontend**: Next.js on Vercel
+---
 
-### Updating the Attestation Service (snel-bot)
-The attestation service runs on Hetzner (`snel-bot`). A git clone of the repo lives at `/opt/trende-deploy/trende-repo/` and the `.env` (with mnemonic) is at `/opt/trende-deploy/baseline-attested/.env`.
+## TEE Attestation System
 
-To deploy updates:
+### Architecture
+
+```
+┌─────────────────┐
+│  Trende Backend │
+│   (Port 8000)   │
+└────────┬────────┘
+         │
+         │ HTTP POST /attest
+         ▼
+┌─────────────────────────┐
+│  TEE Attestation Service│
+│  (baseline-attested)    │
+│     Port 8082           │
+│                         │
+│  🔐 Signs with wallet:  │
+│  0xf39Fd...92266        │
+└─────────────────────────┘
+```
+
+### Attestation Flow
+
+1. **Research Completion**: Backend creates consensus payload
+2. **TEE Request**: POST to `http://baseline-attested:8080/attest`
+3. **Cryptographic Signing**:
+   - Canonical hash (SHA-256)
+   - Attestation ID generation
+   - Message: `TrendeAttestation|{id}|{hash}|{timestamp}`
+   - EIP-191 signature with TEE wallet
+4. **Response**: Signature + metadata returned to backend
+
+### Attestation Response Format
+
+```json
+{
+  "provider": "eigencompute",
+  "status": "signed",
+  "method": "tee-attestation",
+  "attestation_id": "ATTEST-2b54e3ca4ce336cf",
+  "input_hash": "2b54e3ca4ce336cf5365bbba86564c6123f7e983...",
+  "signature": "0xf2f8f589fa013b00f7d660cad8c46c40b00ca0a3...",
+  "signer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "key_id": "eigencompute-tee",
+  "generated_at": "2026-02-16T13:36:42.927422+00:00",
+  "payload": { /* original consensus data */ }
+}
+```
+
+### Verification
+
+**API Endpoint**: `POST /api/attest/verify`
+
+```bash
+curl -X POST https://api.trende.famile.xyz/api/attest/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "payload": {...},
+    "attestation": {...}
+  }'
+```
+
+**Response**:
+```json
+{
+  "verified": true,
+  "signer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "attestation_id": "ATTEST-2b54e3ca4ce336cf",
+  "message": "TrendeAttestation|ATTEST-2b54e3ca...|2b54e3ca...|...",
+  "timestamp": "2026-02-16T13:40:00.000000+00:00"
+}
+```
+
+### Security Properties
+
+**Provides**:
+- ✅ Non-repudiation via wallet signature
+- ✅ Integrity via hash mismatch detection
+- ✅ Timestamped attestations
+- ✅ Public verifiability
+
+**Future Enhancements**:
+- [ ] Hardware TEE (Intel SGX, AMD SEV)
+- [ ] Remote attestation quotes
+- [ ] Key rotation mechanism
+- [ ] On-chain attestation registry
+- [ ] IPFS storage
+
+---
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Attestation Provider
+ATTESTATION_PROVIDER=eigencompute
+ATTESTATION_STRICT_MODE=true
+
+# TEE Service Endpoints
+EIGEN_ATTEST_URL=http://baseline-attested:8080/attest
+EIGEN_HEALTH_URL=http://baseline-attested:8080/health
+
+# Retry Configuration
+EIGEN_ATTEST_TIMEOUT_SECS=10
+EIGEN_ATTEST_RETRIES=3
+EIGEN_ATTEST_BACKOFF_MS=300
+
+# ACP Configuration (optional)
+ACP_ENABLED=true
+ACP_AGENT_WALLET_ADDRESS=0x...
+ACP_WALLET_PRIVATE_KEY=...
+ACP_ENTITY_ID=...
+ACP_SERVICE_PRICE=10.00
+ACP_SERVICE_SLA_SECONDS=180
+```
+
+### Docker Network
+
+```bash
+docker network create trende-network
+
+docker run -d --name baseline-attested \
+  --network trende-network \
+  -p 8082:8080 \
+  trende/baseline:v2
+
+docker run -d --name trende-backend \
+  --network trende-network \
+  -p 8000:8000 \
+  trende/backend:latest
+```
+
+---
+
+## Health Checks
+
+### Attestation Service
+```bash
+curl http://localhost:8082/health
+```
+
+### Backend Attestation Status
+```bash
+# Configuration check
+curl https://api.trende.famile.xyz/api/health/attestation
+
+# Live probe
+curl https://api.trende.famile.xyz/api/health/attestation?probe=true
+```
+
+### ACP Status
+```bash
+curl https://api.trende.famile.xyz/api/acp/status
+```
+
+---
+
+## TEE Service Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/attest` | POST | Attest to arbitrary payload |
+| `/verify` | POST | Verify an attestation |
+| `/random` | GET | Generate attested random number |
+| `/health` | GET | Service health check |
+
+---
+
+## Deployment
+
+### Attestation Service (Hetzner)
+
 ```bash
 ssh snel-bot "/opt/trende-deploy/deploy-baseline.sh"
 ```
 
-This script:
+Script performs:
 1. `git pull` in `/opt/trende-deploy/trende-repo/`
-2. Rebuilds the Docker image from `baseline-attested/Dockerfile`
-3. Stops and replaces the running container (preserving `.env`)
-4. Health-checks the `/random` endpoint
+2. Rebuilds Docker image
+3. Stops and replaces container (preserving `.env`)
+4. Health-checks `/random` endpoint
+
+### Backend API
+
+```bash
+cd /opt/trende-deploy
+./deploy-backend.sh
+```
+
+### Frontend
+
+Deployed to Vercel via git push.
+
+---
+
+## API Integration
+
+### Frontend Display
+
+```typescript
+const response = await fetch(`/api/trends/${taskId}`);
+const data = await response.json();
+const attestation = data.summary.attestationData;
+
+console.log('Attestation ID:', attestation.attestation_id);
+console.log('Signature:', attestation.signature);
+console.log('Signer:', attestation.signer);
+```
+
+### Verification
+
+```typescript
+const verifyResponse = await fetch('/api/attest/verify', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    payload: attestation.payload,
+    attestation: attestation
+  })
+});
+const result = await verifyResponse.json();
+console.log('Verified:', result.verified);
+```
+
+---
+
+## Troubleshooting
+
+### Backend Can't Reach TEE Service
+**Symptom**: `RuntimeError: ATTESTATION_STRICT_MODE=true requires live Eigen attestation`
+
+**Solution**: Ensure same Docker network, use container name:
+```bash
+EIGEN_ATTEST_URL=http://baseline-attested:8080/attest
+```
+
+### Signature Verification Fails
+**Symptom**: `verified: false`
+
+**Solution**: Use canonical JSON (sorted keys, no whitespace)
+
+### TEE Service Not Starting
+**Symptom**: Container exits immediately
+
+**Solution**: Check MNEMONIC in `.env`:
+```bash
+docker logs baseline-attested
+```
+
+---
+
+## Signer Address
+
+**Production TEE Wallet**: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
+
+All attestations are signed by this address. Verify against it to confirm authenticity.
