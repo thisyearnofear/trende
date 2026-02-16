@@ -1,16 +1,11 @@
 'use client';
 
+import { useMemo } from 'react';
 import { StreamEvent, QueryStatus } from '@/lib/types';
-import {
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  Compass,
-  Search,
-  ShieldCheck,
-  Blocks,
-} from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Loader2, Terminal, Fingerprint } from 'lucide-react';
+import { TerminalLog } from './TypewriterText';
+import { PipelineStages } from './PipelineStages';
+import { GlassContainer } from './GlassContainer';
 
 interface ProcessingStatusProps {
   status: QueryStatus | null;
@@ -19,152 +14,99 @@ interface ProcessingStatusProps {
   isProcessing: boolean;
 }
 
-const STAGES = [
-  { id: 'planner', label: 'Planner', icon: Compass, description: 'Selecting the best worlds and strategy.' },
-  { id: 'researcher', label: 'Researcher', icon: Search, description: 'Harvesting multi-source signal and citations.' },
-  { id: 'validator', label: 'Validator', icon: ShieldCheck, description: 'Cross-checking claims and confidence.' },
-  { id: 'architect', label: 'Architect', icon: Blocks, description: 'Structuring output for Forge and Launchpad.' },
-];
-
 export function ProcessingStatus({ status, progress, events, isProcessing }: ProcessingStatusProps) {
   if (!isProcessing && status !== 'processing') {
     return null;
   }
 
-  const currentStageIndex = Math.min(
-    Math.floor((progress / 100) * STAGES.length),
-    STAGES.length - 1
-  );
-
-  const currentStage = STAGES[currentStageIndex];
-  const recentEvents = events.slice(-6);
-
-  // Animate flow progress for connected lines
-  const [animatedProgress, setAnimatedProgress] = useState(0);
-
-  useEffect(() => {
-    // Smooth animation for the flow indicator
-    const timer = setTimeout(() => setAnimatedProgress(progress), 100);
-    return () => clearTimeout(timer);
-  }, [progress]);
+  // Convert StreamEvents to TerminalEvents for the typewriter effect
+  const terminalEvents = useMemo(() => {
+    return events.slice(-6).map((event, index) => {
+      const type: 'error' | 'success' | 'info' = 
+        event.type === 'error' ? 'error' : 
+        event.type === 'result' ? 'success' : 
+        'info';
+      return {
+        id: `${event.type}-${index}-${event.message?.slice(0, 20) || ''}`,
+        message: event.message || '',
+        type,
+      };
+    });
+  }, [events]);
 
   return (
-    <div className="rounded-3xl border border-slate-700 bg-slate-900/75 p-6">
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div className="flex items-start gap-3">
-          <div className="w-11 h-11 bg-cyan-600 rounded-2xl flex items-center justify-center shrink-0">
-            <Loader2 className="w-5 h-5 text-white animate-spin" />
+    <GlassContainer 
+      variant="processing" 
+      title="Agentic Pipeline"
+      subtitle="TEE-Secured Execution"
+      className="overflow-visible"
+    >
+      {/* Progress Header */}
+      <div className="px-6 py-4 border-b border-white/5">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-start gap-3">
+            <div className="w-11 h-11 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/20">
+              <Loader2 className="w-5 h-5 text-white animate-spin" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-100">Processing in TEE</h3>
+              <p className="text-sm text-slate-400 mt-0.5">Secure multi-stage validation</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-slate-100">Agentic Pipeline Running</h3>
-            <p className="text-sm text-slate-400 mt-1">{currentStage.description}</p>
+          <div className="text-right shrink-0">
+            <div className="text-3xl font-bold text-cyan-300">{progress}%</div>
+            <div className="text-xs text-slate-500">Complete</div>
           </div>
         </div>
-        <div className="text-right shrink-0">
-          <div className="text-2xl font-bold text-cyan-300">{progress}%</div>
-          <div className="text-xs text-slate-500">Mission complete</div>
-        </div>
-      </div>
 
-      <div className="mb-8">
-        <div className="h-2.5 bg-slate-700 rounded-full overflow-hidden">
+        {/* Progress bar with gradient */}
+        <div className="relative h-2 bg-slate-800 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 rounded-full transition-all duration-500"
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
+          />
+          {/* Shimmer effect */}
+          <div 
+            className="absolute inset-y-0 w-20 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"
+            style={{ 
+              left: `${progress - 10}%`,
+              opacity: progress > 10 && progress < 90 ? 1 : 0,
+            }}
           />
         </div>
       </div>
 
-      {/* Interactive Pipeline Flow Visualization */}
-      <div className="relative mb-6">
-        {/* Connection lines background */}
-        <div className="absolute top-1/2 left-0 right-0 h-1 bg-slate-700 -translate-y-1/2 hidden sm:block" />
-        
-        {/* Animated flow line */}
-        <div 
-          className="absolute top-1/2 left-0 h-1 bg-gradient-to-r from-cyan-500 to-emerald-500 -translate-y-1/2 hidden sm:block transition-all duration-700 ease-out"
-          style={{ 
-            width: `${Math.max(0, (currentStageIndex / (STAGES.length - 1)) * 100)}%`,
-            opacity: animatedProgress > 0 ? 1 : 0
-          }}
+      {/* Pipeline Stages */}
+      <div className="p-6">
+        <PipelineStages 
+          status={status} 
+          progress={progress} 
+          isProcessing={isProcessing} 
         />
-
-        {/* Active flowing dot */}
-        <div 
-          className="absolute top-1/2 w-3 h-3 bg-cyan-400 rounded-full -translate-y-1/2 shadow-[0_0_12px_rgba(34,211,238,0.6)] hidden sm:block transition-all duration-500 ease-out"
-          style={{ 
-            left: `calc(${currentStageIndex * (100 / (STAGES.length - 1))}% - 6px)`,
-            opacity: isProcessing ? 1 : 0,
-          }}
-        />
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-          {STAGES.map((stage, index) => {
-            const isActive = index === currentStageIndex;
-            const isComplete = index < currentStageIndex;
-            const StageIcon = stage.icon;
-
-            return (
-              <div key={stage.id} className="relative">
-                {/* Stage card */}
-                <div 
-                  className={`rounded-xl border bg-slate-800/60 p-3 text-center transition-all duration-500 ${
-                    isActive ? 'border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.15)]' : 
-                    isComplete ? 'border-emerald-500/30' : 'border-slate-700'
-                  }`}
-                >
-                  <div
-                    className={`w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center transition-all ${
-                      isComplete
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : isActive
-                        ? 'bg-cyan-600 text-white shadow-[0_0_12px_rgba(8,145,178,0.5)]'
-                        : 'bg-slate-700 text-slate-500'
-                    }`}
-                  >
-                    {isComplete ? (
-                      <CheckCircle2 className="w-5 h-5" />
-                    ) : (
-                      <StageIcon className={`w-5 h-5 ${isActive ? 'animate-pulse' : ''}`} />
-                    )}
-                  </div>
-                  <p className={`text-xs ${isActive ? 'text-cyan-200 font-medium' : 'text-slate-500'}`}>
-                    {stage.label}
-                  </p>
-                  
-                  {/* Active indicator bar */}
-                  {isActive && (
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-cyan-400 rounded-full animate-pulse" />
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
-      {recentEvents.length > 0 && (
-        <div className="border-t border-slate-700 pt-4">
-          <h4 className="text-xs font-semibold tracking-wide text-slate-500 mb-2">Live Telemetry</h4>
-          <div className="space-y-2">
-            {recentEvents.map((event, index) => (
-              <div
-                key={index}
-                className={`flex items-start gap-2 text-sm ${
-                  event.type === 'error' ? 'text-red-400' : 'text-slate-300'
-                }`}
-              >
-                {event.type === 'error' ? (
-                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                ) : (
-                  <Loader2 className="w-4 h-4 mt-0.5 flex-shrink-0 animate-spin" />
-                )}
-                <span>{event.message}</span>
+      {/* Terminal Telemetry */}
+      {terminalEvents.length > 0 && (
+        <div className="px-6 pb-6">
+          <div className="rounded-xl border border-slate-800 bg-slate-950/80 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-800 bg-slate-900/50">
+              <Terminal className="w-3.5 h-3.5 text-slate-500" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Live Telemetry</span>
+              <div className="ml-auto flex items-center gap-1.5">
+                <Fingerprint className="w-3 h-3 text-cyan-500/50" />
+                <span className="text-[10px] text-cyan-500/50">TEE-Logged</span>
               </div>
-            ))}
+            </div>
+            <div className="p-4">
+              <TerminalLog 
+                events={terminalEvents} 
+                maxHeight="120px"
+                className="text-xs"
+              />
+            </div>
           </div>
         </div>
       )}
-    </div>
+    </GlassContainer>
   );
 }
