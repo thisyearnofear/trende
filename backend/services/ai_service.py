@@ -190,8 +190,11 @@ class AIService:
                         labels.append((label, model))
                         tasks.append(
                             asyncio.create_task(
-                                self._call_with_metrics(
-                                    self._call_openrouter(prompt, system_prompt, model=model)
+                                asyncio.wait_for(
+                                    self._call_with_metrics(
+                                        self._call_openrouter(prompt, system_prompt, model=model)
+                                    ),
+                                    timeout=60.0
                                 )
                             )
                         )
@@ -203,8 +206,11 @@ class AIService:
                     labels.append((name, name))
                     tasks.append(
                         asyncio.create_task(
-                            self._call_with_metrics(
-                                self._fetch_from_provider(name, prompt, system_prompt)
+                            asyncio.wait_for(
+                                self._call_with_metrics(
+                                    self._fetch_from_provider(name, prompt, system_prompt)
+                                ),
+                                timeout=60.0
                             )
                         )
                     )
@@ -220,8 +226,11 @@ class AIService:
                     labels.append((label, model))
                     tasks.append(
                         asyncio.create_task(
-                            self._call_with_metrics(
-                                self._call_openrouter(prompt, system_prompt, model=model)
+                            asyncio.wait_for(
+                                self._call_with_metrics(
+                                    self._call_openrouter(prompt, system_prompt, model=model)
+                                ),
+                                timeout=60.0
                             )
                         )
                     )
@@ -229,8 +238,12 @@ class AIService:
         if not tasks:
             return []
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        provider_results: List[Dict[str, Any]] = []
+        # Add timeouts to prevent hanging indefinitely
+        try:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+        except Exception as e:
+            print(f"Parallel batch execution failed: {e}")
+            return []
 
         for (label, model_id), value in zip(labels, results):
             if isinstance(value, Exception):

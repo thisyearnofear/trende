@@ -8,9 +8,9 @@ from openai import OpenAI
 try:
     from composio.tools.toolset import ComposioToolSet
     COMPOSIO_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     COMPOSIO_AVAILABLE = False
-    print("Warning: Composio not available. Install with: pip install composio-core")
+    print(f"Warning: Composio not available. Import error: {e}")
 
 
 class ComposioService:
