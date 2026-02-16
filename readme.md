@@ -1,191 +1,59 @@
 # Trende: The Verifiable AI Oracle for Monad
 
-Trende is a **Sovereign AI Agent** that bridges real-world social signal into verifiable on-chain intelligence. It is built to serve as the "Truth Layer" for the Monad Agent Economy.
+Trende is a **Sovereign AI Agent** that bridges real-world social signal into verifiable on-chain intelligence. It serves as the "Truth Layer" for the Monad Agent Economy.
 
-## ⚡ Monad Integration
+## 📖 Documentation
 
-Trende is built natively on **Monad Testnet** (Chain ID: 10143) with:
+Detailed guides and specifications are available in the [./docs/](./docs/) directory:
 
-- **Wallet-Gated Access**: Connect your Monad wallet to unlock higher rate limits
-- **X402 Micropayments**: Pay-per-query using EIP-712 signed authorizations (0.001 MON/search)
-- **Research Commons**: All completed research is publicly browsable at `/commons`, with sponsor attribution
-- **On-Chain Identity**: Research queries are tagged with sponsor wallet addresses for permanent attribution
+- **[Vision & Strategy](./docs/VISION.md)**: Mission, core value proposition, and strategic opportunities.
+- **[Technical Architecture](./docs/ARCHITECTURE.md)**: System overview, LangGraph workflow, TEE attestation, and configuration.
+- **[ACP Integration](./docs/ACP_GUIDE.md)**: Guide for Virtuals Protocol's Agent Commerce Protocol.
+- **[Roadmap](./docs/ROADMAP.md)**: Development phases and future milestones.
+- **[A2A Integration](./docs/skills/alpha.md)**: Integrating Trende with other agents (Verifiable Alpha).
 
-### Rate Limits
-| Tier | Daily Searches | Requirement |
-|------|---------------|-------------|
-| Anonymous | 3 | None |
-| Connected | 10 | Wallet connected |
-| Premium | Unlimited | X402 payment |
+## 🚀 Quick Start
 
-### Environment Variables (Monad)
+### Backend (Python 3.10+)
 ```bash
-MONAD_RPC_URL=https://testnet-rpc.monad.xyz
-MONAD_CHAIN_ID=10143
-MONAD_EXPLORER_URL=https://testnet.monadexplorer.com
-X402_RECIPIENT_ADDRESS=0xYourWallet
-X402_PAYMENT_AMOUNT=0.001
-FREE_TIER_DAILY_LIMIT=3
-CONNECTED_TIER_DAILY_LIMIT=10
-```
-
-## 🤖 Agent Ecosystem (A2A)
-Trende is designed to be **hired by other agents**. 
-- **llms.txt**: [Master Discovery File](/llms.txt) for LLM-based agents.
-- **Skill: Verifiable Alpha**: [A2A Integration Guide](/docs/skills/alpha.md) for launch bots and traders.
-- **Settlement**: Native **X402 (EIP-3009)** support for automated intelligence purchases.
-
-## 🚀 Capabilities
-
-- **Multi-Platform Laboratory**: Autonomously searches TikTok, X, LinkedIn, and Web.
-- **Consensus Forge**: Cross-verifies findings using multiple AI providers (Venice, GPT-4o, Llama, Gemini) to eliminate single-source bias.
-- **Verifiable Output**: Every analysis produces an **Attestation Payload** cryptographically signed by a Trusted Execution Environment (TEE), providing verifiable proof of the consensus process. Each report links to a permanent **Proof URL** with full attestation details.
-- **Forge UI**: `/meme/[queryId]` provides specialized views for **Meme Theses** and **Institutional Intelligence**.
-
-## 🛠️ Setup
-
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- Docker & Docker Compose (Recommended for Production)
-
-### Backend Setup (Local)
-1. Navigate to the root directory.
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -e .
-   ```
-4. Configure your `.env` file (see `.env.example`).
-5. Run the development server:
-   ```bash
-   uvicorn backend.api.main:app --reload
-   ```
-6. Attestation configuration (production uses TEE):
-   - `ATTESTATION_PROVIDER=local_hmac` for local development signatures.
-   - `ATTESTATION_PROVIDER=eigencompute` with `EIGEN_ATTEST_URL=http://baseline-attested:8080/attest` for TEE attestations.
-   - Production hardening:
-     - `ATTESTATION_STRICT_MODE=true` to prevent local fallback when TEE is unavailable.
-     - `EIGEN_HEALTH_URL=http://baseline-attested:8080/health` for health checks.
-     - `EIGEN_ATTEST_TIMEOUT_SECS`, `EIGEN_ATTEST_RETRIES`, `EIGEN_ATTEST_BACKOFF_MS` for network resiliency.
-
-### Running Tests
-```bash
-# Activate virtual environment
+python -m venv venv
 source venv/bin/activate
-
-# Run all tests
-pytest tests/ -v
-
-# Run with coverage
-pytest tests/ --cov=backend --cov=shared --cov-report=term-missing
+pip install -e .
+# Configure .env based on .env.example
+uvicorn backend.api.main:app --reload
 ```
 
-### Frontend Setup
-1. Navigate to `frontend/`:
-   ```bash
-   cd frontend
-   npm install
-   ```
-2. Run the development server:
-   ```bash
-   npm run dev
-   ```
-
-## 🚀 Deployment
-
-### Backend (Docker)
-For production, the backend is deployed using Docker on Hetzner.
-
-**Server Setup** (snel-bot):
-- Location: `/opt/trende-deploy/`
-- Repository: `/opt/trende-deploy/trende-repo` (tracking `main` branch)
-- Configuration: `/opt/trende-deploy/.env`
-
-**Deployment Script**:
+### Frontend (Node.js 18+)
 ```bash
-ssh snel-bot
-cd /opt/trende-deploy
-./deploy-backend.sh
+cd frontend
+npm install
+npm run dev
 ```
 
-The deployment script automatically:
-1. Pulls latest changes from `main` branch
-2. Builds Docker image from `config/docker/Dockerfile`
-3. Restarts the container with updated code
-4. Verifies service health
-
-**Manual Deployment**:
+### Testing
 ```bash
-# On the server
-cd /opt/trende-deploy/trende-repo
-git pull origin main
-docker build -t trende/backend:latest -f config/docker/Dockerfile .
-docker stop trende-backend && docker rm trende-backend
-docker run -d --name trende-backend \
-  --env-file /opt/trende-deploy/.env \
-  -p 8000:8000 \
-  --restart unless-stopped \
-  trende/backend:latest
-```
-
-**View Logs**:
-```bash
-ssh snel-bot "docker logs -f trende-backend"
-```
-
-**API Endpoints**:
-- Production: `https://api.trende.famile.xyz`
-- Health Check: `https://api.trende.famile.xyz/api/health/consensus`
-- API Docs: `https://api.trende.famile.xyz/docs`
-
-### Frontend (Vercel)
-1. Deploy the `frontend/` directory to Vercel.
-2. Set Environment Variable:
-   - `NEXT_PUBLIC_API_URL`: URL of your deployed backend (e.g., `https://api.trende.famile.xyz`).
-
-## 🧪 Testing the Agent
-
-You can run a live research task directly from the CLI to verify the AI backbone:
-```bash
+# Run a live research task
 python3 scripts/test_agent.py "Your Research Topic"
-```
 
-For an end-to-end real run flow (start -> poll -> Forge links):
-```bash
+# Run full flow (start -> poll -> Forge links)
 ./scripts/finals_flow.sh "Your Research Topic"
 ```
 
-Consensus preflight checks:
-```bash
-# Config-only readiness (no model calls)
-curl -s "http://localhost:8000/api/health/consensus" | jq
+## 🤖 Agent Ecosystem (A2A)
 
-# Live probe (lightweight calls to configured providers)
-curl -s "http://localhost:8000/api/health/consensus?probe=true" | jq
-```
-
-Attestation preflight checks:
-```bash
-# Config-only readiness
-curl -s "http://localhost:8000/api/health/attestation" | jq
-
-# Live Eigen endpoint probe (when using eigencompute mode)
-curl -s "http://localhost:8000/api/health/attestation?probe=true" | jq
-```
+Trende is built for the agent-to-agent economy:
+- **llms.txt**: [Master Discovery File](./llms.txt) for LLM-based agents.
+- **Verifiable Output**: Every analysis produces an **Attestation Payload** signed by a TEE.
+- **Settlement**: Native **X402 (EIP-3009)** support for automated intelligence purchases.
 
 ## 🛡️ Core Principles
-- **Enhancement First**: Prioritize improving existing components.
-- **Aggressive Consolidation**: Delete unnecessary code; no bloat.
-- **Privacy First**: Primary inference routed via Venice AI.
-- **Fact-Checked**: Every report undergoes a dedicated validation node.
+
+- **Verifiable First**: Cryptographic proof for every consensus report.
+- **Multi-Model**: Eliminates single-source bias using Venice, GPT-4o, Llama, and Gemini.
+- **Privacy Centric**: Primary inference routed via Venice AI.
 
 ---
 
-Built for the [Moltiverse Hackathon](https://moltiverse.dev) (Agent Track) on **Monad** and the [EigenCloud Open Innovation Challenge](https://x.com/eigencloud/status/2022385148189397227).
+Built for the [Moltiverse Hackathon](https://moltiverse.dev) (Agent Track) on **Monad**.
 
 **Monad Testnet**: Chain ID `10143` | RPC `https://testnet-rpc.monad.xyz` | [Explorer](https://testnet.monadexplorer.com)
