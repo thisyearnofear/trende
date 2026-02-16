@@ -4,7 +4,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 try:
-    import pinecone
+    from pinecone import Pinecone, ServerlessSpec
     PINECONE_AVAILABLE = True
 except ImportError:
     PINECONE_AVAILABLE = False
@@ -16,7 +16,6 @@ class PineconeService:
     
     def __init__(self):
         self.api_key = os.getenv("PINECONE_API_KEY", "")
-        self.environment = os.getenv("PINECONE_ENVIRONMENT", "")
         self.index_name = os.getenv("PINECONE_INDEX", "trends")
         
         if not self.api_key:
@@ -26,19 +25,21 @@ class PineconeService:
             self.initialized = False
         else:
             try:
-                # Initialize Pinecone
-                pinecone.init(api_key=self.api_key, environment=self.environment)
+                # Initialize Pinecone with new API
+                self.pc = Pinecone(api_key=self.api_key)
                 
                 # Check if index exists, create if not
-                if self.index_name not in pinecone.list_indexes():
+                existing_indexes = [idx.name for idx in self.pc.list_indexes()]
+                if self.index_name not in existing_indexes:
                     print(f"Creating Pinecone index: {self.index_name}")
-                    pinecone.create_index(
+                    self.pc.create_index(
                         name=self.index_name,
                         dimension=1536,  # Standard for OpenAI embeddings
-                        metric='cosine'
+                        metric='cosine',
+                        spec=ServerlessSpec(cloud='aws', region='us-east-1')
                     )
                 
-                self.index = pinecone.Index(self.index_name)
+                self.index = self.pc.Index(self.index_name)
                 self.initialized = True
                 print(f"Pinecone service initialized with index: {self.index_name}")
             except Exception as e:
