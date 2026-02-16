@@ -113,11 +113,10 @@ export default function Home() {
               />
               <button
                 onClick={() => setShowHistory(!showHistory)}
-                className={`p-2.5 min-h-[44px] min-w-[44px] border-2 transition-colors flex items-center justify-center ${
-                  showHistory
+                className={`p-2.5 min-h-[44px] min-w-[44px] border-2 transition-colors flex items-center justify-center ${showHistory
                     ? "bg-[var(--text-primary)] text-[var(--bg-primary)]"
                     : "bg-[var(--bg-primary)] text-[var(--text-primary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)]"
-                }`}
+                  }`}
                 style={{ boxShadow: "2px 2px 0px 0px var(--shadow-color)" }}
                 aria-label="History"
               >
@@ -177,13 +176,12 @@ export default function Home() {
                       </p>
                       <div className="flex items-center gap-2 mt-2">
                         <span
-                          className={`text-xs px-2 py-0.5 font-mono ${
-                            item.status === "completed"
+                          className={`text-xs px-2 py-0.5 font-mono ${item.status === "completed"
                               ? "bg-[var(--accent-emerald)] text-[var(--bg-primary)]"
                               : item.status === "processing"
                                 ? "bg-[var(--accent-amber)] text-[var(--bg-primary)]"
                                 : "bg-[var(--text-muted)] text-[var(--text-primary)]"
-                          }`}
+                            }`}
                         >
                           {item.status.toUpperCase()}
                         </span>
@@ -207,17 +205,37 @@ export default function Home() {
             <div className="flex items-center gap-2 mb-4">
               <Fingerprint className="w-5 h-5 text-[var(--accent-cyan)]" />
               <span className="text-xs font-mono text-[var(--accent-cyan)]">
-                EIGENCOMPUTE TEE // SECURE ENCLAVE
+                TEE-SECURED EXECUTION // CRYPTOGRAPHICALLY VERIFIABLE
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight mb-3">
               Turn Social Signal Into Conviction-Ready Intelligence
             </h2>
-            <p className="text-[var(--text-secondary)] font-mono text-sm max-w-2xl">
+            <p className="text-[var(--text-secondary)] font-mono text-sm max-w-2xl mb-4">
               Run multi-platform research through verifiable TEE execution.
               Cross-reference signals, validate consensus, generate
               cryptographic attestations.
             </p>
+            <div className="flex flex-wrap gap-4 pt-4 border-t border-[var(--border-color)]">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[var(--accent-emerald)]" />
+                <span className="text-xs text-[var(--text-secondary)]">
+                  Trusted Execution Environment
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[var(--accent-emerald)]" />
+                <span className="text-xs text-[var(--text-secondary)]">
+                  Multi-Model Consensus
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[var(--accent-emerald)]" />
+                <span className="text-xs text-[var(--text-secondary)]">
+                  Cryptographic Signatures
+                </span>
+              </div>
+            </div>
           </Card>
         )}
 

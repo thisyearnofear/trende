@@ -39,7 +39,7 @@ Trende is designed to be **hired by other agents**.
 
 - **Multi-Platform Laboratory**: Autonomously searches TikTok, X, LinkedIn, and Web.
 - **Consensus Forge**: Cross-verifies findings using multiple AI providers (Venice, GPT-4o, Llama, Gemini) to eliminate single-source bias.
-- **Verifiable Output**: Every analysis produces an **Attestation Payload** cryptographically signed by the attestation service at `attest.famile.xyz`, linking to a permanent **Proof URL**.
+- **Verifiable Output**: Every analysis produces an **Attestation Payload** cryptographically signed by a Trusted Execution Environment (TEE), providing verifiable proof of the consensus process. Each report links to a permanent **Proof URL** with full attestation details.
 - **Forge UI**: `/meme/[queryId]` provides specialized views for **Meme Theses** and **Institutional Intelligence**.
 
 ## 🛠️ Setup
@@ -65,12 +65,12 @@ Trende is designed to be **hired by other agents**.
    ```bash
    uvicorn backend.api.main:app --reload
    ```
-6. Optional attestation config:
-   - `ATTESTATION_PROVIDER=local_hmac` for local signatures.
-   - `ATTESTATION_PROVIDER=eigencompute` with `EIGEN_ATTEST_URL=https://attest.famile.xyz/random` for remote attestations.
-   - Production hardening toggles:
-     - `ATTESTATION_STRICT_MODE=true` to prevent local fallback when Eigen is unavailable.
-     - `EIGEN_HEALTH_URL=https://attest.famile.xyz/random` for baseline reachability checks.
+6. Attestation configuration (production uses TEE):
+   - `ATTESTATION_PROVIDER=local_hmac` for local development signatures.
+   - `ATTESTATION_PROVIDER=eigencompute` with `EIGEN_ATTEST_URL=http://baseline-attested:8080/attest` for TEE attestations.
+   - Production hardening:
+     - `ATTESTATION_STRICT_MODE=true` to prevent local fallback when TEE is unavailable.
+     - `EIGEN_HEALTH_URL=http://baseline-attested:8080/health` for health checks.
      - `EIGEN_ATTEST_TIMEOUT_SECS`, `EIGEN_ATTEST_RETRIES`, `EIGEN_ATTEST_BACKOFF_MS` for network resiliency.
 
 ### Running Tests

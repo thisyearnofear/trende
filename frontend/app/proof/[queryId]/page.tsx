@@ -3,7 +3,8 @@
 import { use } from 'react';
 import { useTrendData } from '@/hooks/useTrendData';
 import { ForgeViewer } from '@/components/ForgeViewer';
-import { ShieldCheck, ArrowLeft, Loader2, Link2 } from 'lucide-react';
+import { AttestationBadge } from '@/components/AttestationBadge';
+import { ShieldCheck, ArrowLeft, Loader2, Link2, Fingerprint, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 
@@ -39,10 +40,11 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Attested</span>
-                            </div>
+                            <AttestationBadge
+                                attestation={data?.summary?.attestationData}
+                                size="md"
+                                showDetails
+                            />
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText(window.location.href);
@@ -98,28 +100,80 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                         </div>
 
                         {/* Immutable Footnote */}
-                        <div className="rounded-2xl border border-white/5 bg-white/5 p-8 space-y-6">
+                        <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-8 space-y-6">
                             <div className="flex items-center gap-3">
-                                <ShieldCheck className="w-6 h-6 text-emerald-400" />
-                                <h3 className="text-lg font-semibold text-white">Trust Minimization</h3>
+                                <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                                    <Lock className="w-6 h-6 text-emerald-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-semibold text-white">Cryptographically Secured</h3>
+                                    <p className="text-xs text-emerald-400 font-mono">TEE Attestation • Non-Repudiable</p>
+                                </div>
                             </div>
+
+                            <div className="space-y-4">
+                                <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-700/50">
+                                    <div className="flex items-start gap-3">
+                                        <Fingerprint className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <h4 className="text-sm font-bold text-white mb-1">What is TEE Attestation?</h4>
+                                            <p className="text-sm text-slate-400 leading-relaxed">
+                                                A Trusted Execution Environment (TEE) is a secure area of a processor that guarantees
+                                                code and data are protected. This report was generated inside a TEE and cryptographically
+                                                signed, providing verifiable proof that the consensus process was executed securely without
+                                                tampering.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-700/50">
+                                        <ShieldCheck className="w-5 h-5 text-emerald-400 mb-2" />
+                                        <h4 className="text-xs font-bold text-white mb-1 uppercase tracking-wider">Non-Repudiation</h4>
+                                        <p className="text-xs text-slate-400">
+                                            Cryptographic signature proves this came from our TEE
+                                        </p>
+                                    </div>
+                                    <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-700/50">
+                                        <Lock className="w-5 h-5 text-emerald-400 mb-2" />
+                                        <h4 className="text-xs font-bold text-white mb-1 uppercase tracking-wider">Integrity</h4>
+                                        <p className="text-xs text-slate-400">
+                                            Any tampering with the data is immediately detectable
+                                        </p>
+                                    </div>
+                                    <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-700/50">
+                                        <Fingerprint className="w-5 h-5 text-emerald-400 mb-2" />
+                                        <h4 className="text-xs font-bold text-white mb-1 uppercase tracking-wider">Verifiable</h4>
+                                        <p className="text-xs text-slate-400">
+                                            Anyone can independently verify the signature
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <p className="text-sm text-slate-400 leading-relaxed">
                                 This report was synthesized from parallel inferences across independent AI providers including Venice,
-                                AIsa, and OpenRouter. The resulting consensus was cryptographically signed via EigenCompute (TEE)
-                                to ensure non-repudiation and bias suppression.
+                                AIsa, and OpenRouter. The resulting consensus was cryptographically attested using a Trusted Execution
+                                Environment (TEE) to ensure non-repudiation, verifiable provenance, and bias suppression.
                             </p>
-                            <div className="pt-4 border-t border-white/5 flex flex-wrap gap-8">
+
+                            <div className="pt-4 border-t border-slate-700/50 grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Generated At</p>
-                                    <p className="text-sm text-slate-200 font-mono">{new Date(data.summary?.generatedAt || '').toUTCString()}</p>
+                                    <p className="text-xs text-slate-200 font-mono">{new Date(data.summary?.generatedAt || '').toUTCString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Attestation</p>
+                                    <p className="text-xs text-emerald-400 font-mono">{data.summary?.attestationData?.attestation_id?.slice(0, 16) || 'n/a'}</p>
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Oracle Version</p>
-                                    <p className="text-sm text-slate-200 font-mono">Institutional-v2.1</p>
+                                    <p className="text-xs text-slate-200 font-mono">Institutional-v2.1</p>
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Network</p>
-                                    <p className="text-sm text-slate-200">Monad Agentic Layer</p>
+                                    <p className="text-xs text-slate-200">Monad Agentic Layer</p>
                                 </div>
                             </div>
                         </div>

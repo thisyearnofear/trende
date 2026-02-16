@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp, Check } from 'lucide-react';
+import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp, Check, Copy } from 'lucide-react';
 import { TrendSummary as TrendSummaryType } from '@/lib/types';
 import { useToast } from '@/components/Toast';
+import { AttestationBadge, VerificationStatus } from '@/components/AttestationBadge';
 
 interface ForgeViewerProps {
     summary: TrendSummaryType;
@@ -54,10 +55,13 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const { showToast } = useToast();
 
     const [verifyStatus, setVerifyStatus] = useState<string>('');
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [verified, setVerified] = useState<boolean | null>(null);
     const [showVerificationDetails, setShowVerificationDetails] = useState(false);
     const [showAgentManifest, setShowAgentManifest] = useState(false);
     const [manifestData, setManifestData] = useState<AgentManifest | null>(null);
     const [copiedManifest, setCopiedManifest] = useState(false);
+    const [copiedSignature, setCopiedSignature] = useState(false);
 
     if (!summary.memePageData) {
         return (
@@ -97,6 +101,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const verifyAttestation = async () => {
         if (!attestation) {
             setVerifyStatus('Missing attestation payload.');
+            setVerified(false);
             return;
         }
 
@@ -110,7 +115,8 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
             };
 
         try {
-            setVerifyStatus('Verifying...');
+            setIsVerifying(true);
+            setVerifyStatus('Verifying cryptographic signature...');
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
             const response = await fetch(`${baseUrl}/api/attest/verify`, {
                 method: 'POST',
@@ -119,14 +125,19 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
             });
 
             if (!response.ok) {
-                setVerifyStatus(`Verification failed (${response.status}).`);
+                setVerifyStatus(`Verification failed (HTTP ${response.status}).`);
+                setVerified(false);
                 return;
             }
 
             const result = (await response.json()) as { verified?: boolean };
-            setVerifyStatus(result.verified ? 'Attestation verified.' : 'Attestation mismatch.');
-        } catch {
+            setVerified(result.verified || false);
+            setVerifyStatus(result.verified ? 'Signature verified successfully!' : 'Signature verification failed.');
+        } catch (error) {
             setVerifyStatus('Verification request failed.');
+            setVerified(false);
+        } finally {
+            setIsVerifying(false);
         }
     };
 
@@ -284,16 +295,86 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                 <div className="flex items-center gap-2 text-slate-400 mb-2 ml-1">
                                     <ShieldCheck className="w-4 h-4" />
                                     <span className="text-xs font-bold uppercase tracking-widest">
-                                        Multi-Model Consensus
+                                        Cryptographic Attestation
                                     </span>
                                 </div>
-                                <div className="p-5 rounded-2xl bg-slate-800/40 border-2 border-emerald-500/20">
+
+                                {/* Prominent Attestation Card */}
+                                <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-2 border-emerald-500/30 shadow-lg">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <AttestationBadge attestation={attestation} size="lg" showDetails />
+                                        <button
+                                            onClick={() => {
+                                                if (attestation?.signature) {
+                                                    navigator.clipboard.writeText(attestation.signature);
+                                                    setCopiedSignature(true);
+                                                    showToast('Signature copied to clipboard', 'success');
+                                                    setTimeout(() => setCopiedSignature(false), 2000);
+                                                }
+                                            }}
+                                            className="p-2 rounded-lg hover:bg-emerald-500/10 transition-colors"
+                                            title="Copy signature"
+                                        >
+                                            {copiedSignature ? (
+                                                <Check className="w-4 h-4 text-emerald-400" />
+                                            ) : (
+                                                <Copy className="w-4 h-4 text-slate-400" />
+                                            )}
+                                        </button>
+                                    </div>
+
                                     <p className="text-sm text-slate-300 leading-relaxed italic mb-4">
                                         &quot;{summary.overview || 'No consensus overview provided.'}&quot;
                                     </p>
 
+                                    {/* Attestation Details Grid */}
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                        <div className="p-3 rounded-lg bg-slate-900/50 border border-slate-700/50">
+                                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
+                                                Attestation ID
+                                            </p>
+                                            <p className="text-xs text-emerald-400 font-mono break-all">
+                                                {attestation?.attestation_id || 'n/a'}
+                                            </p>
+                                        </div>
+                                        <div className="p-3 rounded-lg bg-slate-900/50 border border-slate-700/50">
+                                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
+                                                Method
+                                            </p>
+                                            <p className="text-xs text-slate-300 font-mono">
+                                                {attestation?.method || 'n/a'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Signer Address */}
+                                    <div className="p-3 rounded-lg bg-slate-900/50 border border-emerald-500/20 mb-4">
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
+                                            TEE Signer Address
+                                        </p>
+                                        <a
+                                            href="https://etherscan.io/address/0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-emerald-400 hover:text-emerald-300 font-mono flex items-center gap-2 transition-colors"
+                                        >
+                                            0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+                                            <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                    </div>
+
+                                    {/* Signature Preview */}
+                                    <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-700/50">
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
+                                            Cryptographic Signature
+                                        </p>
+                                        <p className="text-xs text-slate-400 font-mono break-all">
+                                            {attestation?.signature ? `${attestation.signature.slice(0, 66)}...` : 'n/a'}
+                                        </p>
+                                    </div>
+
                                     {consensus?.pillars && consensus.pillars.length > 0 && (
-                                        <div className="mb-4">
+                                        <div className="mt-4 pt-4 border-t border-slate-700/50">
                                             <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mb-2">Consensus Pillars</p>
                                             <ul className="space-y-1">
                                                 {consensus.pillars.slice(0, 3).map((pillar: string, idx: number) => (
@@ -306,7 +387,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                     )}
 
                                     {consensus?.anomalies && consensus.anomalies.length > 0 && (
-                                        <div className="mb-4">
+                                        <div className="mt-3">
                                             <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-2">Fringe Anomalies</p>
                                             <ul className="space-y-1">
                                                 {consensus.anomalies.slice(0, 2).map((anomaly: string, idx: number) => (
@@ -318,22 +399,8 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                         </div>
                                     )}
 
-                                    <div className="flex flex-col gap-1 text-xs text-slate-500">
-                                        <span className="flex items-center gap-1">
-                                            <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                                            Attestation: {attestation?.attestation_id || 'n/a'}
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                            <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                                            Method: {attestation?.method || 'n/a'}
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                            <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                                            Providers: {providers.length > 0 ? providers.join(', ') : 'n/a'}
-                                        </span>
-                                    </div>
                                     {consensusWarnings.length > 0 && (
-                                        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                                        <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
                                             <p className="text-[10px] text-amber-300 font-bold uppercase tracking-widest mb-1">
                                                 Runtime Warnings
                                             </p>
@@ -346,23 +413,25 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                             </ul>
                                         </div>
                                     )}
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={verifyAttestation}
-                                            className="px-3 py-1.5 rounded-lg border border-emerald-500/40 text-xs text-emerald-200 hover:bg-emerald-500/15"
-                                        >
-                                            Verify attestation
-                                        </button>
+
+                                    {/* Verification Actions */}
+                                    <div className="mt-4 pt-4 border-t border-slate-700/50">
+                                        <VerificationStatus
+                                            isVerifying={isVerifying}
+                                            verified={verified}
+                                            onVerify={verifyAttestation}
+                                        />
+                                        {verifyStatus && (
+                                            <p className="text-xs text-slate-400 mt-2">{verifyStatus}</p>
+                                        )}
                                         <button
                                             type="button"
                                             onClick={() => setShowVerificationDetails(true)}
-                                            className="px-3 py-1.5 rounded-lg border border-slate-600 text-xs text-slate-200 hover:bg-slate-700/60"
+                                            className="mt-2 text-xs text-slate-400 hover:text-slate-300 underline"
                                         >
-                                            View verification details
+                                            View full technical details →
                                         </button>
                                     </div>
-                                    {verifyStatus && <p className="text-xs text-slate-400 mt-2">{verifyStatus}</p>}
                                 </div>
                                 {providerOutputs.length > 0 && (
                                     <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
@@ -488,8 +557,14 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                             <p className="text-slate-300 break-all">
                                 <span className="text-slate-500">Input hash:</span> {attestation?.input_hash || 'n/a'}
                             </p>
-                            <p className="text-slate-300 break-all">
+                            <p className="text-slate-300 break-all font-mono text-xs">
                                 <span className="text-slate-500">Signature:</span> {attestation?.signature || 'n/a'}
+                            </p>
+                            <p className="text-slate-300">
+                                <span className="text-slate-500">Key ID:</span> {attestation?.key_id || 'n/a'}
+                            </p>
+                            <p className="text-slate-300">
+                                <span className="text-slate-500">Generated at:</span> {attestation?.generated_at ? new Date(attestation.generated_at).toUTCString() : 'n/a'}
                             </p>
                             <p className="text-slate-300">
                                 <span className="text-slate-500">Providers in consensus:</span>{' '}

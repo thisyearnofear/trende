@@ -23,30 +23,30 @@
   /* ----------------------------------------
      DARK THEME (Default)
      ---------------------------------------- */
-  
+
   /* Backgrounds */
   --bg-primary: #0a0a0a;
   --bg-secondary: #141414;
   --bg-tertiary: #1a1a1a;
-  
+
   /* Text */
   --text-primary: #ffffff;
   --text-secondary: #a3a3a3;
   --text-muted: #525252;
-  
+
   /* Borders & Shadows */
   --border-color: #ffffff;
   --border-width: 2px;
   --shadow-color: #ffffff;
   --shadow-offset: 4px;
-  
+
   /* Accents - Neon for dark mode */
   --accent-cyan: #00ffff;
   --accent-emerald: #00ff88;
   --accent-amber: #ffaa00;
   --accent-rose: #ff4444;
   --accent-violet: #aa66ff;
-  
+
   /* Status */
   --status-success: #00ff88;
   --status-warning: #ffaa00;
@@ -62,25 +62,25 @@
   --bg-primary: #fafafa;
   --bg-secondary: #ffffff;
   --bg-tertiary: #f0f0f0;
-  
+
   /* Text */
   --text-primary: #000000;
   --text-secondary: #525252;
   --text-muted: #a3a3a3;
-  
+
   /* Borders & Shadows */
   --border-color: #000000;
   --border-width: 2px;
   --shadow-color: #000000;
   --shadow-offset: 4px;
-  
+
   /* Accents - Darker for light mode */
   --accent-cyan: #0066cc;
   --accent-emerald: #00aa44;
   --accent-amber: #cc7700;
   --accent-rose: #cc0000;
   --accent-violet: #6600cc;
-  
+
   /* Status */
   --status-success: #00aa44;
   --status-warning: #cc7700;
@@ -134,28 +134,73 @@ body {
    ANIMATIONS
    ============================================ */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes slideInRight {
-  from { opacity: 0; transform: translateX(22px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .animate-fade-up {
@@ -174,10 +219,15 @@ body {
   animation: fadeIn 240ms ease-out both;
 }
 
+.animate-fade-in {
+  animation: fadeInUp 300ms ease-out both;
+}
+
 /* ============================================
    REDUCED MOTION
    ============================================ */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
