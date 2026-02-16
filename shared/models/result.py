@@ -1,6 +1,6 @@
 """Result models for trend analysis outputs."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID, uuid4
 

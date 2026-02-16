@@ -33,14 +33,14 @@ class TikTokConnector(AbstractPlatformConnector):
             items = []
             for res in results:
                 items.append(TrendItem(
-                    id=res.get('url', f"tiktok_{datetime.now(timezone.utc).timestamp()}"),
+                    id=res.get('url', f"tiktok_{datetime.datetime.now(datetime.timezone.utc).timestamp()}"),
                     platform=self.platform,
                     title=res.get('title', 'TikTok Trend'),
                     content=res.get('snippet', '') or res.get('content', ''),
                     author="TikTok Creator",
                     author_handle="tiktok",
                     url=res.get('url', ''),
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.datetime.now(datetime.timezone.utc),
                     metrics={}, 
                     raw_data=res
                 ))
