@@ -459,6 +459,11 @@ async def run_agent_workflow(
                 tasks[task_id]["logs"] = []
             tasks[task_id]["logs"].append(f"Completed step: {node_name}")
 
+            # If node was architect, it's the last step
+            if node_name == "architect":
+                tasks[task_id]["status"] = QueryStatus.COMPLETED
+                tasks[task_id]["logs"].append("🏆 MISSION ACCOMPLISHED: Final results ready.")
+
             # Persist update to DB
             repo.save_task(task_id, tasks[task_id])
 
@@ -756,8 +761,10 @@ async def stream_status(task_id: str) -> StreamingResponse:
             }
             yield f"data: {json.dumps(payload)}\n\n"
 
+            # Check for terminal state
             if state["status"] in [QueryStatus.COMPLETED, QueryStatus.FAILED]:
-                result_payload = {
+                # Send one final status update to ensure frontend knows it's finished
+                final_payload = {
                     "type": "result" if state["status"] == QueryStatus.COMPLETED else "error",
                     "message": "Analysis completed"
                     if state["status"] == QueryStatus.COMPLETED
@@ -765,7 +772,7 @@ async def stream_status(task_id: str) -> StreamingResponse:
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "data": {"task_id": task_id, "status": state["status"]},
                 }
-                yield f"data: {json.dumps(result_payload)}\n\n"
+                yield f"data: {json.dumps(final_payload)}\n\n"
                 break
 
             await asyncio.sleep(0.5)

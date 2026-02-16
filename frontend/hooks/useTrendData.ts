@@ -95,7 +95,11 @@ export function useTrendData(
     status === 'analyzing' ||
     status === 'processing';
   
-  const needsSync = isProcessing || (status === 'completed' && !data?.results?.length);
+  // Terminal states
+  const isFinished = status === 'completed' || status === 'failed';
+  
+  // We need sync if we are processing OR if we just finished but haven't received results yet
+  const needsSync = !isFinished || (status === 'completed' && (!data || !data.results || data.results.length === 0));
 
   // SSE for real-time updates
   useEffect(() => {
