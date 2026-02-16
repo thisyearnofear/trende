@@ -74,7 +74,7 @@ class AIsaService:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.base_url}/tools/twitter/search",
+                    f"{self.base_url}/twitter/search",
                     json={"query": query, "limit": limit},
                     headers=self.headers,
                     timeout=30.0
@@ -93,7 +93,7 @@ class AIsaService:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.base_url}/tools/web/search",
+                    f"{self.base_url}/web/search",
                     json={"query": query, "limit": limit},
                     headers=self.headers,
                     timeout=30.0

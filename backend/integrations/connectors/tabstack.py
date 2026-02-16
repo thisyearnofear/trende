@@ -1,7 +1,7 @@
 import os
 import httpx
 import json
-import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from backend.integrations.base import AbstractPlatformConnector
 from shared.models import TrendItem, PlatformType
@@ -60,14 +60,14 @@ class TabstackConnector(AbstractPlatformConnector):
                     # Convert the research summary into a lead TrendItem
                     items = [
                         TrendItem(
-                            id=f"tabstack_{datetime.datetime.now(datetime.timezone.utc).timestamp()}",
+                            id=f"tabstack_{datetime.now(timezone.utc).timestamp()}",
                             platform=self.platform,
                             title=f"Deep Research for: {query}",
                             content=final_answer,
                             author="Tabstack AI",
                             author_handle="tabstack",
                             url=sources[0].get('url', '') if sources else "",
-                            timestamp=datetime.datetime.now(datetime.timezone.utc),
+                            timestamp=datetime.now(timezone.utc),
                             metrics={"depth": 10},
                             raw_data={"sources": sources}
                         )
@@ -82,7 +82,7 @@ class TabstackConnector(AbstractPlatformConnector):
                             content=src.get('snippet', ''),
                             author="Web",
                             url=src.get('url', ''),
-                            timestamp=datetime.datetime.now(datetime.timezone.utc),
+                            timestamp=datetime.now(timezone.utc),
                             metrics={},
                             raw_data=src
                         ))

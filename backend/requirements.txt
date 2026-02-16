@@ -15,6 +15,7 @@ langchain-openai>=0.0.2
 langchain-anthropic>=0.1.0
 
 # Composio
+composio-core>=0.1.0
 composio-openai>=0.1.0
 composio-langchain>=0.1.0
 
