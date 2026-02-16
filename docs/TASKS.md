@@ -22,8 +22,8 @@
 ## ⚙️ Infrastructure
 - [x] **ecloud CLI Migration**: Installed `@layr-labs/ecloud-cli` and locked the key standard.
 - [x] **Baseline Dry Run**: EigenCloud billing active (✓). Successfully executed multi-model stress tests with triangulation logic.
-- [ ] **Staging Switch**: Point `ATTESTATION_PROVIDER` to `eigencompute` in a TEE environment.
-- [ ] **Production Hardening**: Use verifiable builds, pinned digests, and restricted log visibility.
+- [x] **Staging Switch**: Attestation provider set to `eigencompute`, endpoint live at https://attest.famile.xyz.
+- [x] **Production Hardening**: `baseline-attested` runs in Docker on Hetzner with nginx reverse proxy + SSL (Let's Encrypt auto-renew).
 - [ ] **CI Integration**: Add checks to fail deploy if attestation verification fails.
 - [ ] **Sovereign Persona**: Define the "Trende Bot" personality for social posts.
 

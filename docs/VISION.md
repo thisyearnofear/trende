@@ -29,3 +29,11 @@ To win at Moltiverse, Trende is evolving from a **Research Tool** to a **Soverei
 - **Autonomous Wallets**: Every analysis run can be a "propose-to-buy" signal for the agent's treasury.
 - **Social Influence**: The agent builds its own reputation by posting "Refined Alpha" to Farcaster.
 - **Agent API**: Other agents hire Trende via X402 payments to inform their own trading/gaming decisions.
+
+## 🏆 Hackathon Context
+
+### Moltiverse (Agent Track)
+Trende is a sovereign agent on Monad that other agents can **hire** for verifiable intelligence — fitting the Moltiverse thesis that agents need money rails and the ability to transact at scale. It supports agent-to-agent transactions via X402 (EIP-3009) and provides attested research manifests that launch agents (e.g., nad.fun bots) can consume directly.
+
+### EigenCloud Open Innovation Challenge
+Trende demonstrates a **multiplayer agent** that serves many users and other agents with verifiable, privacy-preserving intelligence. The attestation pipeline runs in a containerized environment with cryptographic signing, proving that the agent ran specific code on specific data — the foundation of real agent identity as defined by EigenCloud: code + data + upgrades + state.

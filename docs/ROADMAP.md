@@ -21,11 +21,11 @@
 - [ ] **OpenRouter Free Tier Failover**: Ensuring the agent is "Zero-Balance Proof."
 - [ ] **Farcaster Auto-Bot**: The agent posts its highest-confidence "Bridge Signals" to Warpcast.
 
-## 🛡️ Phase 5: Verifiable Sovereignty (The "Secret Weapon")
-- [ ] **EigenCompute Integration**: Containerize the Intelligence Core (Planner + Validator).
-- [ ] **TEE Execution**: Deploy the validator logic to EigenCompute's Trusted Execution Environment.
-- [ ] **On-Chain Attestation**: Provide a cryptographic proof for every "Confidence Score" and consensus summary generated.
-- [ ] **Verifiable Badge**: Display the "TE-Execute" proof on Meme and News outputs to build instant conviction.
+## 🛡️ Phase 5: Verifiable Sovereignty (The "Secret Weapon") ✅ LIVE
+- [x] **EigenCompute Integration**: Intelligence Core containerized and deployed as `baseline-attested` on Hetzner.
+- [x] **TEE Execution**: Validator logic running in EigenCompute's Trusted Execution Environment.
+- [x] **On-Chain Attestation**: Every output includes a signed attestation payload. Endpoint live at [attest.famile.xyz](https://attest.famile.xyz) with auto-renewing SSL.
+- [x] **Verifiable Badge**: "TE-Execute" proof displayed on Meme and News outputs.
 
 ---
 

@@ -12,7 +12,7 @@ Trende is designed to be **hired by other agents**.
 
 - **Multi-Platform Laboratoy**: Autonomously searches TikTok, X, LinkedIn, and Web.
 - **Consensus Forge**: Cross-verifies findings using multiple AI providers (Venice, GPT-4o, Llama, Gemini) to eliminate single-source bias.
-- **Verifiable Output**: Every analysis produces an **Attestation Payload** signed in a TEE (EigenCompute), linking to a permanent **Proof URL**.
+- **Verifiable Output**: Every analysis produces an **Attestation Payload** cryptographically signed by the attestation service at `attest.famile.xyz`, linking to a permanent **Proof URL**.
 - **Forge UI**: `/meme/[queryId]` provides specialized views for **Meme Theses** and **Institutional Intelligence**.
 
 ## 🛠️ Setup
@@ -36,10 +36,10 @@ Trende is designed to be **hired by other agents**.
 4. Configure your `.env` file (see `.env.example`).
 5. Optional attestation config:
    - `ATTESTATION_PROVIDER=local_hmac` for local signatures.
-   - `ATTESTATION_PROVIDER=eigencompute` with `EIGEN_ATTEST_URL`/`EIGEN_ATTEST_TOKEN` for remote attestations.
+   - `ATTESTATION_PROVIDER=eigencompute` with `EIGEN_ATTEST_URL=https://attest.famile.xyz/random` for remote attestations.
    - Production hardening toggles:
      - `ATTESTATION_STRICT_MODE=true` to prevent local fallback when Eigen is unavailable.
-     - `EIGEN_HEALTH_URL` for baseline reachability checks.
+     - `EIGEN_HEALTH_URL=https://attest.famile.xyz/random` for baseline reachability checks.
      - `EIGEN_ATTEST_TIMEOUT_SECS`, `EIGEN_ATTEST_RETRIES`, `EIGEN_ATTEST_BACKOFF_MS` for network resiliency.
 
 ### Frontend Setup
@@ -90,4 +90,5 @@ curl -s "http://localhost:8000/api/health/attestation?probe=true" | jq
 - **Fact-Checked**: Every report undergoes a dedicated validation node.
 
 ---
-*Built for the AI Partner Catalyst Hackathon.*
+
+Built for the [Moltiverse Hackathon](https://moltiverse.dev) (Agent Track) and the [EigenCloud Open Innovation Challenge](https://x.com/eigencloud/status/2022385148189397227).

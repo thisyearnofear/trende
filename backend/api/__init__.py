@@ -1,5 +1,5 @@
 """Backend API module."""
 
-from .main import create_app
+from .main import app
 
-__all__ = ["create_app"]
+__all__ = ["app"]
