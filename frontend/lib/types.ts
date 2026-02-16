@@ -150,3 +150,20 @@ export interface StreamEvent {
   data?: Record<string, unknown>;
   timestamp: string;
 }
+
+export interface CommonsResearchItem {
+  id: string;
+  topic: string;
+  sponsor: string | null;
+  platforms: string[];
+  hasAttestation: boolean;
+  createdAt: string;
+}
+
+export interface CommonsResponse {
+  research: CommonsResearchItem[];
+  total: number;
+  filter: {
+    sponsor: string | null;
+  };
+}

@@ -10,7 +10,8 @@ import {
   QueryResponse, 
   ResultsResponse, 
   StreamEvent,
-  QueryStatus 
+  QueryStatus,
+  CommonsResponse,
 } from '@/lib/types';
 
 interface UseTrendDataOptions {
@@ -199,5 +200,28 @@ export function usePlatforms() {
     platforms: data?.platforms ?? [],
     error,
     isLoading,
+  };
+}
+
+/**
+ * Hook for public research commons feed
+ */
+export function useCommons(sponsor?: string) {
+  const key = sponsor ? ['/api/commons', sponsor] : '/api/commons';
+  const { data, error, isLoading, mutate } = useSWR<CommonsResponse>(
+    key,
+    () => api.getCommons(sponsor),
+    {
+      refreshInterval: 60000,
+      revalidateOnFocus: false,
+    }
+  );
+
+  return {
+    research: data?.research ?? [],
+    total: data?.total ?? 0,
+    error,
+    isLoading,
+    refresh: mutate,
   };
 }

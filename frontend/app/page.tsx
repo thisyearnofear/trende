@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { useTrendData, useTrendHistory } from "@/hooks/useTrendData";
+import { useTrendData, useTrendHistory, useCommons } from "@/hooks/useTrendData";
 import { QueryInput } from "@/components/QueryInput";
 import { PlatformTabs } from "@/components/PlatformTabs";
 import { TrendSummary } from "@/components/TrendSummary";
@@ -59,6 +59,9 @@ export default function Home() {
   const [showForgeInline, setShowForgeInline] = useState(false);
   const [focusMode, setFocusMode] = useState<"compact" | "full">("compact");
   const [showFullOverview, setShowFullOverview] = useState(false);
+  const [showCommons, setShowCommons] = useState(false);
+  const [commonsSearch, setCommonsSearch] = useState("");
+  const [commonsVisibleCount, setCommonsVisibleCount] = useState(6);
   const { showToast } = useToast();
 
   const {
@@ -71,6 +74,7 @@ export default function Home() {
     refresh,
   } = useTrendData(queryId);
   const { queries: history, isLoading: historyLoading } = useTrendHistory();
+  const { research: commonsResearch, isLoading: commonsLoading } = useCommons();
 
   const handleSubmit = useCallback(
     async (request: QueryRequest) => {
@@ -108,6 +112,18 @@ export default function Home() {
       window.localStorage.removeItem(LAST_QUERY_STORAGE_KEY);
     }
   };
+
+  const handleLoadCommonsItem = useCallback(
+    (id: string) => {
+      setQueryId(id);
+      setShowForgeInline(false);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(LAST_QUERY_STORAGE_KEY, id);
+      }
+      showToast("Loaded commons run into current workspace.", "success");
+    },
+    [showToast],
+  );
 
   const stats = useMemo(() => {
     const platforms = new Set(
@@ -272,6 +288,21 @@ export default function Home() {
   const activeEta = STATUS_ETAS[status || "pending"] || STATUS_ETAS.pending;
   const startedAt = data?.query?.createdAt ? new Date(data.query.createdAt).getTime() : null;
   const activeQueryId = data?.query?.id || queryId;
+  const filteredCommons = useMemo(() => {
+    const term = commonsSearch.trim().toLowerCase();
+    if (!term) return commonsResearch;
+    return commonsResearch.filter((item) => {
+      const topicMatch = item.topic.toLowerCase().includes(term);
+      const platformMatch = item.platforms.some((platform) =>
+        platform.toLowerCase().includes(term),
+      );
+      return topicMatch || platformMatch;
+    });
+  }, [commonsResearch, commonsSearch]);
+  const visibleCommons = useMemo(
+    () => filteredCommons.slice(0, commonsVisibleCount),
+    [filteredCommons, commonsVisibleCount],
+  );
 
   useEffect(() => {
     if (!isProcessing || !startedAt) return;
@@ -500,6 +531,142 @@ export default function Home() {
           isLoading={isProcessing}
           disabled={isProcessing}
         />
+
+        {/* Commons Snapshot */}
+        <Card accent="emerald" className="p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <ListTree className="w-4 h-4 text-[var(--accent-emerald)]" />
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-wider">
+                  Community Commons
+                </h3>
+                <p className="text-xs font-mono text-[var(--text-muted)]">
+                  Public completed research runs from the network
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-[var(--text-muted)]">
+                {commonsLoading ? "Loading..." : `${commonsResearch.length} runs`}
+              </span>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowCommons((prev) => !prev)}
+              >
+                {showCommons ? "Hide" : "Explore"}
+              </Button>
+              <Link href="/commons">
+                <Button variant="ghost" size="sm">
+                  Full Page
+                  <ExternalLink className="w-3.5 h-3.5 ml-1 inline-block" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {showCommons && (
+            <div className="mt-4 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  value={commonsSearch}
+                  onChange={(event) => {
+                    setCommonsSearch(event.target.value);
+                    setCommonsVisibleCount(6);
+                  }}
+                  placeholder="Filter by topic or platform..."
+                  className="w-full px-3 py-2 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] font-mono text-sm focus:outline-none focus:border-[var(--accent-emerald)]"
+                />
+                <div className="text-xs font-mono text-[var(--text-muted)] border-2 border-[var(--border-color)] px-3 py-2 bg-[var(--bg-primary)]">
+                  Showing {visibleCommons.length} / {filteredCommons.length}
+                </div>
+              </div>
+
+              {commonsLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {[1, 2, 3].map((index) => (
+                    <div
+                      key={index}
+                      className="h-36 border-2 border-[var(--border-color)] bg-[var(--bg-primary)] animate-pulse"
+                    />
+                  ))}
+                </div>
+              ) : filteredCommons.length === 0 ? (
+                <div className="p-4 border-2 border-dashed border-[var(--border-color)] text-sm font-mono text-[var(--text-muted)]">
+                  No commons runs match this filter.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {visibleCommons.map((item) => (
+                      <div
+                        key={item.id}
+                        className="border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-3 space-y-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-mono text-sm line-clamp-3">{item.topic}</p>
+                          {item.hasAttestation && (
+                            <span className="shrink-0 text-[10px] font-black uppercase px-2 py-0.5 bg-[var(--accent-emerald)] text-[var(--bg-primary)]">
+                              Attested
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {item.platforms.slice(0, 4).map((platform) => (
+                            <span
+                              key={platform}
+                              className="text-[10px] font-mono px-1.5 py-0.5 bg-[var(--bg-secondary)] border border-[var(--border-color)] uppercase"
+                            >
+                              {platform}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)]">
+                          <span>
+                            {item.sponsor
+                              ? `${item.sponsor.slice(0, 6)}...${item.sponsor.slice(-4)}`
+                              : "Anonymous"}
+                          </span>
+                          <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleLoadCommonsItem(item.id)}
+                          >
+                            Load Here
+                          </Button>
+                          <Link href={`/proof/${item.id}`} className="flex-1">
+                            <Button variant="ghost" size="sm" className="w-full">
+                              Open Proof
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {filteredCommons.length > visibleCommons.length && (
+                    <div className="flex justify-center">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() =>
+                          setCommonsVisibleCount((prev) => Math.min(prev + 6, filteredCommons.length))
+                        }
+                      >
+                        Load More
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
 
         {/* Processing Status */}
         {(isProcessing || status === "processing") && (

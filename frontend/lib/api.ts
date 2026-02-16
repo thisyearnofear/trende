@@ -6,7 +6,8 @@ import {
   QueryRequest, 
   QueryResponse, 
   ResultsResponse, 
-  StreamEvent
+  StreamEvent,
+  CommonsResponse,
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -146,6 +147,17 @@ export const api = {
   async getHistory(): Promise<{ queries: { id: string; idea: string; status: string; createdAt: string }[] }> {
     const response = await fetch(`${API_BASE}/api/trends/history`);
     return handleResponse<{ queries: { id: string; idea: string; status: string; createdAt: string }[] }>(response);
+  },
+
+  /**
+   * Get public research commons feed
+   */
+  async getCommons(sponsor?: string): Promise<CommonsResponse> {
+    const params = new URLSearchParams();
+    if (sponsor) params.set('sponsor', sponsor);
+    const query = params.toString();
+    const response = await fetch(`${API_BASE}/api/commons${query ? `?${query}` : ''}`);
+    return handleResponse<CommonsResponse>(response);
   },
 
   /**
