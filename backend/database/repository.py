@@ -1,48 +1,73 @@
 from datetime import datetime, timezone
 from typing import Any
 
+from shared.config import get_settings
+
+settings = get_settings()
+
 try:
     from sqlalchemy import JSON, Column, DateTime, Float, String, create_engine
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.orm import sessionmaker
 
-    _has_sql = True
+    HAS_SQL = True
+    Base = declarative_base()
 except ImportError:
-    _has_sql = False
+    HAS_SQL = False
+    Base = object  # type: ignore
 
-HAS_SQL = _has_sql
+    # Mock components for environment without sqlalchemy
+    def Column(*args: Any, **kwargs: Any) -> Any:
+        return None  # type: ignore
 
-from shared.config import get_settings
+    def String(*args: Any, **kwargs: Any) -> Any:
+        return None  # type: ignore
 
-settings = get_settings()
+    def JSON(*args: Any, **kwargs: Any) -> Any:
+        return None  # type: ignore
+
+    def DateTime(*args: Any, **kwargs: Any) -> Any:
+        return None  # type: ignore
+
+    def Float(*args: Any, **kwargs: Any) -> Any:
+        return None  # type: ignore
+
+    def create_engine(*args: Any, **kwargs: Any) -> Any:
+        return None  # type: ignore
+
+    def sessionmaker(*args: Any, **kwargs: Any) -> Any:
+        return None  # type: ignore
+
+
+class TaskModel(Base):  # type: ignore
+    __tablename__ = "tasks"
+    task_id = Column(String, primary_key=True)
+    topic = Column(String)
+    status = Column(String)
+    logs = Column(JSON)
+    result = Column(JSON)
+    platforms = Column(JSON)
+    models = Column(JSON, nullable=True)
+    sponsor_address = Column(String, nullable=True)  # Wallet that funded this research
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
 
 if HAS_SQL:
-    Base = declarative_base()
-
-    class TaskModel(Base):
-        __tablename__ = "tasks"
-        task_id = Column(String, primary_key=True)
-        topic = Column(String)
-        status = Column(String)
-        logs = Column(JSON)
-        result = Column(JSON)
-        platforms = Column(JSON)
-        models = Column(JSON, nullable=True)
-        sponsor_address = Column(String, nullable=True)  # Wallet that funded this research
-        created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-        updated_at = Column(
-            DateTime,
-            default=lambda: datetime.now(timezone.utc),
-            onupdate=lambda: datetime.now(timezone.utc),
-        )
-
     engine = create_engine(settings.database_url)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+else:
+    engine = None
+    SessionLocal = None
 
 
-def init_db():
-    if HAS_SQL:
-        Base.metadata.create_all(bind=engine)
+def init_db() -> None:
+    if HAS_SQL and hasattr(Base, "metadata"):
+        Base.metadata.create_all(bind=engine)  # type: ignore
 
 
 class Repository:

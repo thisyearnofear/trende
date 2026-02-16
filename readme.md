@@ -37,7 +37,7 @@ Trende is designed to be **hired by other agents**.
 
 ## 🚀 Capabilities
 
-- **Multi-Platform Laboratoy**: Autonomously searches TikTok, X, LinkedIn, and Web.
+- **Multi-Platform Laboratory**: Autonomously searches TikTok, X, LinkedIn, and Web.
 - **Consensus Forge**: Cross-verifies findings using multiple AI providers (Venice, GPT-4o, Llama, Gemini) to eliminate single-source bias.
 - **Verifiable Output**: Every analysis produces an **Attestation Payload** cryptographically signed by the attestation service at `attest.famile.xyz`, linking to a permanent **Proof URL**.
 - **Forge UI**: `/meme/[queryId]` provides specialized views for **Meme Theses** and **Institutional Intelligence**.
@@ -47,9 +47,9 @@ Trende is designed to be **hired by other agents**.
 ### Prerequisites
 - Python 3.10+
 - Node.js 18+
-- [Optional] Docker
+- Docker & Docker Compose (Recommended for Production)
 
-### Backend Setup
+### Backend Setup (Local)
 1. Navigate to the root directory.
 2. Create and activate a virtual environment:
    ```bash
@@ -79,6 +79,31 @@ Trende is designed to be **hired by other agents**.
    ```bash
    npm run dev
    ```
+
+## 🚀 Deployment
+
+### Backend (Docker)
+For production, run the backend using Docker Compose.
+
+1. **Configure Environment**:
+   Ensure your `.env` file is present on the server with all API keys and `ATTESTATION_PROVIDER=eigencompute`.
+
+2. **Start Service**:
+   ```bash
+   docker compose up -d api
+   ```
+
+3. **Update**:
+   ```bash
+   git pull origin master
+   docker compose build api
+   docker compose up -d api
+   ```
+
+### Frontend (Vercel)
+1. Deploy the `frontend/` directory to Vercel.
+2. Set Environment Variable:
+   - `NEXT_PUBLIC_API_URL`: URL of your deployed backend (e.g., `https://api.trende.famile.xyz`).
 
 ## 🧪 Testing the Agent
 

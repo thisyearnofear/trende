@@ -315,7 +315,7 @@ async def get_user_rate_limit(
     }
 
 
-@app.post("/api/trends/start")
+@app.post("/api/trends/start", response_model=None)
 async def start_analysis(
     request: QueryRequest,
     background_tasks: BackgroundTasks,
@@ -417,6 +417,18 @@ async def run_agent_workflow(
     # Run the graph
     async for output in workflow.astream(initial_state):  # type: ignore
         for node_name, state_update in output.items():
+            # Set explicit QueryStatus based on node name
+            if node_name == "planner":
+                tasks[task_id]["status"] = QueryStatus.PLANNING
+            elif node_name == "researcher":
+                tasks[task_id]["status"] = QueryStatus.RESEARCHING
+            elif node_name == "validator":
+                tasks[task_id]["status"] = QueryStatus.PROCESSING  # Use PROCESSING as a bridge
+            elif node_name == "analyzer":
+                tasks[task_id]["status"] = QueryStatus.ANALYZING
+            elif node_name == "architect":
+                tasks[task_id]["status"] = QueryStatus.PROCESSING  # Wrapping up
+
             # Update the global task state with the latest changes from the agent
             for key, value in state_update.items():
                 tasks[task_id][key] = value
@@ -444,7 +456,7 @@ async def run_agent_workflow(
             repo.save_task(task_id, tasks[task_id])
 
 
-@app.get("/api/trends/status/{task_id}")
+@app.get("/api/trends/status/{task_id}", response_model=None)
 async def get_status(task_id: str) -> dict[str, Any] | Response:
     task = tasks.get(task_id) or repo.get_task(task_id)
     if not task:
@@ -452,7 +464,7 @@ async def get_status(task_id: str) -> dict[str, Any] | Response:
     return task
 
 
-@app.get("/api/trends/{task_id}")
+@app.get("/api/trends/{task_id}", response_model=None)
 async def get_task_results(task_id: str) -> dict[str, Any] | Response:
     """Returns the full task results in the format expected by the frontend."""
     task = tasks.get(task_id) or repo.get_task(task_id)
@@ -561,7 +573,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
     }
 
 
-@app.get("/api/agent/alpha/{task_id}")
+@app.get("/api/agent/alpha/{task_id}", response_model=None)
 async def get_agent_alpha(
     task_id: str, payment: X402Payment | None = None
 ) -> dict[str, Any] | Response:
@@ -681,9 +693,18 @@ async def stream_status(task_id: str) -> StreamingResponse:
             elif state["status"] == QueryStatus.PLANNING:
                 progress = 25
             elif state["status"] == QueryStatus.RESEARCHING:
-                progress = 50
+                progress = 45
+            elif state["status"] == QueryStatus.PROCESSING:
+                # This status is used by Validator and Architect nodes
+                last_log = state.get("logs", [])[-1] if state.get("logs") else ""
+                if "Validat" in last_log:
+                    progress = 65
+                elif "Architect" in last_log:
+                    progress = 95
+                else:
+                    progress = 75
             elif state["status"] == QueryStatus.ANALYZING:
-                progress = 90
+                progress = 85
             elif state["status"] == QueryStatus.COMPLETED:
                 progress = 100
 

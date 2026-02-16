@@ -37,9 +37,10 @@ const personaMessages = {
   processing: [
     "🕵️ Scouting the landscape across multiple platforms...",
     "🔍 Harvesting signals from X, LinkedIn, and news sources...",
-    "🧠 Cross-referencing claims for convergence...",
+    "🛡️ Hardening results in TEE...",
     "⚖️ Weighting source credibility...",
     "🔬 Running multi-model consensus inside TEE...",
+    "🧠 Performing cross-model verification...",
     "📝 Synthesizing findings into actionable intelligence...",
     "🔒 Generating cryptographic attestation...",
     "✓ Sealing results with EigenCompute...",
