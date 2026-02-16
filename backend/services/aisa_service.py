@@ -68,41 +68,11 @@ class AIsaService:
         ]
 
     async def twitter_search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        if not self.api_key:
-            return []
+        # FEATURE COMING SOON - Returning empty to avoid 404
+        return []
             
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.base_url}/twitter/search",
-                    json={"query": query, "limit": limit},
-                    headers=self.headers,
-                    timeout=30.0
-                )
-                if response.status_code == 200:
-                    return response.json().get("results", [])
-                return []
-        except Exception as e:
-            print(f"AIsa Twitter search failed: {e}")
-            return []
-
     async def web_search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        if not self.api_key:
-            return []
-            
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.base_url}/web/search",
-                    json={"query": query, "limit": limit},
-                    headers=self.headers,
-                    timeout=30.0
-                )
-                if response.status_code == 200:
-                    return response.json().get("results", [])
-                return []
-        except Exception as e:
-            print(f"AIsa Web search failed: {e}")
-            return []
+        # FEATURE COMING SOON - Returning empty to avoid 404
+        return []
 
 aisa_service = AIsaService()

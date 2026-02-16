@@ -16,7 +16,7 @@ class TabstackConnector(AbstractPlatformConnector):
     def __init__(self):
         self.settings = get_settings()
         self.api_key = self.settings.tabstack_api_key
-        self.base_url = "https://api.tabstack.ai"
+        self.base_url = "https://api.tabstack.ai/v1"
 
     async def search(self, query: str, limit: int = 10) -> List[TrendItem]:
         """Performs a deep research search using Tabstack's Research endpoint."""
