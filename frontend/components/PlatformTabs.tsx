@@ -52,6 +52,20 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
     });
   }, [activeTab, platformData]);
 
+  const stats = useMemo(() => {
+    const items = activeItems;
+    if (items.length === 0) return null;
+    
+    const avgRelevance = items.reduce((acc, item) => acc + (item.relevanceScore || 0), 0) / items.length;
+    const totalEngagement = items.reduce((acc, item) => 
+      acc + (item.metrics.likes || 0) + (item.metrics.shares || 0), 0);
+      
+    return {
+      avgRelevance: Math.round(avgRelevance * 100),
+      totalEngagement,
+    };
+  }, [activeItems]);
+
   const tabs = [
     { id: 'all', label: 'All Sources', count: platformData.totalCount },
     ...Object.entries(platformData.data).map(([platform, items]) => ({
@@ -133,10 +147,16 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
       <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-3 sm:p-4">
         <div className="flex items-center justify-between gap-3 mb-3">
           <h3 className="text-sm font-medium text-slate-200">Signal Feed</h3>
-          <p className="text-xs text-slate-500">Sorted by relevance</p>
+          {stats && (
+            <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider font-bold">
+              <span className="text-cyan-400">{stats.avgRelevance}% Relevance</span>
+              <span className="text-slate-600 hidden sm:inline">•</span>
+              <span className="text-emerald-400 hidden sm:inline">{stats.totalEngagement.toLocaleString()} Engagement</span>
+            </div>
+          )}
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory" role="tablist" aria-label="Result platforms">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory" role="tablist" aria-label="Result platforms">
           {tabs.map((tab) => {
             const tabIndex = tabs.findIndex((candidate) => candidate.id === tab.id);
             const config = tab.id === 'all' ? null : PLATFORM_CONFIG[tab.id];
@@ -151,7 +171,7 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
                 aria-selected={isActive}
                 aria-controls={`tabpanel-${tab.id}`}
                 tabIndex={isActive ? 0 : -1}
-                className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all border snap-start ${
+                className={`px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all border snap-start min-h-[44px] flex items-center justify-center ${
                   isActive
                     ? 'text-white border-transparent'
                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'
@@ -216,20 +236,20 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-3 min-w-0">
                 <span
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold text-white"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold text-white shrink-0"
                   style={{ backgroundColor: PLATFORM_CONFIG[selectedItem.platform]?.color || '#6366F1' }}
                 >
                   {PLATFORM_CONFIG[selectedItem.platform]?.icon || '🌐'}
                 </span>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-slate-100 break-words">{selectedItem.author}</h3>
-                  <p className="text-sm text-slate-500 break-all">{selectedItem.authorHandle}</p>
+                  <h3 className="font-semibold text-slate-100 break-words line-clamp-1">{selectedItem.author}</h3>
+                  <p className="text-sm text-slate-500 break-all line-clamp-1">{selectedItem.authorHandle}</p>
                 </div>
               </div>
               <button
                 ref={closeButtonRef}
                 onClick={() => setSelectedItem(null)}
-                className="text-slate-500 hover:text-slate-300"
+                className="text-slate-500 hover:text-slate-300 min-h-[44px] min-w-[44px] flex items-center justify-center -mt-2 -mr-2"
                 aria-label="Close detail view"
               >
                 ✕
@@ -247,7 +267,7 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
               href={selectedItem.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-cyan-300 hover:text-cyan-200"
+              className="inline-flex items-center justify-center gap-2 text-cyan-300 hover:text-cyan-200 min-h-[44px] w-full sm:w-auto"
             >
               View original <ArrowUpRight className="w-4 h-4" />
             </a>

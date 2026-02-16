@@ -2,10 +2,8 @@
 
 import { useMemo } from 'react';
 import { StreamEvent, QueryStatus } from '@/lib/types';
-import { Terminal, Fingerprint } from 'lucide-react';
+import { Terminal, Fingerprint, Bot, CheckCircle2, Circle } from 'lucide-react';
 import { TerminalLog } from './TypewriterText';
-import { PipelineStages } from './PipelineStages';
-import { GlassContainer } from './GlassContainer';
 import { AgentPersona } from './AgentPersona';
 
 interface ProcessingStatusProps {
@@ -15,27 +13,24 @@ interface ProcessingStatusProps {
   isProcessing: boolean;
 }
 
-export function ProcessingStatus({ status, progress, events, isProcessing }: ProcessingStatusProps) {
-  if (!isProcessing && status !== 'processing') {
-    return null;
-  }
+const STAGES = [
+  { id: 'planner', label: 'PLAN', description: 'Strategy & Source Selection' },
+  { id: 'researcher', label: 'HARVEST', description: 'Multi-Platform Data Collection' },
+  { id: 'validator', label: 'VALIDATE', description: 'Cross-Reference & Confidence' },
+  { id: 'architect', label: 'ATTEST', description: 'TEE Signing & Output' },
+];
 
-  // Convert StreamEvents to TerminalEvents for the typewriter effect
+export function ProcessingStatus({ status, progress, events, isProcessing }: ProcessingStatusProps) {
+  const currentStageIndex = Math.min(Math.floor((progress / 100) * STAGES.length), STAGES.length - 1);
+
   const terminalEvents = useMemo(() => {
-    return events.slice(-6).map((event, index) => {
-      const type: 'error' | 'success' | 'info' = 
-        event.type === 'error' ? 'error' : 
-        event.type === 'result' ? 'success' : 
-        'info';
-      return {
-        id: `${event.type}-${index}-${event.message?.slice(0, 20) || ''}`,
-        message: event.message || '',
-        type,
-      };
-    });
+    return events.slice(-6).map((event, index) => ({
+      id: `${event.type}-${index}-${event.message?.slice(0, 20) || ''}`,
+      message: event.message || '',
+      type: (event.type === 'error' ? 'error' : event.type === 'result' ? 'success' : 'info') as 'error' | 'success' | 'info',
+    }));
   }, [events]);
 
-  // Determine agent status based on processing state
   const getAgentStatus = () => {
     if (!isProcessing) return 'idle';
     if (progress < 10) return 'thinking';
@@ -45,85 +40,91 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
 
   return (
     <div className="space-y-4">
-      {/* Trende Agent Persona */}
-      <AgentPersona 
-        status={getAgentStatus()}
-        progress={progress}
-        currentStage={status || undefined}
-      />
+      {/* Trende Agent */}
+      <AgentPersona status={getAgentStatus()} progress={progress} currentStage={status || undefined} />
 
-      <GlassContainer 
-        variant="processing" 
-        title="Secure Pipeline"
-        subtitle="TEE-Protected Execution"
-        className="overflow-visible"
-      >
-        {/* Progress Header */}
-        <div className="px-6 py-4 border-b border-white/5">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                <Fingerprint className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-100">Processing in TEE</h3>
-                <p className="text-sm text-slate-400 mt-0.5">EigenCompute secure enclave</p>
-              </div>
+      {/* Main Processing Card */}
+      <div className="bg-[#141414] border-2 border-white" style={{ boxShadow: '6px 6px 0px 0px #00ffff' }}>
+        {/* Header */}
+        <div className="border-b-2 border-white p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-[#00ffff] flex items-center justify-center">
+              <Fingerprint className="w-5 h-5 text-black" />
             </div>
-            <div className="text-right shrink-0">
-              <div className="text-3xl font-bold text-cyan-300">{progress}%</div>
-              <div className="text-xs text-slate-500">Complete</div>
+            <div>
+              <h3 className="font-black uppercase tracking-wider text-white">TEE Processing</h3>
+              <p className="text-xs font-mono text-[#00ffff]">EigenCompute Secure Enclave</p>
             </div>
           </div>
+          <div className="text-right">
+            <p className="text-3xl font-black text-[#00ffff]">{progress}%</p>
+          </div>
+        </div>
 
-          {/* Progress bar with shimmer */}
-          <div className="relative h-2 bg-slate-800 rounded-full overflow-hidden">
+        {/* Progress Bar */}
+        <div className="p-4 border-b-2 border-white">
+          <div className="w-full h-6 bg-[#0a0a0a] border-2 border-white">
             <div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 rounded-full transition-all duration-500"
+              className="h-full bg-[#00ffff] border-r-2 border-white transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
-            <div 
-              className="absolute inset-y-0 w-20 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"
-              style={{ 
-                left: `${progress - 10}%`,
-                opacity: progress > 10 && progress < 90 ? 1 : 0,
-              }}
-            />
           </div>
         </div>
 
-        {/* Pipeline Stages */}
-        <div className="p-6">
-          <PipelineStages 
-            status={status} 
-            progress={progress} 
-            isProcessing={isProcessing} 
-          />
+        {/* Stages */}
+        <div className="p-4 border-b-2 border-white">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {STAGES.map((stage, index) => {
+              const isComplete = index < currentStageIndex;
+              const isActive = index === currentStageIndex;
+              
+              return (
+                <div
+                  key={stage.id}
+                  className={`p-3 border-2 transition-colors ${
+                    isComplete ? 'border-[#00ff88] bg-[#00ff88]/10' :
+                    isActive ? 'border-[#00ffff] bg-[#00ffff]/10' :
+                    'border-gray-700 bg-[#0a0a0a]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {isComplete ? (
+                      <CheckCircle2 className="w-4 h-4 text-[#00ff88]" />
+                    ) : isActive ? (
+                      <div className="w-4 h-4 bg-[#00ffff] animate-pulse" />
+                    ) : (
+                      <Circle className="w-4 h-4 text-gray-600" />
+                    )}
+                    <span className={`text-xs font-black uppercase ${
+                      isComplete ? 'text-[#00ff88]' :
+                      isActive ? 'text-[#00ffff]' :
+                      'text-gray-600'
+                    }`}>
+                      {stage.label}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 font-mono">{stage.description}</p>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Terminal Telemetry */}
+        {/* Terminal */}
         {terminalEvents.length > 0 && (
-          <div className="px-6 pb-6">
-            <div className="rounded-xl border border-slate-800 bg-slate-950/80 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-800 bg-slate-900/50">
-                <Terminal className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Live Telemetry</span>
-                <div className="ml-auto flex items-center gap-1.5">
-                  <Fingerprint className="w-3 h-3 text-cyan-500/50" />
-                  <span className="text-[10px] text-cyan-500/50">TEE-Logged</span>
-                </div>
+          <div className="p-4">
+            <div className="border-2 border-gray-700 bg-[#0a0a0a]">
+              <div className="flex items-center gap-2 px-3 py-2 border-b-2 border-gray-700 bg-[#141414]">
+                <Terminal className="w-3.5 h-3.5 text-gray-500" />
+                <span className="text-[10px] font-mono text-gray-500">TEE_TELEMETRY.LOG</span>
               </div>
-              <div className="p-4">
-                <TerminalLog 
-                  events={terminalEvents} 
-                  maxHeight="120px"
-                  className="text-xs"
-                />
+              <div className="p-3">
+                <TerminalLog events={terminalEvents} maxHeight="100px" className="text-xs" />
               </div>
             </div>
           </div>
         )}
-      </GlassContainer>
+      </div>
     </div>
   );
 }

@@ -3,7 +3,6 @@
 import { useState, useCallback } from 'react';
 import { Send, Sparkles, Loader2, Compass, Layers } from 'lucide-react';
 import { QueryRequest } from '@/lib/types';
-import { NeumorphicCard, NeumorphicButton, NeumorphicInput } from './Neumorphic';
 
 interface QueryInputProps {
   onSubmit: (request: QueryRequest) => void;
@@ -12,30 +11,10 @@ interface QueryInputProps {
 }
 
 const PLATFORM_OPTIONS = [
-  {
-    id: 'twitter',
-    label: 'X / Twitter',
-    color: '#1DA1F2',
-    hint: 'Fast social momentum',
-  },
-  {
-    id: 'linkedin',
-    label: 'LinkedIn',
-    color: '#0A66C2',
-    hint: 'Professional conviction',
-  },
-  {
-    id: 'newsapi',
-    label: 'News',
-    color: '#FF6B35',
-    hint: 'Media narrative context',
-  },
-  {
-    id: 'web',
-    label: 'Web',
-    color: '#6366F1',
-    hint: 'Long-tail signal capture',
-  },
+  { id: 'twitter', label: 'X / Twitter', color: '#00ffff', hint: 'Fast social momentum' },
+  { id: 'linkedin', label: 'LinkedIn', color: '#00ff88', hint: 'Professional conviction' },
+  { id: 'newsapi', label: 'News', color: '#ffaa00', hint: 'Media narrative context' },
+  { id: 'web', label: 'Web', color: '#aa66ff', hint: 'Long-tail signal capture' },
 ];
 
 const SUGGESTIONS = [
@@ -55,116 +34,83 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!idea.trim() || isLoading || disabled || !hasPlatforms) return;
-
-    onSubmit({
-      idea: idea.trim(),
-      platforms,
-      relevanceThreshold,
-    });
+    onSubmit({ idea: idea.trim(), platforms, relevanceThreshold });
   }, [idea, platforms, relevanceThreshold, onSubmit, isLoading, disabled, hasPlatforms]);
 
   const togglePlatform = (platform: string) => {
     setPlatforms((prev) =>
-      prev.includes(platform)
-        ? prev.filter((p) => p !== platform)
-        : [...prev, platform]
+      prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
     );
   };
 
-  const quickSubmit = () => {
-    if (!disabled && !isLoading && idea.trim() && hasPlatforms) {
-      onSubmit({ idea: idea.trim(), platforms, relevanceThreshold });
-    }
-  };
-
   return (
-    <NeumorphicCard intensity="strong" className="p-6 sm:p-8">
+    <div 
+      className="bg-[#0a0a0a] border-2 border-white p-4 sm:p-8"
+      style={{ boxShadow: '6px 6px 0px 0px #00ffff' }}
+    >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-cyan-400">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
             <div 
-              className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(145deg, #1e293b, #0f172a)',
-                boxShadow: '4px 4px 8px rgba(2, 6, 23, 0.8), -4px -4px 8px rgba(30, 41, 59, 0.4)',
-              }}
+              className="w-10 h-10 flex items-center justify-center bg-[#00ffff] shrink-0"
+              style={{ boxShadow: '3px 3px 0px 0px #000' }}
             >
-              <Compass className="w-4 h-4" />
+              <Compass className="w-5 h-5 text-black" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-200">Laboratory Brief</p>
-              <p className="text-xs text-slate-500">What conviction are we testing?</p>
+              <p className="text-sm font-black uppercase tracking-wider text-white">Laboratory Brief</p>
+              <p className="text-xs text-gray-500 font-mono">SECURE INPUT CHANNEL // TEE-PROTECTED</p>
             </div>
           </div>
-          <span className="text-xs text-slate-500 font-mono">{idea.trim().length} chars</span>
+          <span className="text-xs font-mono text-[#00ffff] self-end sm:self-auto">{idea.trim().length} CHARS</span>
         </div>
 
         {/* Input Area */}
         <div className="relative">
-          <NeumorphicInput
+          <textarea
             value={idea}
-            onChange={setIdea}
-            placeholder="Example: Identify sectors where viral consumer attention and professional optimism both point to a near-term breakout."
+            onChange={(e) => setIdea(e.target.value)}
+            placeholder="EXAMPLE: Identify sectors where viral consumer attention and professional optimism both point to a near-term breakout."
             disabled={disabled}
             rows={4}
+            className="w-full bg-[#0a0a0a] text-white placeholder-gray-600 border-2 border-white p-4 pb-16 font-mono text-sm focus:outline-none focus:border-[#00ffff] resize-none"
+            style={{ boxShadow: '4px 4px 0px 0px #00ffff' }}
           />
           
-          {/* Submit button - positioned inside input */}
-          <div className="absolute bottom-3 right-3">
+          {/* Submit button */}
+          <div className="absolute bottom-3 right-3 left-3 sm:left-auto sm:bottom-4 sm:right-4">
             <button
               type="submit"
               disabled={!idea.trim() || isLoading || disabled || !hasPlatforms}
-              className="
-                px-4 py-2 rounded-xl font-medium text-sm
-                bg-gradient-to-br from-cyan-500 to-cyan-600 text-white
-                disabled:opacity-50 disabled:cursor-not-allowed
-                transition-all duration-150 active:scale-95
-                flex items-center gap-2
-              "
-              style={{
-                boxShadow: isLoading 
-                  ? 'inset 4px 4px 8px rgba(0, 0, 0, 0.3)' 
-                  : '4px 4px 12px rgba(6, 182, 212, 0.3), -2px -2px 8px rgba(30, 41, 59, 0.3)',
+              className="w-full sm:w-auto px-5 py-2.5 bg-[#00ffff] text-black font-black uppercase tracking-wider text-sm border-2 border-white disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0"
+              style={{ 
+                boxShadow: isLoading ? 'none' : '4px 4px 0px 0px #fff',
               }}
             >
               {isLoading ? (
-                <>
+                <span className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Analyzing...
-                </>
+                  PROCESSING...
+                </span>
               ) : (
-                <>
+                <span className="flex items-center gap-2">
                   <Send className="w-4 h-4" />
-                  Run Analysis
-                </>
+                  RUN ANALYSIS
+                </span>
               )}
             </button>
           </div>
         </div>
 
-        {/* Help text */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-slate-500">
-          <span>Use target audience, timeframe, and market angle for higher-quality results.</span>
-          <span className="font-mono text-cyan-500/70">Cmd/Ctrl + Enter to submit</span>
-        </div>
-
         {/* Platform Selectors */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-slate-300">
-            <div 
-              className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(145deg, #1e293b, #0f172a)',
-                boxShadow: '3px 3px 6px rgba(2, 6, 23, 0.8), -3px -3px 6px rgba(30, 41, 59, 0.4)',
-              }}
-            >
-              <Layers className="w-3.5 h-3.5 text-cyan-400" />
-            </div>
-            <p className="text-sm font-medium">World Selectors</p>
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-[#00ffff]" />
+            <span className="text-xs font-black uppercase tracking-wider text-gray-400">World Selectors</span>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {PLATFORM_OPTIONS.map((platform) => {
               const active = platforms.includes(platform.id);
               return (
@@ -173,39 +119,20 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   type="button"
                   onClick={() => togglePlatform(platform.id)}
                   disabled={disabled}
-                  aria-pressed={active}
-                  className={`
-                    text-left rounded-2xl p-4 transition-all duration-200
-                    ${active 
-                      ? 'bg-slate-800' 
-                      : 'bg-slate-900 hover:bg-slate-800/80'
-                    }
-                    disabled:opacity-50
-                  `}
+                  className="text-left p-4 min-h-[44px] bg-[#0a0a0a] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-50"
                   style={{
-                    boxShadow: active
-                      ? 'inset 4px 4px 8px rgba(2, 6, 23, 0.9), inset -4px -4px 8px rgba(30, 41, 59, 0.4)'
-                      : '6px 6px 12px rgba(2, 6, 23, 0.8), -6px -6px 12px rgba(30, 41, 59, 0.4)',
-                    border: active ? `1px solid ${platform.color}40` : '1px solid transparent',
+                    borderColor: active ? platform.color : '#333',
+                    boxShadow: active ? `4px 4px 0px 0px ${platform.color}` : '4px 4px 0px 0px #333',
                   }}
                 >
-                  <p 
-                    className="text-sm font-semibold mb-1 transition-colors"
-                    style={{ color: active ? platform.color : '#94a3b8' }}
-                  >
+                  <p className="text-sm font-black uppercase" style={{ color: active ? platform.color : '#666' }}>
                     {platform.label}
                   </p>
-                  <p className="text-xs text-slate-500">{platform.hint}</p>
-                  
-                  {/* Active indicator */}
+                  <p className="text-xs text-gray-600 mt-1">{platform.hint}</p>
                   {active && (
-                    <div 
-                      className="mt-3 w-2 h-2 rounded-full"
-                      style={{ 
-                        backgroundColor: platform.color,
-                        boxShadow: `0 0 8px ${platform.color}`,
-                      }}
-                    />
+                    <div className="mt-2 text-xs font-mono" style={{ color: platform.color }}>
+                      [ACTIVE]
+                    </div>
                   )}
                 </button>
               );
@@ -213,24 +140,15 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
           </div>
           
           {!hasPlatforms && (
-            <p className="text-xs text-amber-400 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-              Select at least one source to run analysis.
-            </p>
+            <p className="text-xs text-[#ff4444] font-mono">[!] SELECT AT LEAST ONE SOURCE</p>
           )}
         </div>
 
         {/* Relevance Threshold */}
-        <div className="space-y-3 p-4 rounded-2xl bg-slate-900/50">
-          <div className="flex items-center justify-between gap-4">
-            <label className="text-sm text-slate-400">Relevance threshold</label>
-            <span 
-              className="text-cyan-400 font-bold font-mono px-3 py-1 rounded-lg"
-              style={{
-                background: 'linear-gradient(145deg, #1e293b, #0f172a)',
-                boxShadow: 'inset 2px 2px 4px rgba(2, 6, 23, 0.8), inset -2px -2px 4px rgba(30, 41, 59, 0.4)',
-              }}
-            >
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wider text-gray-400">Relevance Threshold</span>
+            <span className="px-3 py-1 bg-[#00ffff] text-black font-black text-xs border-2 border-white" style={{ boxShadow: '2px 2px 0px 0px #fff' }}>
               {Math.round(relevanceThreshold * 100)}%
             </span>
           </div>
@@ -242,37 +160,31 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
             value={relevanceThreshold}
             onChange={(e) => setRelevanceThreshold(Number(e.target.value))}
             disabled={disabled}
-            className="w-full accent-cyan-500 cursor-pointer"
+            className="w-full accent-[#00ffff]"
           />
-          <p className="text-xs text-slate-500">Higher threshold means fewer but stronger signals.</p>
         </div>
 
         {/* Suggestions */}
-        <div className="flex flex-wrap gap-2 items-center pt-2">
-          <Sparkles className="w-4 h-4 text-slate-600" />
-          <span className="text-sm text-slate-500">Try prompts:</span>
-          {SUGGESTIONS.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              onClick={() => setIdea(suggestion)}
-              disabled={disabled}
-              className="
-                text-xs text-cyan-300/80 hover:text-cyan-200
-                px-3 py-1.5 rounded-full
-                transition-all duration-200
-                bg-slate-900
-                hover:bg-slate-800
-              "
-              style={{
-                boxShadow: '3px 3px 6px rgba(2, 6, 23, 0.8), -3px -3px 6px rgba(30, 41, 59, 0.3)',
-              }}
-            >
-              {suggestion}
-            </button>
-          ))}
+        <div className="flex flex-col gap-3 pt-4 border-t-2 border-gray-800">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-gray-600" />
+            <span className="text-xs text-gray-500 font-mono">SUGGESTED_QUERIES:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {SUGGESTIONS.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => setIdea(suggestion)}
+                disabled={disabled}
+                className="text-left text-xs text-[#00ffff] px-2 py-1.5 border border-[#00ffff]/30 hover:bg-[#00ffff]/10 font-mono transition-colors"
+              >
+                {suggestion.slice(0, 40)}...
+              </button>
+            ))}
+          </div>
         </div>
       </form>
-    </NeumorphicCard>
+    </div>
   );
 }

@@ -107,7 +107,7 @@ export function ContentCard({ item, onClick, animationDelayMs = 0 }: ContentCard
           <button
             type="button"
             onClick={onClick}
-            className="text-sm text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors"
+            className="text-sm text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 px-4 py-2.5 rounded-lg transition-colors min-h-[44px] flex-1 sm:flex-none flex items-center justify-center"
             aria-label={`Open details for ${item.title}`}
           >
             Open details
@@ -118,10 +118,10 @@ export function ContentCard({ item, onClick, animationDelayMs = 0 }: ContentCard
           href={item.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 text-sm text-cyan-300 hover:text-cyan-200"
+          className="flex items-center justify-center gap-1.5 text-sm text-cyan-300 hover:text-cyan-200 min-h-[44px] px-3 flex-1 sm:flex-none"
         >
-          <ExternalLink className="w-3 h-3" />
-          View original
+          <ExternalLink className="w-4 h-4" />
+          <span className="sm:inline">View original</span>
         </a>
       </div>
     </article>
