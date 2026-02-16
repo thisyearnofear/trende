@@ -135,7 +135,7 @@ class AIService:
             return await self._call_openrouter(
                 prompt,
                 system_prompt,
-                model="google/gemini-flash-1.5-exp",
+                model="google/gemini-2.0-flash-001",
             )
         if provider == "gemini":
             return await self._call_gemini(prompt, system_prompt)

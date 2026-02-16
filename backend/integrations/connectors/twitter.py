@@ -68,8 +68,7 @@ class TwitterConnector(AbstractPlatformConnector):
             res = conn.getresponse()
             
             if res.status != 200:
-                print(f"Twitter API error: {res.status}")
-                return []
+                raise Exception(f"Twitter API error: {res.status} {res.reason}")
 
             data = json.loads(res.read().decode("utf-8"))
             items = []
@@ -77,6 +76,9 @@ class TwitterConnector(AbstractPlatformConnector):
             # Placeholder: Adjust parsing based on actual RapidAPI 'search.php' response structure
             raw_tweets = data.get('search_results', []) or data.get('timeline', [])
             
+            if not raw_tweets and data.get('message'):
+                raise Exception(f"Twitter API error: {data.get('message')}")
+
             for tweet in raw_tweets[:limit]:
                 items.append(TrendItem(
                     id=tweet.get('id_str', tweet.get('id', 'unknown')),

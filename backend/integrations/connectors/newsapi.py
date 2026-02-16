@@ -59,8 +59,7 @@ class NewsConnector(AbstractPlatformConnector):
                 response = await client.get(url)
                 
                 if response.status_code != 200:
-                    print(f"NewsAPI error: {response.status_code}")
-                    return []
+                    raise Exception(f"NewsAPI error: {response.status_code} {response.text}")
 
                 data = response.json()
                 articles = data.get('articles', [])

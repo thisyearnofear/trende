@@ -89,47 +89,52 @@ async def researcher_node(state: GraphState) -> GraphState:
     youtube = YouTubeConnector()
 
     tasks = []
+    task_platforms = []
     for sq in state["search_queries"]:
         platform = sq["platform"]
         query = sq["query"]
+        task_platforms.append(platform)
         state["logs"].append(f"🤖 AGENT >> Establishing quantum link to {platform.upper()} for: '{query}'")
 
         if platform == "twitter":
-            state["logs"].append(f"🐦 Diving into the Twitterverse for fresh tweets...")
             tasks.append(twitter.search(query, limit=5))
         elif platform == "linkedin":
-            state["logs"].append(f"💼 Mining LinkedIn for professional insights...")
             tasks.append(linkedin.search(query, limit=5))
         elif platform in ["news", "newsapi"]:
-            state["logs"].append(f"📰 Scanning news feeds for breaking developments...")
             tasks.append(news.search(query, limit=5))
         elif platform == "web":
-            state["logs"].append(f"🔍 Casting wide nets across the web...")
             tasks.append(tabstack.search(query, limit=5))
         elif platform == "tiktok":
-            state["logs"].append(f"🎵 Catching viral trends on TikTok...")
             tasks.append(tiktok.search(query, limit=5))
         elif platform == "youtube":
-            state["logs"].append(f"📺 Analyzing YouTube for video insights...")
             tasks.append(youtube.search(query, limit=5))
+        else:
+            # Fallback for unknown platforms
+            state["logs"].append(f"⚠️  Warning: Platform {platform} not natively supported. Attempting web fallback.")
+            tasks.append(tabstack.search(query, limit=5))
 
     if tasks:
         state["logs"].append(f"🔄 Gathering intelligence from {len(tasks)} sources simultaneously...")
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        # Handle potential exceptions in results
         all_items = []
         for i, result in enumerate(results):
+            platform = task_platforms[i] if i < len(task_platforms) else "unknown"
             if isinstance(result, Exception):
-                platform = state["search_queries"][i]["platform"] if i < len(state["search_queries"]) else "unknown"
-                state["logs"].append(f"⚠️  Warning: Error fetching from {platform}: {str(result)}")
+                state["logs"].append(f"❌ ERROR: Platform {platform.upper()} failed: {str(result)}")
+            elif not result:
+                state["logs"].append(f"⚠️  EMPTY: No data found on {platform.upper()}. This could be due to rate limits or narrow search.")
             else:
+                state["logs"].append(f"✅ SUCCESS: Harvested {len(result)} items from {platform.upper()}")
                 all_items.extend(result)
         
         state["raw_findings"] = all_items
-        state["logs"].append(
-            f"✅ SIGNAL ACQUIRED: Harvested {len(all_items)} valuable data points. Preparing for validation..."
-        )
+        if all_items:
+            state["logs"].append(
+                f"📊 AGGREGATION COMPLETE: Total signals acquired: {len(all_items)}. Commencing neural validation..."
+            )
+        else:
+            state["logs"].append("🚨 CRITICAL: No data harvested from any source. Synthesis will be based on limited context.")
     else:
         state["logs"].append("😴 No search tasks were generated. Nothing to harvest.")
 
