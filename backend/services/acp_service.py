@@ -7,6 +7,7 @@ allowing other AI agents to purchase research services.
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from uuid import uuid4
@@ -16,78 +17,29 @@ from virtuals_acp.contract_clients.contract_client_v2 import ACPContractClientV2
 from virtuals_acp.configs.configs import BASE_MAINNET_ACP_X402_CONFIG_V2
 
 from backend.agents.workflow import run_trend_analysis
-
 from backend.database.repository import Repository
-
-
-
-
 
 logger = logging.getLogger(__name__)
 
 
-
-
-
 class ACPService:
-
     """
-
     Service for handling ACP (Agent Commerce Protocol) interactions.
-
     
-
     Trende operates as a Provider Agent, offering research services to other agents.
-
     """
-
     
-
-        def __init__(self):
-
-    
-
-            """Initialize ACP service with configuration from environment."""
-
-    
-
-            self.repository = Repository()
-
-    
-
-            
-
-    
-
-            # ACP configuration
-
-    
-
-            self.enabled = os.getenv("ACP_ENABLED", "false").lower() == "true"
-
-    
-
-            self.agent_wallet_address = os.getenv("ACP_AGENT_WALLET_ADDRESS")
-
-    
-
-            self.wallet_private_key = os.getenv("ACP_WALLET_PRIVATE_KEY")
-
-    
-
-            self.entity_id = os.getenv("ACP_ENTITY_ID")
-
-    
-
-            self.service_price = float(os.getenv("ACP_SERVICE_PRICE", "10.0"))
-
-    
-
-            self.sla_seconds = int(os.getenv("ACP_SERVICE_SLA_SECONDS", "180"))
-
-    
-
-    
+    def __init__(self):
+        """Initialize ACP service with configuration from environment."""
+        self.repository = Repository()
+        
+        # ACP configuration
+        self.enabled = os.getenv("ACP_ENABLED", "false").lower() == "true"
+        self.agent_wallet_address = os.getenv("ACP_AGENT_WALLET_ADDRESS")
+        self.wallet_private_key = os.getenv("ACP_WALLET_PRIVATE_KEY")
+        self.entity_id = os.getenv("ACP_ENTITY_ID")
+        self.service_price = float(os.getenv("ACP_SERVICE_PRICE", "10.0"))
+        self.sla_seconds = int(os.getenv("ACP_SERVICE_SLA_SECONDS", "180"))
         
         # Job tracking
         self.active_jobs: Dict[str, Dict[str, Any]] = {}
