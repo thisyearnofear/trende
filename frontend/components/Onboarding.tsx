@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Terminal, Bot, Shield, Zap, X } from 'lucide-react';
+import { Terminal, Bot, Shield, Zap } from 'lucide-react';
 import { Card, Button } from './DesignSystem';
 
 const BOOT_SEQUENCE = [
@@ -14,17 +14,13 @@ const BOOT_SEQUENCE = [
 ];
 
 export function Onboarding() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const visited = window.localStorage.getItem('trende_onboarding_complete');
+    return !visited;
+  });
   const [bootStep, setBootStep] = useState(0);
   const [showContent, setShowContent] = useState(false);
-
-  useEffect(() => {
-    // Check if user has visited before
-    const visited = localStorage.getItem('trende_onboarding_complete');
-    if (!visited) {
-      setIsOpen(true);
-    }
-  }, []);
 
   useEffect(() => {
     if (!isOpen) return;

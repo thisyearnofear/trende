@@ -39,7 +39,7 @@ async def planner_node(state: GraphState) -> GraphState:
 
     Generate a research plan in JSON format.
     You MUST include search queries for each of the requested platforms.
-    Available platforms: twitter, linkedin, news, tiktok, youtube, web.
+    Available platforms: twitter, linkedin, news, newsapi, tiktok, youtube, web, gdelt, wikimedia, hackernews, stackexchange, coingecko.
     If the user asked for a specific platform, prioritize it.
 
     JSON format:
@@ -85,6 +85,11 @@ async def researcher_node(state: GraphState) -> GraphState:
     from backend.integrations.connectors.tabstack import TabstackConnector
     from backend.integrations.connectors.tiktok import TikTokConnector
     from backend.integrations.connectors.youtube import YouTubeConnector
+    from backend.integrations.connectors.gdelt import GDELTConnector
+    from backend.integrations.connectors.wikimedia import WikimediaConnector
+    from backend.integrations.connectors.hackernews import HackerNewsConnector
+    from backend.integrations.connectors.stackexchange import StackExchangeConnector
+    from backend.integrations.connectors.coingecko import CoinGeckoConnector
 
     twitter = TwitterConnector()
     linkedin = LinkedInConnector()
@@ -92,6 +97,11 @@ async def researcher_node(state: GraphState) -> GraphState:
     tabstack = TabstackConnector()
     tiktok = TikTokConnector()
     youtube = YouTubeConnector()
+    gdelt = GDELTConnector()
+    wikimedia = WikimediaConnector()
+    hackernews = HackerNewsConnector()
+    stackexchange = StackExchangeConnector()
+    coingecko = CoinGeckoConnector()
 
     tasks = []
     task_platforms = []
@@ -113,6 +123,16 @@ async def researcher_node(state: GraphState) -> GraphState:
             tasks.append(tiktok.search(query, limit=5))
         elif platform == "youtube":
             tasks.append(youtube.search(query, limit=5))
+        elif platform == "gdelt":
+            tasks.append(gdelt.search(query, limit=5))
+        elif platform == "wikimedia":
+            tasks.append(wikimedia.search(query, limit=5))
+        elif platform in ["hackernews", "hn"]:
+            tasks.append(hackernews.search(query, limit=5))
+        elif platform in ["stackexchange", "se"]:
+            tasks.append(stackexchange.search(query, limit=5))
+        elif platform == "coingecko":
+            tasks.append(coingecko.search(query, limit=5))
         else:
             # Fallback for unknown platforms
             state["logs"].append(f"⚠️  Warning: Platform {platform} not natively supported. Attempting web fallback.")

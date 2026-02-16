@@ -172,6 +172,11 @@ class RateLimiter:
             "twitter": TokenBucket(rate=0.5, capacity=15),
             "newsapi": TokenBucket(rate=0.1, capacity=5),
             "linkedin": TokenBucket(rate=1.0, capacity=10),
+            "gdelt": TokenBucket(rate=1.0, capacity=20),
+            "wikimedia": TokenBucket(rate=1.0, capacity=20),
+            "hackernews": TokenBucket(rate=1.0, capacity=20),
+            "stackexchange": TokenBucket(rate=0.8, capacity=15),
+            "coingecko": TokenBucket(rate=0.8, capacity=15),
         }
 
     async def check_rate_limit(self, platform: str) -> bool:

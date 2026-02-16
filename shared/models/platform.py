@@ -14,6 +14,11 @@ class PlatformType(str, Enum):
     TIKTOK = "tiktok"
     YOUTUBE = "youtube"
     WEB = "web"  # General web search (Serper/Tavily)
+    GDELT = "gdelt"
+    WIKIMEDIA = "wikimedia"
+    HACKERNEWS = "hackernews"
+    STACKEXCHANGE = "stackexchange"
+    COINGECKO = "coingecko"
 
 
 class Platform:
@@ -94,6 +99,41 @@ PLATFORMS: dict[PlatformType, Platform] = {
         "Web",
         "🌐",
         "#6366F1",
+        supports_embed=False,
+    ),
+    PlatformType.GDELT: Platform(
+        PlatformType.GDELT,
+        "GDELT",
+        "🗞️",
+        "#0EA5E9",
+        supports_embed=False,
+    ),
+    PlatformType.WIKIMEDIA: Platform(
+        PlatformType.WIKIMEDIA,
+        "Wikimedia",
+        "📚",
+        "#111827",
+        supports_embed=False,
+    ),
+    PlatformType.HACKERNEWS: Platform(
+        PlatformType.HACKERNEWS,
+        "Hacker News",
+        "HN",
+        "#FF6600",
+        supports_embed=False,
+    ),
+    PlatformType.STACKEXCHANGE: Platform(
+        PlatformType.STACKEXCHANGE,
+        "Stack Exchange",
+        "SE",
+        "#1F7A8C",
+        supports_embed=False,
+    ),
+    PlatformType.COINGECKO: Platform(
+        PlatformType.COINGECKO,
+        "CoinGecko",
+        "CG",
+        "#65A30D",
         supports_embed=False,
     ),
 }

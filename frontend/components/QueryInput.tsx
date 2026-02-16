@@ -23,6 +23,11 @@ const PLATFORM_OPTIONS = [
   { id: 'linkedin', label: 'LinkedIn', hint: 'Professional conviction' },
   { id: 'newsapi', label: 'News', hint: 'Media narrative context' },
   { id: 'web', label: 'Web', hint: 'Long-tail signal capture' },
+  { id: 'gdelt', label: 'GDELT', hint: 'Global event/news graph' },
+  { id: 'wikimedia', label: 'Wikimedia', hint: 'Live public knowledge edits' },
+  { id: 'hackernews', label: 'Hacker News', hint: 'Builder/tech pulse' },
+  { id: 'stackexchange', label: 'StackExchange', hint: 'Technical problem signals' },
+  { id: 'coingecko', label: 'CoinGecko', hint: 'Crypto market snapshots' },
 ];
 
 const SUGGESTIONS = [

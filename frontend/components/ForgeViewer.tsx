@@ -133,7 +133,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
             const result = (await response.json()) as { verified?: boolean };
             setVerified(result.verified || false);
             setVerifyStatus(result.verified ? 'Signature verified successfully!' : 'Signature verification failed.');
-        } catch (error) {
+        } catch {
             setVerifyStatus('Verification request failed.');
             setVerified(false);
         } finally {
