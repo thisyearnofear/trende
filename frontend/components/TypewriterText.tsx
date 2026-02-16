@@ -22,11 +22,9 @@ export function TypewriterText({
   cursorClassName = 'animate-pulse',
 }: TypewriterTextProps) {
   const [displayText, setDisplayText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const [showCursor, setShowCursor] = useState(cursor);
 
   const startTyping = useCallback(() => {
-    setIsTyping(true);
     setDisplayText('');
     let currentIndex = 0;
 
@@ -39,7 +37,6 @@ export function TypewriterText({
         const variableSpeed = speed + (Math.random() * 20 - 10);
         setTimeout(typeChar, Math.max(10, variableSpeed));
       } else {
-        setIsTyping(false);
         onComplete?.();
         // Hide cursor after a delay when done
         if (cursor) {

@@ -13,8 +13,6 @@ import {
   QueryStatus 
 } from '@/lib/types';
 
-const POLLING_INTERVAL = 30000; // 30 seconds - less aggressive for background polling
-
 interface UseTrendDataOptions {
   /** Enable automatic polling */
   polling?: boolean;
@@ -52,7 +50,7 @@ export function useTrendData(
   queryId: string | null,
   options: UseTrendDataOptions = {}
 ): UseTrendDataReturn {
-  const { polling = true, pollInterval = POLLING_INTERVAL, sse = true } = options;
+  const { sse = true } = options;
   
   const [optimisticStatus, setOptimisticStatus] = useState<QueryStatus | null>(null);
   const [progress, setProgress] = useState(0);

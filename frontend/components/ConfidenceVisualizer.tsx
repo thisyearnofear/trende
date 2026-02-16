@@ -4,7 +4,6 @@ import { useRef, useEffect, useState } from 'react';
 import { gsap } from 'gsap';
 import { 
   CheckCircle2, 
-  AlertCircle, 
   TrendingUp, 
   Shield, 
   Users,
@@ -86,7 +85,6 @@ export function ConfidenceVisualizer({ data, expanded = false }: ConfidenceVisua
   };
 
   const diversity = diversityConfig[data.diversity];
-  const DiversityIcon = diversity.icon;
 
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-950/50 overflow-hidden">

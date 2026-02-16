@@ -2,7 +2,6 @@
  * Monad chain configuration and wagmi setup
  */
 
-import { http, createConfig, createStorage } from 'wagmi';
 import { defineChain } from 'viem';
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 

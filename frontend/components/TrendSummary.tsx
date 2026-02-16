@@ -158,7 +158,7 @@ export function TrendSummary({ summary, isLoading }: TrendSummaryProps) {
           {consensus.main_divergence && (
             <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--accent-amber)' }}>
               <p className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)] mb-1">Divergence Signal</p>
-              <p className="text-xs italic text-[var(--text-secondary)]">"{consensus.main_divergence}"</p>
+              <p className="text-xs italic text-[var(--text-secondary)]">&ldquo;{consensus.main_divergence}&rdquo;</p>
             </div>
           )}
         </Alert>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { 
   Globe, 
@@ -10,7 +10,6 @@ import {
   Wallet, 
   ExternalLink,
   Zap,
-  Bot,
   Filter,
 } from 'lucide-react';
 import { WalletButton } from '@/components/WalletButton';
@@ -41,11 +40,7 @@ export default function CommonsPage() {
   const [sponsorFilter, setSponsorFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchResearch();
-  }, [sponsorFilter]);
-
-  async function fetchResearch() {
+  const fetchResearch = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -59,7 +54,11 @@ export default function CommonsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [sponsorFilter]);
+
+  useEffect(() => {
+    fetchResearch();
+  }, [sponsorFilter, fetchResearch]);
 
   const filteredResearch = research.filter(item =>
     !searchQuery || item.topic.toLowerCase().includes(searchQuery.toLowerCase())

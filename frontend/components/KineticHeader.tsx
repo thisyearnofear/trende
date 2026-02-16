@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
-import { Zap, Shield, Cpu } from 'lucide-react';
+import { Zap, Shield } from 'lucide-react';
 
 interface KineticHeaderProps {
   title?: string;

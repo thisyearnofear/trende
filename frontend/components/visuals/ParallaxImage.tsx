@@ -15,7 +15,7 @@ interface ParallaxImageProps {
   overlayColor?: string;
 }
 
-export function ParallaxImage({ src, alt, className = '', overlayColor = 'bg-cyan-500/10' }: ParallaxImageProps) {
+export function ParallaxImage({ src, className = '', overlayColor = 'bg-cyan-500/10' }: ParallaxImageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
 

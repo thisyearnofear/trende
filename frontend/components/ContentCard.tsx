@@ -3,7 +3,8 @@
 import { formatDistanceToNow } from 'date-fns';
 import { TrendItem } from '@/lib/types';
 import { ExternalLink, MessageCircle, Repeat, Heart, Eye, Radar } from 'lucide-react';
-import { Card, Badge } from './DesignSystem';
+
+import { Card } from './DesignSystem';
 
 interface ContentCardProps {
   item: TrendItem;

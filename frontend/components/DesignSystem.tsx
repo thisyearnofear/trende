@@ -17,7 +17,7 @@
  * 5. Uppercase, mono font for labels
  */
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 
 // ============================================
@@ -35,6 +35,7 @@ interface CardProps {
   accent?: 'cyan' | 'emerald' | 'amber' | 'rose' | 'violet' | 'white';
   shadow?: 'sm' | 'md' | 'lg' | 'xl';
   interactive?: boolean;
+  style?: CSSProperties;
 }
 
 export function Card({ 
@@ -43,6 +44,7 @@ export function Card({
   accent = 'white',
   shadow = 'md',
   interactive = false,
+  style,
 }: CardProps) {
   const [isPressed, setIsPressed] = useState(false);
   
@@ -51,7 +53,7 @@ export function Card({
     emerald: 'border-[var(--accent-emerald)]',
     amber: 'border-[var(--accent-amber)]',
     rose: 'border-[var(--accent-rose)]',
-    violet: 'border-[var(--accent-violet)]',
+    violet: 'border(--accent-violet)',
     white: 'border-[var(--border-color)]',
   };
   
@@ -75,6 +77,7 @@ export function Card({
           ? 'none' 
           : `${shadowSize[shadow]} ${shadowSize[shadow]} 0px 0px var(--shadow-color)`,
         transform: isPressed && interactive ? `translate(${shadowSize[shadow]}, ${shadowSize[shadow]})` : undefined,
+        ...style,
       }}
       onMouseDown={() => interactive && setIsPressed(true)}
       onMouseUp={() => setIsPressed(false)}

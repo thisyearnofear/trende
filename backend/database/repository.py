@@ -1,19 +1,24 @@
+from datetime import datetime, timezone
+from typing import Any
+
 try:
-    from sqlalchemy import Column, String, JSON, DateTime, Float, create_engine
+    from sqlalchemy import JSON, Column, DateTime, Float, String, create_engine
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.orm import sessionmaker
-    HAS_SQL = True
-except ImportError:
-    HAS_SQL = False
 
-from datetime import datetime
-import json
+    _has_sql = True
+except ImportError:
+    _has_sql = False
+
+HAS_SQL = _has_sql
+
 from shared.config import get_settings
 
 settings = get_settings()
 
 if HAS_SQL:
     Base = declarative_base()
+
     class TaskModel(Base):
         __tablename__ = "tasks"
         task_id = Column(String, primary_key=True)
@@ -24,25 +29,31 @@ if HAS_SQL:
         platforms = Column(JSON)
         models = Column(JSON, nullable=True)
         sponsor_address = Column(String, nullable=True)  # Wallet that funded this research
-        created_at = Column(DateTime, default=datetime.utcnow)
-        updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+        created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+        updated_at = Column(
+            DateTime,
+            default=lambda: datetime.now(timezone.utc),
+            onupdate=lambda: datetime.now(timezone.utc),
+        )
 
     engine = create_engine(settings.database_url)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 def init_db():
     if HAS_SQL:
         Base.metadata.create_all(bind=engine)
 
+
 class Repository:
-    def __init__(self):
+    def __init__(self) -> None:
         if HAS_SQL:
             self.Session = SessionLocal
         else:
             print("Warning: SQLAlchemy not installed. Repository will operate in Mock mode.")
             self.Session = None
 
-    def save_task(self, task_id: str, state: dict):
+    def save_task(self, task_id: str, state: dict[str, Any]) -> None:
         if not HAS_SQL or not self.Session:
             return
         with self.Session() as session:
@@ -50,14 +61,14 @@ class Repository:
             if not task:
                 task = TaskModel(task_id=task_id)
                 session.add(task)
-            
+
             task.topic = state.get("topic")
             task.status = state.get("status")
             task.logs = state.get("logs", [])
             task.platforms = state.get("platforms", [])
             task.models = state.get("models", [])
             task.sponsor_address = state.get("sponsor_address")
-            
+
             result_data = {
                 "summary": state.get("summary"),
                 "relevance_score": state.get("relevance_score"),
@@ -69,12 +80,15 @@ class Repository:
                 "consensus_data": state.get("consensus_data"),
                 "attestation_data": state.get("attestation_data"),
                 "run_telemetry": state.get("run_telemetry"),
-                "raw_findings": [item.model_dump() if hasattr(item, 'model_dump') else item for item in state.get("raw_findings", [])]
+                "raw_findings": [
+                    item.model_dump() if hasattr(item, "model_dump") else item
+                    for item in state.get("raw_findings", [])
+                ],
             }
             task.result = result_data
             session.commit()
 
-    def get_task(self, task_id: str) -> dict:
+    def get_task(self, task_id: str) -> dict[str, Any] | None:
         if not HAS_SQL or not self.Session:
             return None
         with self.Session() as session:
@@ -91,26 +105,32 @@ class Repository:
                 "models": task.models,
                 "sponsor_address": task.sponsor_address,
                 "created_at": task.created_at.isoformat(),
-                "updated_at": task.updated_at.isoformat() if task.updated_at else task.created_at.isoformat(),
+                "updated_at": task.updated_at.isoformat()
+                if task.updated_at
+                else task.created_at.isoformat(),
             }
 
-    def get_all_tasks(self, limit: int = 50):
+    def get_all_tasks(self, limit: int = 50) -> list[dict[str, Any]]:
         if not HAS_SQL or not self.Session:
             return []
         with self.Session() as session:
-            tasks = session.query(TaskModel).order_by(TaskModel.created_at.desc()).limit(limit).all()
+            tasks = (
+                session.query(TaskModel).order_by(TaskModel.created_at.desc()).limit(limit).all()
+            )
             return [
                 {
                     "task_id": t.task_id,
                     "topic": t.topic,
                     "status": t.status,
                     "sponsor_address": t.sponsor_address,
-                    "created_at": t.created_at.isoformat()
+                    "created_at": t.created_at.isoformat(),
                 }
                 for t in tasks
             ]
-    
-    def get_public_research(self, limit: int = 50, sponsor: str = None):
+
+    def get_public_research(
+        self, limit: int = 50, sponsor: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get completed research for the public commons."""
         if not HAS_SQL or not self.Session:
             return []

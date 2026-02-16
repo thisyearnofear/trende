@@ -120,10 +120,11 @@ export function PaymentModal({ isOpen, onClose, onPaymentComplete, paymentInfo }
         onClose();
       }, 1000);
 
-    } catch (error: any) {
-      console.error('Payment signing error:', error);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Payment signing error:', err);
       setStatus('error');
-      setErrorMessage(error.message || 'Failed to sign payment authorization');
+      setErrorMessage(err.message || 'Failed to sign payment authorization');
     }
   }, [address, paymentInfo, signTypedDataAsync, onPaymentComplete, onClose, openConnectModal]);
 

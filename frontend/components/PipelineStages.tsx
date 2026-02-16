@@ -64,7 +64,7 @@ interface PipelineStagesProps {
   isProcessing: boolean;
 }
 
-export function PipelineStages({ status, progress, isProcessing }: PipelineStagesProps) {
+export function PipelineStages({ progress, isProcessing }: PipelineStagesProps) {
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const [hoveredStage, setHoveredStage] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -79,7 +79,10 @@ export function PipelineStages({ status, progress, isProcessing }: PipelineStage
   useEffect(() => {
     if (isProcessing && currentStageIndex >= 0) {
       const currentStage = STAGES[currentStageIndex];
-      setExpandedStage(currentStage.id);
+      // Use requestAnimationFrame to avoid synchronous setState during render/effect cycle
+      requestAnimationFrame(() => {
+        setExpandedStage(currentStage.id);
+      });
     }
   }, [currentStageIndex, isProcessing]);
 

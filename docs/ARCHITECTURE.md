@@ -53,3 +53,17 @@ Trende is built to excel in the **Agentic Economy** by addressing three core arc
 - **Attestation Service**: `baseline-attested` Docker container → nginx reverse proxy → `https://attest.famile.xyz`
 - **Backend API**: Python/FastAPI (local dev or containerized)
 - **Frontend**: Next.js on Vercel
+
+### Updating the Attestation Service (snel-bot)
+The attestation service runs on Hetzner (`snel-bot`). A git clone of the repo lives at `/opt/trende-deploy/trende-repo/` and the `.env` (with mnemonic) is at `/opt/trende-deploy/baseline-attested/.env`.
+
+To deploy updates:
+```bash
+ssh snel-bot "/opt/trende-deploy/deploy-baseline.sh"
+```
+
+This script:
+1. `git pull` in `/opt/trende-deploy/trende-repo/`
+2. Rebuilds the Docker image from `baseline-attested/Dockerfile`
+3. Stops and replaces the running container (preserving `.env`)
+4. Health-checks the `/random` endpoint

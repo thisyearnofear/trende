@@ -5,7 +5,7 @@ import { StreamEvent, QueryStatus } from '@/lib/types';
 import { Terminal, Fingerprint, CheckCircle2, Circle } from 'lucide-react';
 import { TerminalLog } from './TypewriterText';
 import { AgentPersona } from './AgentPersona';
-import { Card, Progress, Badge } from './DesignSystem';
+import { Card, Progress } from './DesignSystem';
 
 interface ProcessingStatusProps {
   status: QueryStatus | null;
@@ -21,7 +21,7 @@ const STAGES = [
   { id: 'architect', label: 'ATTEST', description: 'TEE Signing & Output' },
 ];
 
-export function ProcessingStatus({ status, progress, events, isProcessing }: ProcessingStatusProps) {
+export function ProcessingStatus({ progress, events, isProcessing }: ProcessingStatusProps) {
   const currentStageIndex = Math.min(Math.floor((progress / 100) * STAGES.length), STAGES.length - 1);
 
   const terminalEvents = useMemo(() => {
@@ -42,7 +42,7 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
   return (
     <div className="space-y-4">
       {/* Trende Agent */}
-      <AgentPersona status={getAgentStatus()} progress={progress} currentStage={status || undefined} />
+      <AgentPersona status={getAgentStatus()} progress={progress} />
 
       {/* Main Processing Card */}
       <Card accent="cyan" shadow="lg">

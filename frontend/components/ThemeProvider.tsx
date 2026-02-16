@@ -31,13 +31,20 @@ export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProvider
 
   // Initialize theme from localStorage or system preference
   useEffect(() => {
-    setMounted(true);
+    // Use requestAnimationFrame to avoid synchronous setState warning
+    requestAnimationFrame(() => {
+      setMounted(true);
+    });
     
     const stored = localStorage.getItem('trende-theme') as Theme | null;
     if (stored) {
-      setThemeState(stored);
+      requestAnimationFrame(() => {
+        setThemeState(stored);
+      });
     } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-      setThemeState('light');
+      requestAnimationFrame(() => {
+        setThemeState('light');
+      });
     }
   }, []);
 

@@ -5,12 +5,8 @@ import { gsap } from 'gsap';
 import { 
   Bot, 
   Shield, 
-  Fingerprint, 
-  Cpu, 
-  Eye, 
   Lock,
   Sparkles,
-  MessageSquare,
   Radio
 } from 'lucide-react';
 
@@ -72,7 +68,6 @@ function getProcessingMessage(progress: number): string {
 export function AgentPersona({ 
   status, 
   progress = 0, 
-  currentStage,
   message 
 }: AgentPersonaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -149,12 +144,12 @@ export function AgentPersona({
     }, 30);
 
     return () => clearInterval(typeInterval);
-  }, [status, progress, message]);
+  }, [status, progress, message, displayMessage]);
 
   // Status indicator config
   const statusConfig = {
     idle: { color: 'bg-slate-500', icon: Bot, label: 'Standby' },
-    listening: { color: 'bg-cyan-400', icon: EarIcon, label: 'Listening' },
+    listening: { color: 'bg-cyan-400', icon: Bot, label: 'Listening' },
     thinking: { color: 'bg-amber-400', icon: Sparkles, label: 'Planning' },
     processing: { color: 'bg-emerald-400', icon: Radio, label: 'Processing' },
     complete: { color: 'bg-emerald-500', icon: Shield, label: 'Complete' },
@@ -165,94 +160,62 @@ export function AgentPersona({
   const StatusIcon = config.icon;
 
   return (
-    <div 
-      ref={containerRef}
-      className="flex items-start gap-4 p-4 rounded-2xl bg-slate-900/50 border border-slate-800"
-    >
-      {/* Avatar */}
+    <div ref={containerRef} className="flex flex-col items-center sm:flex-row sm:items-start gap-4 p-4 sm:p-6 bg-[var(--bg-secondary)] border-2 border-[var(--border-color)]" style={{ boxShadow: '4px 4px 0px 0px var(--shadow-color)' }}>
+      {/* Avatar Container */}
       <div className="relative shrink-0">
-        <div
+        <div 
           ref={avatarRef}
-          className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg"
-          style={{ perspective: '1000px' }}
+          className="w-16 h-16 sm:w-20 sm:h-20 bg-[var(--bg-tertiary)] border-2 border-[var(--border-color)] overflow-hidden flex items-center justify-center relative group"
         >
-          <Bot className="w-7 h-7 text-white" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-[var(--accent-cyan)]/20 to-transparent" />
+          <Bot className="w-10 h-10 sm:w-12 h-12 text-[var(--accent-cyan)] z-10" />
+          
+          {/* Status badge on avatar */}
+          <div className={`absolute bottom-0 right-0 w-4 h-4 sm:w-5 sm:h-5 ${config.color} border-2 border-[var(--border-color)] z-20`} />
         </div>
-        
-        {/* Status indicator dot */}
-        <div className={`
-          absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-slate-900 flex items-center justify-center
-          ${config.color}
-        `}>
-          <StatusIcon className="w-2.5 h-2.5 text-slate-900" />
-        </div>
-
-        {/* Orbiting particles when processing */}
-        {status === 'processing' && (
-          <>
-            <div className="absolute inset-0 animate-spin" style={{ animationDuration: '3s' }}>
-              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-cyan-300" />
-            </div>
-            <div className="absolute inset-0 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }}>
-              <div className="absolute top-1/2 -right-1 -translate-y-1/2 w-1 h-1 rounded-full bg-emerald-300" />
-            </div>
-          </>
-        )}
       </div>
 
-      {/* Message bubble */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1.5">
-          <span className="text-sm font-bold text-slate-200">Trende</span>
-          <span className={`
-            text-[10px] px-1.5 py-0.5 rounded-full font-medium uppercase tracking-wider
-            ${status === 'processing' ? 'bg-emerald-500/20 text-emerald-400 animate-pulse' : 'bg-slate-800 text-slate-500'}
-          `}>
-            {config.label}
-          </span>
-          {status === 'processing' && progress > 0 && (
-            <span className="text-xs text-cyan-400 font-mono">{progress}%</span>
+      {/* Message Content */}
+      <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-black uppercase tracking-widest text-[var(--accent-cyan)]">Agent // Trende</span>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[10px] font-mono">
+            <div className={`w-1.5 h-1.5 rounded-full ${config.color} animate-pulse`} />
+            <span className="text-[var(--text-secondary)]">{config.label.toUpperCase()}</span>
+          </div>
+          {status === 'processing' && (
+            <div className="text-[10px] font-mono text-[var(--accent-emerald)] bg-[var(--bg-primary)] px-2 py-0.5 border border-[var(--accent-emerald)]/30">
+              {progress}%
+            </div>
           )}
         </div>
-        
-        <p 
-          ref={messageRef}
-          className="text-sm text-slate-300 leading-relaxed"
-        >
-          {displayMessage}
-          {isTyping && (
-            <span className="inline-block w-2 h-4 bg-cyan-400 ml-1 animate-pulse align-middle" />
-          )}
-        </p>
 
-        {/* TEE Badge */}
-        <div className="mt-2 flex items-center gap-2">
-          <div className="flex items-center gap-1 text-[10px] text-slate-500">
-            <Fingerprint className="w-3 h-3" />
-            <span>EigenCompute TEE</span>
-          </div>
-          <div className="w-px h-3 bg-slate-700" />
-          <div className="flex items-center gap-1 text-[10px] text-slate-500">
-            <Eye className="w-3 h-3" />
-            <span>Zero-knowledge</span>
-          </div>
+        <div className="relative">
+          <p 
+            ref={messageRef}
+            className="text-sm sm:text-base font-mono leading-relaxed text-[var(--text-primary)] min-h-[3em]"
+          >
+            {displayMessage}
+            {isTyping && <span className="inline-block w-2 h-4 ml-1 bg-[var(--accent-cyan)] animate-pulse align-middle" />}
+          </p>
+        </div>
+
+        {/* Action icons */}
+        <div className="flex items-center gap-3 pt-2">
+          <StatusIcon className={`w-4 h-4 ${config.color.replace('bg-', 'text-')}`} />
+          {status === 'processing' && (
+            <div className="flex gap-1">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="w-1 h-1 bg-[var(--accent-cyan)] animate-bounce" style={{ animationDelay: `${i * 0.1}s` }} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-// Custom ear icon for listening state
-function EarIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-      <path d="M4 2C2.8 3.7 2 5.7 2 8" />
-      <path d="M22 8c0-2.3-.8-4.3-2-6" />
-    </svg>
-  );
-}
 
 // Compact version for inline use
 export function AgentBadge({ status }: { status: AgentPersonaProps['status'] }) {

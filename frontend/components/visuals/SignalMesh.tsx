@@ -3,6 +3,48 @@
 import { useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 
+    class Particle {
+      x: number = 0;
+      y: number = 0;
+      size: number = 0;
+      speedX: number = 0;
+      speedY: number = 0;
+      opacity: number = 0;
+      width: number;
+      height: number;
+
+      constructor(width: number, height: number) {
+        this.width = width;
+        this.height = height;
+        this.reset();
+      }
+
+      reset() {
+        this.x = Math.random() * this.width;
+        this.y = Math.random() * this.height;
+        this.size = Math.random() * 2 + 1;
+        this.speedX = (Math.random() - 0.5) * 0.5;
+        this.speedY = (Math.random() - 0.5) * 0.5;
+        this.opacity = Math.random() * 0.5 + 0.2;
+      }
+
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        if (this.x < 0 || this.x > this.width || this.y < 0 || this.y > this.height) {
+          this.reset();
+        }
+      }
+
+      draw(ctx: CanvasRenderingContext2D) {
+        ctx.fillStyle = `rgba(0, 255, 255, ${this.opacity})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
 export function SignalMesh() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -14,61 +56,23 @@ export function SignalMesh() {
     if (!ctx) return;
 
     let animationFrameId: number;
-    let width = 0;
-    let height = 0;
+    let w = 0;
+    let h = 0;
+
     const particles: Particle[] = [];
     const particleCount = 60;
 
-    class Particle {
-      x: number = 0;
-      y: number = 0;
-      size: number = 0;
-      speedX: number = 0;
-      speedY: number = 0;
-      opacity: number = 0;
-
-      constructor() {
-        this.reset();
-      }
-
-      reset() {
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
-        this.size = Math.random() * 2 + 1;
-        this.speedX = (Math.random() - 0.5) * 0.5;
-        this.speedY = (Math.random() - 0.5) * 0.5;
-        this.opacity = Math.random() * 0.5 + 0.2;
-      }
-
-      update() {
-        this.x += this.speedX;
-        this.y += this.speedY;
-
-        if (this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
-          this.reset();
-        }
-      }
-
-      draw() {
-        if (!ctx) return;
-        ctx.fillStyle = `rgba(0, 255, 255, ${this.opacity})`;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
     const resize = () => {
-      width = canvas.width = canvas.offsetWidth;
-      height = canvas.height = canvas.offsetHeight;
+      w = canvas.width = canvas.offsetWidth;
+      h = canvas.height = canvas.offsetHeight;
       particles.length = 0;
       for (let i = 0; i < particleCount; i++) {
-        particles.push(new Particle());
+        particles.push(new Particle(w, h));
       }
     };
 
     const animate = () => {
-      ctx.clearRect(0, 0, width, height);
+      ctx.clearRect(0, 0, w, h);
       
       // Draw connections
       ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
@@ -90,7 +94,7 @@ export function SignalMesh() {
 
       particles.forEach(p => {
         p.update();
-        p.draw();
+        p.draw(ctx);
       });
 
       animationFrameId = requestAnimationFrame(animate);
