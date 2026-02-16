@@ -17,13 +17,18 @@ async def planner_node(state: GraphState) -> GraphState:
     state["logs"].append(f"🧠 INITIALIZING: Crafting a strategic research blueprint for '{state['topic']}'...")
 
     # RAG: Check historical context
-    historical_matches = vector_store.query_historical_context(state["topic"], n_results=3)
-    historical_context = ""
-    if historical_matches:
-        state["logs"].append(f"📚 MEMORY BANK: Retrieved {len(historical_matches)} relevant historical trends for cross-referencing.")
-        historical_context = "\n".join([f"- {m['content']}" for m in historical_matches])
-    else:
-        state["logs"].append(f"🔍 EXPLORATION MODE: No prior data found. Venturing into uncharted territory...")
+    try:
+        historical_matches = vector_store.query_historical_context(state["topic"], n_results=3)
+        historical_context = ""
+        if historical_matches:
+            state["logs"].append(f"📚 MEMORY BANK: Retrieved {len(historical_matches)} relevant historical trends for cross-referencing.")
+            historical_context = "\n".join([f"- {m['content']}" for m in historical_matches])
+        else:
+            state["logs"].append(f"🔍 EXPLORATION MODE: No prior data found. Venturing into uncharted territory...")
+    except Exception as e:
+        print(f"RAG failed: {e}")
+        state["logs"].append(f"⚠️  MEMORY OFFLINE: Historical context unavailable. Proceeding with fresh discovery.")
+        historical_context = ""
 
     prompt = f"""
     The user wants to find trends about: {state["topic"]}

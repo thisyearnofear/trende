@@ -158,6 +158,7 @@ export const api = {
   ): () => void {
     let eventSource: EventSource | null = null;
     let isClosed = false;
+    let hasTerminalEvent = false;
     let retryCount = 0;
     const maxRetries = 5;
 
@@ -170,6 +171,12 @@ export const api = {
         try {
           const data = JSON.parse(event.data) as StreamEvent;
           onEvent(data);
+          if (data.type === 'result' || data.type === 'error') {
+            hasTerminalEvent = true;
+            isClosed = true;
+            eventSource?.close();
+            return;
+          }
           // Reset retry count on successful message
           retryCount = 0;
         } catch (e) {
@@ -178,10 +185,14 @@ export const api = {
       };
 
       eventSource.onerror = (err) => {
+        if (hasTerminalEvent || isClosed) {
+          return;
+        }
+
         console.error('SSE connection error:', err);
         eventSource?.close();
         
-        if (!isClosed && retryCount < maxRetries) {
+        if (retryCount < maxRetries) {
           retryCount++;
           const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
           console.log(`Retrying SSE connection in ${delay}ms... (Attempt ${retryCount}/${maxRetries})`);

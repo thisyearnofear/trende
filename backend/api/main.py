@@ -708,6 +708,8 @@ async def get_agent_alpha(
 @app.get("/api/trends/stream/{task_id}")
 async def stream_status(task_id: str) -> StreamingResponse:
     async def event_generator() -> AsyncIterator[str]:
+        # Initial delay to allow frontend to hook in
+        await asyncio.sleep(1.0)
         while True:
             # Try to get from in-memory tasks first
             state = tasks.get(task_id)
@@ -779,6 +781,8 @@ async def stream_status(task_id: str) -> StreamingResponse:
                 yield f"data: {json.dumps(final_payload)}\n\n"
                 break
 
+            # Keep-alive comment
+            yield ": keep-alive\n\n"
             await asyncio.sleep(0.5)
 
     return StreamingResponse(
