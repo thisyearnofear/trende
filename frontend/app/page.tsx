@@ -9,6 +9,7 @@ import { ProcessingStatus } from '@/components/ProcessingStatus';
 import { KineticHeader, HeroText } from '@/components/KineticHeader';
 import { GlassContainer } from '@/components/GlassContainer';
 import { AttestationSeal } from '@/components/AttestationSeal';
+import { ConfidenceVisualizer } from '@/components/ConfidenceVisualizer';
 import { QueryRequest } from '@/lib/types';
 import {
   RefreshCw,
@@ -280,6 +281,17 @@ export default function Home() {
         {data && data.results && data.results.length > 0 && !isProcessing && (
           <section className="space-y-5 animate-fade-up" style={{ animationDelay: '120ms' }}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <ConfidenceVisualizer 
+                data={{
+                  score: stats.confidence,
+                  sources: stats.platforms,
+                  crossReferences: stats.itemCount,
+                  diversity: (data.telemetry?.diversityLevel?.toLowerCase() as 'low' | 'medium' | 'high') || 'medium',
+                  warnings: data.telemetry?.warnings || [],
+                  providerCount: data.telemetry?.providerCount || data?.summary?.consensusData?.providers?.length || 0,
+                  agreementScore: (data.telemetry?.agreementScore || data?.summary?.consensusData?.agreement_score || 0) * 100,
+                }}
+              />
               <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
                 <p className="text-xs uppercase tracking-wide text-slate-400">Sources analyzed</p>
                 <p className="text-2xl font-semibold mt-1 text-slate-100">{stats.platforms}</p>
@@ -287,10 +299,6 @@ export default function Home() {
               <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
                 <p className="text-xs uppercase tracking-wide text-slate-400">Signals captured</p>
                 <p className="text-2xl font-semibold mt-1 text-slate-100">{stats.itemCount}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Confidence</p>
-                <p className="text-2xl font-semibold mt-1 text-emerald-300">{stats.confidence}%</p>
               </div>
             </div>
 
