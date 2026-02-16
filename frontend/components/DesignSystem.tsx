@@ -53,7 +53,7 @@ export function Card({
     emerald: 'border-[var(--accent-emerald)]',
     amber: 'border-[var(--accent-amber)]',
     rose: 'border-[var(--accent-rose)]',
-    violet: 'border(--accent-violet)',
+    violet: 'border-[var(--accent-violet)]',
     white: 'border-[var(--border-color)]',
   };
   

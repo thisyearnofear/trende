@@ -286,11 +286,12 @@ class AIService:
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
+        providers: Optional[Sequence[str]] = None,
     ) -> Dict[str, object]:
         """
         Produces a consensus report plus verifiability metadata payload.
         """
-        provider_results = await self.get_parallel_provider_results(prompt, system_prompt)
+        provider_results = await self.get_parallel_provider_results(prompt, system_prompt, providers)
         responses = {
             item["provider"]: item["response"]
             for item in provider_results

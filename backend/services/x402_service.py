@@ -1,8 +1,9 @@
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel
+import logging
 import os
 import time
-import logging
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -10,14 +11,18 @@ logger = logging.getLogger(__name__)
 try:
     from eth_account import Account
     from eth_account.messages import encode_typed_data
+
     HAS_ETH_ACCOUNT = True
 except ImportError:
     HAS_ETH_ACCOUNT = False
+    Account = None  # type: ignore
+    encode_typed_data = None  # type: ignore
     logger.warning("eth_account not installed. X402 signature verification will use fallback mode.")
 
 
 class X402Payment(BaseModel):
     """X402 payment payload following EIP-3009 transferWithAuthorization."""
+
     amount: str
     token: str  # Token contract address (or 'native' for MON)
     signature: str  # EIP-712 signature
@@ -30,7 +35,9 @@ def get_eip712_domain(chain_id: int = 10143) -> Dict[str, Any]:
         "name": "Trende Intelligence",
         "version": "1",
         "chainId": chain_id,
-        "verifyingContract": os.getenv("X402_RECIPIENT_ADDRESS", "0x0000000000000000000000000000000000000000"),
+        "verifyingContract": os.getenv(
+            "X402_RECIPIENT_ADDRESS", "0x0000000000000000000000000000000000000000"
+        ),
     }
 
 
@@ -55,12 +62,12 @@ EIP712_TYPES = {
 
 class X402Service:
     """Service for X402 payment verification on Monad."""
-    
+
     def __init__(self):
         self.chain_id = int(os.getenv("MONAD_CHAIN_ID", "10143"))
         self.recipient = os.getenv("X402_RECIPIENT_ADDRESS", "")
         self.default_amount = os.getenv("X402_PAYMENT_AMOUNT", "0.001")
-    
+
     def verify_payment(self, payment_payload: X402Payment) -> bool:
         """
         Verifies the X402 payment payload against EIP-712/EIP-3009 standards.
@@ -71,48 +78,57 @@ class X402Service:
             if not payment_payload.signature or not payment_payload.authorization:
                 logger.warning("X402: Missing signature or authorization")
                 return False
-            
+
             auth = payment_payload.authorization
-            
+
             # 2. Check required fields
             required_fields = ["from", "to", "value", "validAfter", "validBefore", "nonce"]
             if not all(field in auth for field in required_fields):
                 logger.warning(f"X402: Missing required fields. Got: {list(auth.keys())}")
                 return False
-            
+
             # 3. Check time validity
             now = int(time.time())
             valid_after = int(auth.get("validAfter", 0))
             valid_before = int(auth.get("validBefore", 0))
-            
+
             if now < valid_after:
-                logger.warning(f"X402: Authorization not yet valid. Now: {now}, validAfter: {valid_after}")
+                logger.warning(
+                    f"X402: Authorization not yet valid. Now: {now}, validAfter: {valid_after}"
+                )
                 return False
-            
+
             if now > valid_before:
-                logger.warning(f"X402: Authorization expired. Now: {now}, validBefore: {valid_before}")
+                logger.warning(
+                    f"X402: Authorization expired. Now: {now}, validBefore: {valid_before}"
+                )
                 return False
-            
+
             # 4. Check recipient matches
             if self.recipient and auth.get("to", "").lower() != self.recipient.lower():
-                logger.warning(f"X402: Recipient mismatch. Expected: {self.recipient}, Got: {auth.get('to')}")
+                logger.warning(
+                    f"X402: Recipient mismatch. Expected: {self.recipient}, Got: {auth.get('to')}"
+                )
                 return False
-            
+
             # 5. Verify signature using eth_account if available
             if HAS_ETH_ACCOUNT:
                 return self._verify_eip712_signature(auth, payment_payload.signature)
-            
+
             # Fallback: basic validation if eth_account not installed
             # In production, you'd want to ensure eth_account is installed
             logger.warning("X402: Using fallback signature validation (eth_account not installed)")
             return len(payment_payload.signature) >= 130  # 65 bytes hex = 130 chars
-            
+
         except Exception as e:
             logger.error(f"X402: Verification error: {e}")
             return False
-    
-    def _verify_eip712_signature(self, auth: Dict[str, Any], signature: str) -> bool:
+
+    def _verify_eip712_signature(self, auth: dict[str, Any], signature: str) -> bool:
         """Verify EIP-712 typed data signature."""
+        if not HAS_ETH_ACCOUNT:
+            return False
+
         try:
             # Construct the typed data
             typed_data = {
@@ -128,26 +144,28 @@ class X402Service:
                     "nonce": auth["nonce"],
                 },
             }
-            
+
             # Encode and recover signer
-            encoded = encode_typed_data(full_message=typed_data)
-            recovered_address = Account.recover_message(encoded, signature=signature)
-            
+            encoded = encode_typed_data(full_message=typed_data)  # type: ignore
+            recovered_address = Account.recover_message(encoded, signature=signature)  # type: ignore
+
             # Check if recovered address matches the 'from' field
             expected_from = auth["from"].lower()
             recovered_lower = recovered_address.lower()
-            
+
             if recovered_lower != expected_from:
-                logger.warning(f"X402: Signature mismatch. Expected: {expected_from}, Recovered: {recovered_lower}")
+                logger.warning(
+                    f"X402: Signature mismatch. Expected: {expected_from}, Recovered: {recovered_lower}"
+                )
                 return False
-            
+
             logger.info(f"X402: Valid signature from {recovered_address}")
             return True
-            
+
         except Exception as e:
             logger.error(f"X402: EIP-712 verification error: {e}")
             return False
-    
+
     def get_payment_headers(self, amount: str, recipient: str, chain_id: int) -> Dict[str, str]:
         """Returns the X402 headers for the client to process payment."""
         return {
@@ -158,7 +176,7 @@ class X402Service:
             "X-402-Scheme": "EIP-712",
             "X-402-Network": "monad-testnet",
         }
-    
+
     def create_authorization_template(
         self,
         from_address: str,
@@ -170,7 +188,7 @@ class X402Service:
         Client signs this with their wallet, then sends back with signature.
         """
         import secrets
-        
+
         now = int(time.time())
         return {
             "from": from_address,

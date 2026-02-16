@@ -35,6 +35,34 @@ const STAGES = [
   { id: "architect", label: "ATTEST", description: "TEE Signing & Output" },
 ];
 
+const SIMULATED_LOGS: Record<string, string[]> = {
+  planner: [
+    "ANALYZING INTENT VECTORS...",
+    "MAPPING SEARCH SPACE...",
+    "IDENTIFYING KEY ENTITIES...",
+    "OPTIMIZING QUERY STRATEGY...",
+  ],
+  researcher: [
+    "CONNECTING TO SOCIAL GRAPH API...",
+    "SCRAPING NEWS FEEDS...",
+    "PARSING UNSTRUCTURED DATA...",
+    "DETECTING VIRAL SIGNALS...",
+    "FILTERING NOISE...",
+  ],
+  validator: [
+    "CROSS-REFERENCING SOURCES...",
+    "CALCULATING CONFIDENCE SCORE...",
+    "DETECTING HALLUCINATIONS...",
+    "VERIFYING CITATIONS...",
+  ],
+  architect: [
+    "SYNTHESIZING REPORT...",
+    "GENERATING EIGEN PROOF...",
+    "SIGNING ATTESTATION PAYLOAD...",
+    "FINALIZING OUTPUT...",
+  ],
+};
+
 export function ProcessingStatus({
   progress,
   events,
@@ -44,8 +72,11 @@ export function ProcessingStatus({
     Math.floor((progress / 100) * STAGES.length),
     STAGES.length - 1,
   );
+  const currentStageId = STAGES[currentStageIndex]?.id || "planner";
   const [activeHash, setActiveHash] = useState("0x...");
+  const [simulatedLog, setSimulatedLog] = useState<string | null>(null);
 
+  // Hash animation
   useEffect(() => {
     if (!isProcessing) return;
     const interval = setInterval(() => {
@@ -60,8 +91,32 @@ export function ProcessingStatus({
     return () => clearInterval(interval);
   }, [isProcessing]);
 
+  // Simulated telemetry logs
+  useEffect(() => {
+    if (!isProcessing) {
+      setSimulatedLog(null);
+      return;
+    }
+
+    const logs = SIMULATED_LOGS[currentStageId] || SIMULATED_LOGS["planner"];
+    const interval = setInterval(() => {
+      const randomLog = logs[Math.floor(Math.random() * logs.length)];
+      setSimulatedLog(`[SYSTEM] ${randomLog}`);
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [isProcessing, currentStageId]);
+
   const terminalEvents = useMemo(() => {
-    return events.slice(-6).map((event, index) => ({
+    // Filter out repetitive status messages like "researching (45%)"
+    const filtered = events.filter(
+      (e) =>
+        !e.message?.match(
+          /^(pending|planning|researching|analyzing|processing) \(\d+%\)$/i,
+        ),
+    );
+
+    const displayEvents = filtered.slice(-6).map((event, index) => ({
       id: `${event.type}-${index}-${event.message?.slice(0, 20) || ""}`,
       message: event.message || "",
       type: (event.type === "error"
@@ -70,7 +125,17 @@ export function ProcessingStatus({
           ? "success"
           : "info") as "error" | "success" | "info",
     }));
-  }, [events]);
+
+    if (simulatedLog && isProcessing) {
+      displayEvents.push({
+        id: "simulated",
+        message: simulatedLog,
+        type: "info",
+      });
+    }
+
+    return displayEvents.slice(-6);
+  }, [events, simulatedLog, isProcessing]);
 
   const getAgentStatus = () => {
     if (!isProcessing) return "idle";

@@ -11,6 +11,13 @@ interface QueryInputProps {
   disabled?: boolean;
 }
 
+const MODEL_OPTIONS = [
+  { id: 'venice', label: 'Venice AI', hint: 'Privacy-focused, unbiased Llama 3', quality: 95, cost: 0.002 },
+  { id: 'aisa', label: 'AIsA API', hint: 'High-reasoning, filtered responses', quality: 90, cost: 0.0015 },
+  { id: 'tabstack', label: 'Tabstack', hint: 'Real-time web verification', quality: 85, cost: 0.001 },
+  { id: 'openrouter', label: 'OpenRouter', hint: 'Multi-model fallback aggregator', quality: 80, cost: 0.0005 },
+];
+
 const PLATFORM_OPTIONS = [
   { id: 'twitter', label: 'X / Twitter', hint: 'Fast social momentum' },
   { id: 'linkedin', label: 'LinkedIn', hint: 'Professional conviction' },
@@ -28,21 +35,34 @@ const SUGGESTIONS = [
 export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [idea, setIdea] = useState('');
   const [platforms, setPlatforms] = useState<string[]>(['twitter', 'newsapi']);
+  const [models, setModels] = useState<string[]>(['venice', 'aisa', 'openrouter']);
   const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
 
   const hasPlatforms = platforms.length > 0;
+  const hasModels = models.length > 0;
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    if (!idea.trim() || isLoading || disabled || !hasPlatforms) return;
-    onSubmit({ idea: idea.trim(), platforms, relevanceThreshold });
-  }, [idea, platforms, relevanceThreshold, onSubmit, isLoading, disabled, hasPlatforms]);
+    if (!idea.trim() || isLoading || disabled || !hasPlatforms || !hasModels) return;
+    onSubmit({ idea: idea.trim(), platforms, models, relevanceThreshold });
+  }, [idea, platforms, models, relevanceThreshold, onSubmit, isLoading, disabled, hasPlatforms, hasModels]);
 
   const togglePlatform = (platform: string) => {
     setPlatforms((prev) =>
       prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
     );
   };
+
+  const toggleModel = (modelId: string) => {
+    setModels((prev) =>
+      prev.includes(modelId) ? prev.filter((m) => m !== modelId) : [...prev, modelId]
+    );
+  };
+
+  const totalCost = models.reduce((sum, m) => sum + (MODEL_OPTIONS.find(opt => opt.id === m)?.cost || 0), 0);
+  const avgQuality = models.length > 0 
+    ? models.reduce((sum, m) => sum + (MODEL_OPTIONS.find(opt => opt.id === m)?.quality || 0), 0) / models.length
+    : 0;
 
   return (
     <Card accent="cyan" shadow="lg" className="p-4 sm:p-8">
@@ -76,7 +96,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
           
           {/* Submit button */}
           <div className="absolute bottom-4 right-4">
-            <Button type="submit" disabled={!idea.trim() || isLoading || disabled || !hasPlatforms}>
+            <Button type="submit" disabled={!idea.trim() || isLoading || disabled || !hasPlatforms || !hasModels}>
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -114,7 +134,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                     boxShadow: active ? '4px 4px 0px 0px var(--accent-cyan)' : '4px 4px 0px 0px var(--text-muted)',
                   }}
                 >
-                  <p className="text-sm font-black uppercase" style={{ color: active ? 'var(--accent-cyan)' : 'var(--text-muted)' }}>
+                  <p className="text-sm font-black uppercase" style={{ color: active ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
                     {platform.label}
                   </p>
                   <p className="text-xs text-[var(--text-muted)] mt-1">{platform.hint}</p>
@@ -126,6 +146,54 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
           
           {!hasPlatforms && (
             <p className="text-xs font-mono text-[var(--accent-rose)]">[!] SELECT AT LEAST ONE SOURCE</p>
+          )}
+        </div>
+
+        {/* Model Selectors */}
+        <div className="space-y-4 pt-4 border-t-2 border-[var(--bg-tertiary)]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[var(--accent-amber)]" />
+              <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Consensus Models</span>
+            </div>
+            <div className="flex items-center gap-3">
+               <div className="flex flex-col items-end">
+                <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Est. Cost</span>
+                <span className="text-xs font-black text-[var(--accent-amber)]">{totalCost.toFixed(4)} MON</span>
+              </div>
+              <div className="flex flex-col items-end border-l-2 border-[var(--bg-tertiary)] pl-3">
+                <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Mitigation Power</span>
+                <span className="text-xs font-black text-[var(--accent-cyan)]">{Math.round(avgQuality)}%</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {MODEL_OPTIONS.map((model) => {
+              const active = models.includes(model.id);
+              return (
+                <button
+                  key={model.id}
+                  type="button"
+                  onClick={() => toggleModel(model.id)}
+                  disabled={disabled}
+                  className="text-left p-3 min-h-[70px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-50"
+                  style={{
+                    borderColor: active ? 'var(--accent-amber)' : 'var(--text-muted)',
+                    boxShadow: active ? '4px 4px 0px 0px var(--accent-amber)' : '4px 4px 0px 0px var(--text-muted)',
+                  }}
+                >
+                  <p className="text-xs font-black uppercase" style={{ color: active ? 'var(--accent-amber)' : 'var(--text-primary)' }}>
+                    {model.label}
+                  </p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1 leading-tight">{model.hint}</p>
+                </button>
+              );
+            })}
+          </div>
+          
+          {!hasModels && (
+            <p className="text-xs font-mono text-[var(--accent-rose)]">[!] SELECT AT LEAST ONE MODEL FOR CONSENSUS</p>
           )}
         </div>
 
