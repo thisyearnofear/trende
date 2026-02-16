@@ -29,15 +29,27 @@ class PineconeService:
                 self.pc = Pinecone(api_key=self.api_key)
                 
                 # Check if index exists, create if not
-                existing_indexes = [idx.name for idx in self.pc.list_indexes()]
+                try:
+                    index_list = self.pc.list_indexes()
+                    existing_indexes = [idx.name for idx in index_list]
+                except Exception as e:
+                    print(f"Warning: Could not list Pinecone indexes: {e}")
+                    existing_indexes = []
+                
                 if self.index_name not in existing_indexes:
                     print(f"Creating Pinecone index: {self.index_name}")
-                    self.pc.create_index(
-                        name=self.index_name,
-                        dimension=1536,  # Standard for OpenAI embeddings
-                        metric='cosine',
-                        spec=ServerlessSpec(cloud='aws', region='us-east-1')
-                    )
+                    try:
+                        self.pc.create_index(
+                            name=self.index_name,
+                            dimension=1536,  # Standard for OpenAI embeddings
+                            metric='cosine',
+                            spec=ServerlessSpec(cloud='aws', region='us-east-1')
+                        )
+                    except Exception as e:
+                        if "already exists" in str(e).lower():
+                            print(f"Index {self.index_name} already exists (race condition).")
+                        else:
+                            raise e
                 
                 self.index = self.pc.Index(self.index_name)
                 self.initialized = True

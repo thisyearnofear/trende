@@ -1,33 +1,116 @@
-# The Winning Path: Roadmap to Moltiverse
+# Roadmap
 
-## 🏁 Phase 1: High-Signal Research (CURRENT)
-- [x] Multi-platform LangGraph workflow.
-- [x] Private AI Integration (Venice.ai).
-- [x] Confidence Score & Validator Logic.
-- [x] Search Results Dashboard.
+## Phase 1: High-Signal Research ✅ COMPLETE
 
-## 🌉 Phase 2: Bridging & Scope (Target: Feb 18-20)
-- [ ] **Multi-Source Selector**: Frontend UI to toggle LinkedIn, YouTube, TikTok, and News.
-- [ ] **TikTok/YouTube Scrapers**: Integration with specialized RapidAPIs for video-trend metadata.
-- [ ] **Signal Correlation**: Logic to see if a trend on TikTok is matching a spike on X/Farcaster.
-
-## 🚀 Phase 3: The "Forge" & Tokenization (Target: Feb 21-24)
-- [x] **Meme Page Generator**: A dynamic frontend view now exists at `/meme/[queryId]` with a high-conviction thesis layout.
-- [x] **Verifiable News Synthesizer View**: Added a second Forge output mode for cross-model digest UX and attestation preview.
-- [ ] **nad.fun Integration**: One-click token launch integration using the research as the "whitepaper."
-- [ ] **Autonomous Wallet**: Enable the agent to have its own Monad address to "Seed" the tokens it finds most promising.
-
-## 🤖 Phase 4: Extreme Agency & Sovereignty (Target: Hackathon Demo)
-- [ ] **OpenRouter Free Tier Failover**: Ensuring the agent is "Zero-Balance Proof."
-- [ ] **Farcaster Auto-Bot**: The agent posts its highest-confidence "Bridge Signals" to Warpcast.
-
-## 🛡️ Phase 5: Verifiable Sovereignty (The "Secret Weapon") ✅ LIVE
-- [x] **EigenCompute Integration**: Intelligence Core containerized and deployed as `baseline-attested` on Hetzner.
-- [x] **TEE Execution**: Validator logic running in EigenCompute's Trusted Execution Environment.
-- [x] **On-Chain Attestation**: Every output includes a signed attestation payload. Endpoint live at [attest.famile.xyz](https://attest.famile.xyz) with auto-renewing SSL.
-- [x] **Verifiable Badge**: "TE-Execute" proof displayed on Meme and News outputs.
+- [x] Multi-platform LangGraph workflow
+- [x] Private AI Integration (Venice.ai)
+- [x] Confidence Score & Validator Logic
+- [x] Search Results Dashboard
 
 ---
 
-## 💡 The "Winning Secret"
-The project wins by showing that **Verifiable Intelligence is the foundation of the Monad economy.** Trende doesn't just find trends; it provides a cryptographically proven pipeline from external social gravity to on-chain assets.
+## Phase 2: Bridging & Scope
+
+- [x] **Multi-Source Selector**: Frontend UI toggles for LinkedIn, YouTube, TikTok, News
+- [x] **Platform Integration**: TikTok/YouTube metadata via AIsa search
+- [x] **Signal Correlation**: Cross-platform trend matching (TikTok ↔ X/Farcaster)
+
+---
+
+## Phase 3: The Forge & Tokenization
+
+- [x] **Meme Page Generator**: Dynamic view at `/meme/[queryId]`
+- [x] **Verifiable News Synthesizer**: Dual-mode output (Meme/News)
+- [x] **Permanent Proof URL**: `/proof/[queryId]` for public verification
+- [ ] **nad.fun Integration**: One-click token launch from research
+- [ ] **Autonomous Wallet**: Agent treasury for seeding promising tokens
+
+---
+
+## Phase 4: Agentic Interoperability
+
+- [x] **Alpha API**: `/api/agent/alpha` endpoint for nad.fun agents
+- [x] **Agent Wallet**: Developer wallet configured for X402 settlement
+- [x] **ACP Integration**: Provider agent on Virtuals Protocol
+- [ ] **Farcaster Auto-Bot**: Post high-confidence signals to Warpcast
+- [ ] **OpenRouter Failover**: Zero-balance proof inference
+
+---
+
+## Phase 5: Verifiable Sovereignty ✅ LIVE
+
+- [x] **EigenCompute Integration**: Containerized as `baseline-attested`
+- [x] **TEE Execution**: Validator logic in Trusted Execution Environment
+- [x] **On-Chain Attestation**: Signed payload with every output
+- [x] **SSL Endpoint**: attest.famile.xyz with auto-renewing Let's Encrypt
+- [ ] **CI Integration**: Fail deploy if attestation verification fails
+
+---
+
+## Milestones
+
+### Q1 2026 (Jan-Mar)
+
+| Milestone | Target | Status |
+|-----------|--------|--------|
+| ACP Agent Registration | Feb 15 | ✅ Done |
+| 10 ACP Jobs (Graduation) | Feb 28 | In Progress |
+| $1K ACP Revenue | Mar 15 | Pending |
+| 60 Days Launch Decision | Mar 20 | Pending |
+| Top 5 FDV (60 Days) | Apr 15 | Pending |
+
+### Q2 2026 (Apr-Jun)
+
+| Milestone | Target | Status |
+|-----------|--------|--------|
+| 500+ ACP Jobs | May 1 | Pending |
+| $10K Monthly Revenue | Jun 1 | Pending |
+| Cluster Participation (AHF/AMH) | Jun 15 | Pending |
+| Token Launch (if committed) | Jun 30 | Pending |
+
+---
+
+## Success Metrics
+
+### Short-term (Month 1)
+- [ ] ACP agent operational
+- [ ] 10+ jobs completed (graduated)
+- [ ] <10% failure rate
+- [ ] Listed on aGDP.io
+- [ ] $1,000 revenue
+
+### Medium-term (3 Months)
+- [ ] 500+ jobs completed
+- [ ] $10,000+ monthly revenue
+- [ ] aGDP leaderboard featured
+- [ ] Butler integration (50k+ users)
+
+### Long-term (6 Months)
+- [ ] 2,000+ jobs completed
+- [ ] $50,000+ monthly revenue
+- [ ] Cluster participation
+- [ ] Top 10 provider agent
+
+---
+
+## Infrastructure Tasks
+
+- [x] **ecloud CLI**: Installed `@layr-labs/ecloud-cli`
+- [x] **Baseline Dry Run**: EigenCloud billing active
+- [x] **Staging Switch**: Attestation provider set to `eigencompute`
+- [x] **Production Hardening**: Docker + nginx + SSL on Hetzner
+- [ ] **CI Integration**: Attestation verification in deploy pipeline
+- [ ] **Sovereign Persona**: Define Trende Bot personality
+
+---
+
+## The Winning Strategy
+
+**Verifiable Intelligence** is the foundation of the Monad economy.
+
+Trende provides a cryptographically proven pipeline from:
+```
+External Social Gravity → Multi-Model Consensus → TEE Attestation → On-Chain Assets
+```
+
+This is the secret weapon: **provable, unbiased, sovereign intelligence** that other agents can trust and pay for.

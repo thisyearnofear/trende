@@ -13,8 +13,8 @@ from uuid import uuid4
 
 from virtuals_acp.client import VirtualsACP
 from virtuals_acp.env import EnvSettings
-from virtuals_acp.contract_client import ACPContractClientV2
-from virtuals_acp.config import BASE_MAINNET_ACP_X402_CONFIG_V2
+from virtuals_acp.contract_clients.contract_client_v2 import ACPContractClientV2
+from virtuals_acp.configs.configs import BASE_MAINNET_ACP_X402_CONFIG_V2
 
 from backend.agents.workflow import run_trend_analysis
 from backend.database.repository import TrendRepository

@@ -13,9 +13,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 from backend.agents.workflow import create_workflow
-# Temporarily disabled ACP integration until virtuals_acp package is properly configured
-# from backend.api.routes import acp as acp_routes
-# from backend.services.acp_service import acp_service
+from backend.api.routes import acp as acp_routes
+from backend.services.acp_service import acp_service
 from backend.database.repository import Repository, init_db
 from backend.services.ai_service import OPENROUTER_VARIANTS, ai_service
 from backend.services.attestation_service import attestation_service
@@ -31,16 +30,15 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     await enforce_attestation_startup_gate()
     # Resume interrupted tasks
     await resume_interrupted_tasks()
-    # ACP listener temporarily disabled
-    # if acp_service.enabled:
-    #     asyncio.create_task(acp_service.start_listening())
+    if acp_service.enabled:
+        asyncio.create_task(acp_service.start_listening())
     yield
 
 
 app = FastAPI(title="Trende Agent API", lifespan=lifespan)
 
-# ACP routes temporarily disabled
-# app.include_router(acp_routes.router)
+# ACP routes
+app.include_router(acp_routes.router)
 
 # CORS middleware
 app.add_middleware(
