@@ -29,6 +29,7 @@ class NewsConnector(AbstractPlatformConnector):
         if self.aisa_key:
             results = await aisa_service.web_search(query, limit)
             if results:
+                print(f"[News] AIsa returned {len(results)} results")
                 items = []
                 for res in results:
                     items.append(TrendItem(
@@ -44,11 +45,13 @@ class NewsConnector(AbstractPlatformConnector):
                         raw_data=res
                     ))
                 return items
+            else:
+                print(f"[News] AIsa returned no results, falling back to NewsAPI")
 
         # 2. Fallback to NewsAPI
         if not self.news_api_key:
             print("Warning: Neither AISA_API_KEY nor NEWSAPI_KEY set for News")
-            raise ValueError("No API key configured for News")
+            return []
 
         try:
             async with httpx.AsyncClient() as client:

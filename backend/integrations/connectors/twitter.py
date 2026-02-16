@@ -29,6 +29,7 @@ class TwitterConnector(AbstractPlatformConnector):
         if self.aisa_key:
             results = await aisa_service.twitter_search(query, limit)
             if results:
+                print(f"[Twitter] AIsa returned {len(results)} results")
                 items = []
                 for tweet in results:
                     items.append(TrendItem(
@@ -44,11 +45,13 @@ class TwitterConnector(AbstractPlatformConnector):
                         raw_data=tweet
                     ))
                 return items
+            else:
+                print(f"[Twitter] AIsa returned no results, falling back to RapidAPI")
 
         # 2. Fallback to RapidAPI
         if not self.rapid_api_key:
             print("Warning: Neither AISA_API_KEY nor RAPIDAPI_KEY set for Twitter")
-            raise ValueError("No API key configured for Twitter")
+            return []
 
         try:
             # Note: In a real async implementation, we would use httpx

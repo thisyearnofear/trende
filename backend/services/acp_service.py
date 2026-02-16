@@ -44,23 +44,51 @@ class ACPService:
 
     
 
-    def __init__(self):
+        def __init__(self):
 
-        """Initialize ACP service with configuration from environment."""
+    
 
-        self.env = EnvSettings()
+            """Initialize ACP service with configuration from environment."""
 
-        self.repository = Repository()
+    
 
+            self.repository = Repository()
 
-        
-        # ACP configuration
-        self.enabled = self.env.get("ACP_ENABLED", "false").lower() == "true"
-        self.agent_wallet_address = self.env.get("ACP_AGENT_WALLET_ADDRESS")
-        self.wallet_private_key = self.env.get("ACP_WALLET_PRIVATE_KEY")
-        self.entity_id = self.env.get("ACP_ENTITY_ID")
-        self.service_price = float(self.env.get("ACP_SERVICE_PRICE", "10.0"))
-        self.sla_seconds = int(self.env.get("ACP_SERVICE_SLA_SECONDS", "180"))
+    
+
+            
+
+    
+
+            # ACP configuration
+
+    
+
+            self.enabled = os.getenv("ACP_ENABLED", "false").lower() == "true"
+
+    
+
+            self.agent_wallet_address = os.getenv("ACP_AGENT_WALLET_ADDRESS")
+
+    
+
+            self.wallet_private_key = os.getenv("ACP_WALLET_PRIVATE_KEY")
+
+    
+
+            self.entity_id = os.getenv("ACP_ENTITY_ID")
+
+    
+
+            self.service_price = float(os.getenv("ACP_SERVICE_PRICE", "10.0"))
+
+    
+
+            self.sla_seconds = int(os.getenv("ACP_SERVICE_SLA_SECONDS", "180"))
+
+    
+
+    
         
         # Job tracking
         self.active_jobs: Dict[str, Dict[str, Any]] = {}
