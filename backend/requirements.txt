@@ -19,7 +19,7 @@ composio-openai>=0.1.0
 composio-langchain>=0.1.0
 
 # Vector Store
-pinecone-client>=3.0.0
+pinecone>=8.0.0
 chromadb>=0.4.0
 
 # LLMs
