@@ -23,6 +23,7 @@ import { Onboarding } from "@/components/Onboarding";
 export default function Home() {
   const [queryId, setQueryId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [lastQuery, setLastQuery] = useState<QueryRequest | null>(null);
 
   const {
     status,
@@ -38,6 +39,7 @@ export default function Home() {
   const handleSubmit = useCallback(
     async (request: QueryRequest) => {
       try {
+        setLastQuery(request);
         const response = await startAnalysis(request);
         setQueryId(response.id);
       } catch (error) {
@@ -50,6 +52,10 @@ export default function Home() {
   const handleSelectHistory = (id: string) => {
     setQueryId(id);
     setShowHistory(false);
+    // When selecting history, we don't necessarily have the full request details
+    // unless we fetch them or find them in history data.
+    // For now, we'll just clear lastQuery to avoid showing potentially wrong brief
+    setLastQuery(null);
   };
 
   const handleClear = () => {
@@ -253,6 +259,22 @@ export default function Home() {
             progress={progress}
             events={events}
             isProcessing={isProcessing}
+            queryData={
+              lastQuery
+                ? {
+                    topic: lastQuery.idea,
+                    platforms: lastQuery.platforms,
+                    models: lastQuery.models,
+                    threshold: lastQuery.relevanceThreshold,
+                  }
+                : data?.query
+                  ? {
+                      topic: data.query.idea,
+                      platforms: data.query.platforms,
+                      threshold: data.query.relevanceThreshold,
+                    }
+                  : undefined
+            }
           />
         )}
 

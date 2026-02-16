@@ -114,7 +114,10 @@ export function useTrendData(
       
       if (event.type === 'result' || event.type === 'error') {
         // Refresh data when we get results or errors
-        mutate();
+        // Add a slight delay to ensure DB has persisted if it was a final event
+        setTimeout(() => {
+          mutate();
+        }, 1000);
       }
     };
 
@@ -127,7 +130,7 @@ export function useTrendData(
     return () => {
       sseCleanupRef.current?.();
     };
-  }, [queryId, sse, isProcessing, mutate]);
+  }, [queryId, sse, needsSync, mutate]);
 
   // Start analysis function
   const startAnalysis = useCallback(async (request: QueryRequest): Promise<QueryResponse> => {

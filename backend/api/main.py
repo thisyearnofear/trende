@@ -511,7 +511,12 @@ async def get_public_commons(limit: int = 50, sponsor: str | None = None) -> dic
 
 @app.get("/api/trends/status/{task_id}", response_model=None)
 async def get_status(task_id: str) -> dict[str, Any] | Response:
-    task = tasks.get(task_id) or repo.get_task(task_id)
+    task = tasks.get(task_id)
+    if not task:
+        task = repo.get_task(task_id)
+        if task:
+            tasks[task_id] = task
+            
     if not task:
         return Response(status_code=404, content=json.dumps({"error": "Task not found"}))
     return task
@@ -520,17 +525,31 @@ async def get_status(task_id: str) -> dict[str, Any] | Response:
 @app.get("/api/trends/{task_id}", response_model=None)
 async def get_task_results(task_id: str) -> dict[str, Any] | Response:
     """Returns the full task results in the format expected by the frontend."""
-    task = tasks.get(task_id) or repo.get_task(task_id)
+    task = tasks.get(task_id)
+    if not task:
+        task = repo.get_task(task_id)
+        if task:
+            tasks[task_id] = task
+            
     if not task:
         return Response(status_code=404, content=json.dumps({"error": "Task not found"}))
 
     # Normalize result extraction (Handle both memory state and DB state)
+    # In memory, findings are at top level or in result node. 
+    # In DB, findings are serialized inside task['result']['raw_findings']
     res_node_raw = task.get("result")
     res_node = res_node_raw if isinstance(res_node_raw, dict) else task
 
     # Transform raw items into TrendResult objects
     items_by_platform: dict[str, list[dict[str, Any]]] = {}
-    raw_findings = res_node.get("raw_findings") if isinstance(res_node, dict) else []
+    
+    # Try multiple paths for findings
+    raw_findings = []
+    if isinstance(res_node, dict) and res_node.get("raw_findings"):
+        raw_findings = res_node.get("raw_findings")
+    elif isinstance(task, dict) and task.get("raw_findings"):
+        raw_findings = task.get("raw_findings")
+        
     for item in raw_findings or []:
         normalized_item = item.model_dump() if hasattr(item, "model_dump") else item
         platform = (

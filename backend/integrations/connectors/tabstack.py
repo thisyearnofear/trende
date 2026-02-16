@@ -1,8 +1,8 @@
 import os
 import httpx
 import json
+import datetime
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timezone
 from backend.integrations.base import AbstractPlatformConnector
 from shared.models import TrendItem, PlatformType
 from shared.config import get_settings
@@ -45,11 +45,14 @@ class TabstackConnector(AbstractPlatformConnector):
                         if not line.startswith("data: "):
                             continue
                         
-                        data = json.loads(line[6:])
-                        if data.get("type") == "answer":
-                            final_answer = data.get("content", "")
-                        elif data.get("type") == "sources":
-                            sources = data.get("sources", [])
+                        try:
+                            data = json.loads(line[6:])
+                            if data.get("type") == "answer":
+                                final_answer = data.get("content", "")
+                            elif data.get("type") == "sources":
+                                sources = data.get("sources", [])
+                        except Exception:
+                            continue
                     
                     if not final_answer and not sources:
                         return []
@@ -57,14 +60,14 @@ class TabstackConnector(AbstractPlatformConnector):
                     # Convert the research summary into a lead TrendItem
                     items = [
                         TrendItem(
-                            id=f"tabstack_{datetime.now(timezone.utc).timestamp()}",
+                            id=f"tabstack_{datetime.datetime.now(datetime.timezone.utc).timestamp()}",
                             platform=self.platform,
                             title=f"Deep Research for: {query}",
                             content=final_answer,
                             author="Tabstack AI",
                             author_handle="tabstack",
                             url=sources[0].get('url', '') if sources else "",
-                            timestamp=datetime.now(timezone.utc),
+                            timestamp=datetime.datetime.now(datetime.timezone.utc),
                             metrics={"depth": 10},
                             raw_data={"sources": sources}
                         )
@@ -79,7 +82,7 @@ class TabstackConnector(AbstractPlatformConnector):
                             content=src.get('snippet', ''),
                             author="Web",
                             url=src.get('url', ''),
-                            timestamp=datetime.now(timezone.utc),
+                            timestamp=datetime.datetime.now(datetime.timezone.utc),
                             metrics={},
                             raw_data=src
                         ))
