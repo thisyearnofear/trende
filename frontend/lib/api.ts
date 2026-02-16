@@ -149,33 +149,56 @@ export const api = {
   },
 
   /**
-   * Subscribe to SSE stream for real-time updates
+   * Subscribe to SSE stream for real-time updates with automatic reconnection
    */
   subscribeToStream(
     queryId: string, 
     onEvent: (event: StreamEvent) => void,
     onError?: (error: Error) => void
   ): () => void {
-    const eventSource = new EventSource(`${API_BASE}/api/trends/stream/${queryId}`);
+    let eventSource: EventSource | null = null;
+    let isClosed = false;
+    let retryCount = 0;
+    const maxRetries = 5;
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data) as StreamEvent;
-        onEvent(data);
-      } catch (e) {
-        console.error('Failed to parse SSE event:', e);
-      }
+    const connect = () => {
+      if (isClosed) return;
+      
+      eventSource = new EventSource(`${API_BASE}/api/trends/stream/${queryId}`);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data) as StreamEvent;
+          onEvent(data);
+          // Reset retry count on successful message
+          retryCount = 0;
+        } catch (e) {
+          console.error('Failed to parse SSE event:', e);
+        }
+      };
+
+      eventSource.onerror = (err) => {
+        console.error('SSE connection error:', err);
+        eventSource?.close();
+        
+        if (!isClosed && retryCount < maxRetries) {
+          retryCount++;
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+          console.log(`Retrying SSE connection in ${delay}ms... (Attempt ${retryCount}/${maxRetries})`);
+          setTimeout(connect, delay);
+        } else if (retryCount >= maxRetries) {
+          onError?.(new Error('Max SSE reconnection retries reached'));
+        }
+      };
     };
 
-    eventSource.onerror = () => {
-      const error = new Error('SSE connection error');
-      onError?.(error);
-      // Don't reconnect on error
-      eventSource.close();
-    };
+    connect();
 
     // Return cleanup function
-    return () => eventSource.close();
+    return () => {
+      isClosed = true;
+      eventSource?.close();
+    };
   },
 
   /**
