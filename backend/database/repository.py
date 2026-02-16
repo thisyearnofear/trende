@@ -7,7 +7,7 @@ from shared.config import get_settings
 settings = get_settings()
 
 try:
-    from sqlalchemy import JSON, Column, DateTime, Float, String, create_engine
+    from sqlalchemy import JSON, Boolean, Column, DateTime, Float, String, create_engine, inspect, or_, text
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.orm import sessionmaker
 
@@ -26,6 +26,9 @@ except ImportError:
 
     def JSON(*args: Any, **kwargs: Any) -> Any:
         return None  # type: ignore
+    
+    def Boolean(*args: Any, **kwargs: Any) -> Any:
+        return None  # type: ignore
 
     def DateTime(*args: Any, **kwargs: Any) -> Any:
         return None  # type: ignore
@@ -34,6 +37,9 @@ except ImportError:
         return None  # type: ignore
 
     def create_engine(*args: Any, **kwargs: Any) -> Any:
+        return None  # type: ignore
+    
+    def or_(*args: Any, **kwargs: Any) -> Any:
         return None  # type: ignore
 
     def sessionmaker(*args: Any, **kwargs: Any) -> Any:
@@ -50,6 +56,14 @@ class TaskModel(Base):  # type: ignore
     platforms = Column(JSON)
     models = Column(JSON, nullable=True)
     sponsor_address = Column(String, nullable=True)  # Wallet that funded this research
+    owner_address = Column(String, nullable=True)  # Wallet that saved/claimed this research
+    is_saved = Column(Boolean, default=False)
+    visibility = Column(String, default="private")
+    saved_at = Column(DateTime, nullable=True)
+    ipfs_cid = Column(String, nullable=True)
+    ipfs_uri = Column(String, nullable=True)
+    save_label = Column(String, nullable=True)
+    tags = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
     updated_at = Column(
         DateTime,
@@ -69,6 +83,28 @@ else:
 def init_db() -> None:
     if HAS_SQL and hasattr(Base, "metadata"):
         Base.metadata.create_all(bind=engine)  # type: ignore
+        _migrate_task_columns()
+
+
+def _migrate_task_columns() -> None:
+    """Best-effort additive migration for legacy sqlite deployments."""
+    if not HAS_SQL or engine is None:
+        return
+    with engine.begin() as conn:
+        cols = {col["name"] for col in inspect(conn).get_columns("tasks")}
+        migrations = [
+            ("owner_address", "ALTER TABLE tasks ADD COLUMN owner_address VARCHAR"),
+            ("is_saved", "ALTER TABLE tasks ADD COLUMN is_saved BOOLEAN DEFAULT 0"),
+            ("visibility", "ALTER TABLE tasks ADD COLUMN visibility VARCHAR DEFAULT 'private'"),
+            ("saved_at", "ALTER TABLE tasks ADD COLUMN saved_at DATETIME"),
+            ("ipfs_cid", "ALTER TABLE tasks ADD COLUMN ipfs_cid VARCHAR"),
+            ("ipfs_uri", "ALTER TABLE tasks ADD COLUMN ipfs_uri VARCHAR"),
+            ("save_label", "ALTER TABLE tasks ADD COLUMN save_label VARCHAR"),
+            ("tags", "ALTER TABLE tasks ADD COLUMN tags JSON"),
+        ]
+        for column_name, ddl in migrations:
+            if column_name not in cols:
+                conn.execute(text(ddl))
 
 
 class Repository:
@@ -94,6 +130,20 @@ class Repository:
             task.platforms = state.get("platforms", [])
             task.models = state.get("models", [])
             task.sponsor_address = state.get("sponsor_address")
+            task.owner_address = state.get("owner_address", task.owner_address)
+            task.is_saved = bool(state.get("is_saved", task.is_saved))
+            task.visibility = state.get("visibility", task.visibility or "private")
+            saved_at_value = state.get("saved_at", task.saved_at)
+            if isinstance(saved_at_value, str):
+                try:
+                    saved_at_value = datetime.datetime.fromisoformat(saved_at_value)
+                except ValueError:
+                    saved_at_value = task.saved_at
+            task.saved_at = saved_at_value
+            task.ipfs_cid = state.get("ipfs_cid", task.ipfs_cid)
+            task.ipfs_uri = state.get("ipfs_uri", task.ipfs_uri)
+            task.save_label = state.get("save_label", task.save_label)
+            task.tags = state.get("tags", task.tags)
 
             result_data = {
                 "summary": state.get("summary"),
@@ -175,6 +225,14 @@ class Repository:
                 "platforms": task.platforms,
                 "models": task.models,
                 "sponsor_address": task.sponsor_address,
+                "owner_address": task.owner_address,
+                "is_saved": bool(task.is_saved),
+                "visibility": task.visibility or "private",
+                "saved_at": task.saved_at.isoformat() if task.saved_at else None,
+                "ipfs_cid": task.ipfs_cid,
+                "ipfs_uri": task.ipfs_uri,
+                "save_label": task.save_label,
+                "tags": task.tags or [],
                 "created_at": task.created_at.isoformat(),
                 "updated_at": task.updated_at.isoformat()
                 if task.updated_at
@@ -194,7 +252,93 @@ class Repository:
                     "topic": t.topic,
                     "status": t.status,
                     "sponsor_address": t.sponsor_address,
+                    "owner_address": t.owner_address,
+                    "is_saved": bool(t.is_saved),
+                    "visibility": t.visibility or "private",
+                    "saved_at": t.saved_at.isoformat() if t.saved_at else None,
+                    "ipfs_cid": t.ipfs_cid,
+                    "ipfs_uri": t.ipfs_uri,
+                    "save_label": t.save_label,
+                    "tags": t.tags or [],
                     "created_at": t.created_at.isoformat(),
+                }
+                for t in tasks
+            ]
+
+    def mark_task_saved(
+        self,
+        task_id: str,
+        wallet_address: str,
+        visibility: str,
+        ipfs_cid: str | None = None,
+        ipfs_uri: str | None = None,
+        save_label: str | None = None,
+        tags: list[str] | None = None,
+    ) -> dict[str, Any] | None:
+        if not HAS_SQL or not self.Session:
+            return None
+        normalized_wallet = wallet_address.lower()
+        with self.Session() as session:
+            task = session.query(TaskModel).filter(TaskModel.task_id == task_id).first()
+            if not task:
+                return None
+
+            if task.owner_address and task.owner_address.lower() != normalized_wallet:
+                raise PermissionError("Task already owned by another wallet.")
+
+            task.owner_address = normalized_wallet
+            task.is_saved = True
+            task.visibility = visibility
+            task.saved_at = datetime.datetime.now(datetime.timezone.utc)
+            task.ipfs_cid = ipfs_cid
+            task.ipfs_uri = ipfs_uri
+            task.save_label = save_label
+            task.tags = tags or []
+            session.commit()
+
+            return {
+                "task_id": task.task_id,
+                "owner_address": task.owner_address,
+                "is_saved": bool(task.is_saved),
+                "visibility": task.visibility,
+                "saved_at": task.saved_at.isoformat() if task.saved_at else None,
+                "ipfs_cid": task.ipfs_cid,
+                "ipfs_uri": task.ipfs_uri,
+                "save_label": task.save_label,
+                "tags": task.tags or [],
+            }
+
+    def get_saved_research(
+        self,
+        wallet_address: str,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        if not HAS_SQL or not self.Session:
+            return []
+        normalized_wallet = wallet_address.lower()
+        with self.Session() as session:
+            tasks = (
+                session.query(TaskModel)
+                .filter(TaskModel.owner_address == normalized_wallet)
+                .filter(TaskModel.is_saved == True)  # noqa: E712
+                .order_by(TaskModel.saved_at.desc(), TaskModel.created_at.desc())
+                .limit(limit)
+                .all()
+            )
+            return [
+                {
+                    "task_id": t.task_id,
+                    "topic": t.topic,
+                    "status": t.status,
+                    "platforms": t.platforms,
+                    "created_at": t.created_at.isoformat(),
+                    "saved_at": t.saved_at.isoformat() if t.saved_at else None,
+                    "visibility": t.visibility or "private",
+                    "ipfs_cid": t.ipfs_cid,
+                    "ipfs_uri": t.ipfs_uri,
+                    "save_label": t.save_label,
+                    "tags": t.tags or [],
+                    "has_attestation": bool(t.result and t.result.get("attestation_data")),
                 }
                 for t in tasks
             ]
@@ -202,11 +346,15 @@ class Repository:
     def get_public_research(
         self, limit: int = 50, sponsor: str | None = None
     ) -> list[dict[str, Any]]:
-        """Get completed research for the public commons."""
+        """Get completed research explicitly published to the public commons."""
         if not HAS_SQL or not self.Session:
             return []
         with self.Session() as session:
-            query = session.query(TaskModel).filter(TaskModel.status == "completed")
+            query = (
+                session.query(TaskModel)
+                .filter(TaskModel.status == "completed")
+                .filter(or_(TaskModel.visibility == "public", TaskModel.visibility.is_(None)))
+            )
             if sponsor:
                 query = query.filter(TaskModel.sponsor_address == sponsor.lower())
             tasks = query.order_by(TaskModel.created_at.desc()).limit(limit).all()

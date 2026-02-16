@@ -23,6 +23,11 @@ export interface Query {
   errorMessage?: string;
   totalResults: number;
   relevanceThreshold: number;
+  isSaved?: boolean;
+  visibility?: 'private' | 'unlisted' | 'public';
+  savedAt?: string;
+  ipfsUri?: string;
+  saveLabel?: string;
 }
 
 export interface TrendItem {
@@ -128,6 +133,34 @@ export interface QueryResponse {
   createdAt: string;
 }
 
+export interface SaveResearchRequest {
+  visibility: 'private' | 'unlisted' | 'public';
+  pinToIpfs?: boolean;
+  saveLabel?: string;
+  tags?: string[];
+}
+
+export interface SaveResearchResponse {
+  saved: {
+    id: string;
+    owner: string;
+    visibility: 'private' | 'unlisted' | 'public';
+    savedAt: string;
+    ipfsCid?: string | null;
+    ipfsUri?: string | null;
+    saveLabel?: string | null;
+    tags: string[];
+  };
+  archive: {
+    provider: string;
+    pinned: boolean;
+    cid?: string | null;
+    uri: string;
+    content_hash: string;
+    note?: string;
+  };
+}
+
 export interface ResultsResponse {
   query: Query;
   results: TrendResult[];
@@ -166,4 +199,19 @@ export interface CommonsResponse {
   filter: {
     sponsor: string | null;
   };
+}
+
+export interface SavedResearchItem {
+  id: string;
+  idea: string;
+  status: QueryStatus;
+  platforms: string[];
+  createdAt: string;
+  savedAt: string;
+  visibility: 'private' | 'unlisted' | 'public';
+  ipfsCid?: string | null;
+  ipfsUri?: string | null;
+  saveLabel?: string | null;
+  tags: string[];
+  hasAttestation: boolean;
 }

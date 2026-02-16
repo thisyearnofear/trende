@@ -12,6 +12,7 @@ import {
   StreamEvent,
   QueryStatus,
   CommonsResponse,
+  SavedResearchItem,
 } from '@/lib/types';
 
 interface UseTrendDataOptions {
@@ -171,9 +172,9 @@ export function useTrendData(
  * Hook for history of past analyses
  */
 export function useTrendHistory() {
-  const { data, error, isLoading, mutate } = useSWR<{ queries: { id: string; idea: string; status: string; createdAt: string }[] }>(
+  const { data, error, isLoading, mutate } = useSWR<{ queries: { id: string; idea: string; status: string; createdAt: string; savedAt?: string; isSaved?: boolean; visibility?: string; ipfsUri?: string; saveLabel?: string }[] }>(
     '/api/trends/history',
-    () => api.getHistory(),
+    () => api.getHistory(false),
     {
       refreshInterval: 60000, // Refresh every minute
     }
@@ -181,6 +182,29 @@ export function useTrendHistory() {
 
   return {
     queries: data?.queries ?? [],
+    error,
+    isLoading,
+    refresh: mutate,
+  };
+}
+
+/**
+ * Hook for wallet-bound saved research list.
+ */
+export function useSavedResearch(enabled: boolean) {
+  const key = enabled ? '/api/trends/saved' : null;
+  const { data, error, isLoading, mutate } = useSWR<{ saved: SavedResearchItem[]; total: number }>(
+    key,
+    () => api.getSavedResearch(100),
+    {
+      refreshInterval: 60000,
+      revalidateOnFocus: false,
+    }
+  );
+
+  return {
+    saved: data?.saved ?? [],
+    total: data?.total ?? 0,
     error,
     isLoading,
     refresh: mutate,

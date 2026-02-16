@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { useTrendData, useTrendHistory, useCommons } from "@/hooks/useTrendData";
+import { useTrendData, useTrendHistory, useCommons, useSavedResearch } from "@/hooks/useTrendData";
 import { QueryInput } from "@/components/QueryInput";
 import { PlatformTabs } from "@/components/PlatformTabs";
 import { TrendSummary } from "@/components/TrendSummary";
 import { ProcessingStatus } from "@/components/ProcessingStatus";
 import { ForgeViewer } from "@/components/ForgeViewer";
 import { QueryRequest } from "@/lib/types";
+import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import {
   AlertTriangle,
@@ -33,6 +34,7 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, Stat, Button, IconButton } from "@/components/DesignSystem";
 import { Onboarding } from "@/components/Onboarding";
+import { useWallet } from "@/components/WalletProvider";
 
 const STATUS_ETAS: Record<
   string,
@@ -54,6 +56,7 @@ export default function Home() {
     return window.localStorage.getItem(LAST_QUERY_STORAGE_KEY);
   });
   const [showHistory, setShowHistory] = useState(false);
+  const [historyMode, setHistoryMode] = useState<"recent" | "saved">("recent");
   const [lastQuery, setLastQuery] = useState<QueryRequest | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showForgeInline, setShowForgeInline] = useState(false);
@@ -62,7 +65,10 @@ export default function Home() {
   const [showCommons, setShowCommons] = useState(false);
   const [commonsSearch, setCommonsSearch] = useState("");
   const [commonsVisibleCount, setCommonsVisibleCount] = useState(6);
+  const [isSavingPrivate, setIsSavingPrivate] = useState(false);
+  const [isSavingPublic, setIsSavingPublic] = useState(false);
   const { showToast } = useToast();
+  const { isConnected } = useWallet();
 
   const {
     status,
@@ -73,7 +79,9 @@ export default function Home() {
     startAnalysis,
     refresh,
   } = useTrendData(queryId);
+  const activeQueryId = data?.query?.id || queryId;
   const { queries: history, isLoading: historyLoading } = useTrendHistory();
+  const { saved: savedResearch, isLoading: savedLoading, refresh: refreshSaved } = useSavedResearch(isConnected);
   const { research: commonsResearch, isLoading: commonsLoading } = useCommons();
 
   const handleSubmit = useCallback(
@@ -123,6 +131,39 @@ export default function Home() {
       showToast("Loaded commons run into current workspace.", "success");
     },
     [showToast],
+  );
+
+  const handleSaveResult = useCallback(
+    async (visibility: "private" | "public") => {
+      if (!activeQueryId) return;
+      if (!isConnected) {
+        showToast("Connect wallet to save this research.", "error");
+        return;
+      }
+      const setLoading = visibility === "public" ? setIsSavingPublic : setIsSavingPrivate;
+      setLoading(true);
+      try {
+        const response = await api.saveResearch(activeQueryId, {
+          visibility,
+          pinToIpfs: visibility === "public",
+        });
+        const uri = response.saved.ipfsUri || response.archive.uri;
+        showToast(
+          visibility === "public"
+            ? `Published. Archive: ${uri}`
+            : "Saved privately to your wallet workspace.",
+          "success",
+        );
+        refresh();
+        refreshSaved();
+      } catch (error) {
+        console.error("Save failed:", error);
+        showToast("Failed to save research run.", "error");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [activeQueryId, isConnected, showToast, refresh, refreshSaved],
   );
 
   const stats = useMemo(() => {
@@ -287,7 +328,6 @@ export default function Home() {
 
   const activeEta = STATUS_ETAS[status || "pending"] || STATUS_ETAS.pending;
   const startedAt = data?.query?.createdAt ? new Date(data.query.createdAt).getTime() : null;
-  const activeQueryId = data?.query?.id || queryId;
   const filteredCommons = useMemo(() => {
     const term = commonsSearch.trim().toLowerCase();
     if (!term) return commonsResearch;
@@ -435,8 +475,73 @@ export default function Home() {
                 [CLOSE]
               </button>
             </div>
+            <div className="px-4 pt-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={historyMode === "recent" ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => setHistoryMode("recent")}
+                >
+                  Recent
+                </Button>
+                <Button
+                  variant={historyMode === "saved" ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => setHistoryMode("saved")}
+                  disabled={!isConnected}
+                >
+                  Saved
+                </Button>
+              </div>
+            </div>
             <div className="p-4 overflow-y-auto">
-              {historyLoading ? (
+              {historyMode === "saved" && !isConnected ? (
+                <p className="text-[var(--text-muted)] font-mono text-sm">
+                  CONNECT WALLET TO VIEW SAVED RESEARCH
+                </p>
+              ) : historyMode === "saved" ? (
+                savedLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="h-16 bg-[var(--bg-primary)] border-2 border-[var(--text-muted)]"
+                      />
+                    ))}
+                  </div>
+                ) : savedResearch.length === 0 ? (
+                  <p className="text-[var(--text-muted)] font-mono">
+                    NO SAVED RUNS YET
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {savedResearch.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleSelectHistory(item.id)}
+                        className="w-full text-left p-3 bg-[var(--bg-primary)] border-2 border-[var(--text-muted)] hover:border-[var(--accent-cyan)] transition-colors"
+                      >
+                        <p className="text-sm line-clamp-2 font-mono">
+                          {item.saveLabel || item.idea}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <span className="text-xs px-2 py-0.5 font-mono bg-[var(--accent-emerald)] text-[var(--bg-primary)]">
+                            {item.visibility.toUpperCase()}
+                          </span>
+                          {item.ipfsUri && (
+                            <span className="text-xs px-2 py-0.5 font-mono bg-[var(--bg-secondary)] border border-[var(--border-color)]">
+                              ARCHIVED
+                            </span>
+                          )}
+                          <span className="text-xs text-[var(--text-muted)] font-mono">
+                            {new Date(item.savedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )
+              ) : historyLoading ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
                     <div
@@ -768,6 +873,43 @@ export default function Home() {
                   >
                     <EyeOff className="w-3.5 h-3.5 mr-1 inline-block" />
                     Full
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            <Card accent="emerald" className="p-3 sm:p-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider">Persistence</h3>
+                  <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
+                    {isConnected
+                      ? "Claim this run to your wallet. Optionally publish + archive."
+                      : "Connect wallet to save and revisit this run from any device."}
+                  </p>
+                  {data?.query?.isSaved && (
+                    <p className="text-xs font-mono text-[var(--accent-emerald)] mt-2">
+                      Saved as {data.query.visibility?.toUpperCase() || "PRIVATE"}
+                      {data.query.ipfsUri ? ` • ${data.query.ipfsUri}` : ""}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleSaveResult("private")}
+                    disabled={!isConnected || isSavingPrivate}
+                  >
+                    {isSavingPrivate ? "Saving..." : "Save Privately"}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleSaveResult("public")}
+                    disabled={!isConnected || isSavingPublic}
+                  >
+                    {isSavingPublic ? "Publishing..." : "Publish + Archive"}
                   </Button>
                 </div>
               </div>

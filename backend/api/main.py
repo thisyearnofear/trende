@@ -19,6 +19,7 @@ from backend.database.repository import Repository, init_db
 from backend.services.ai_service import OPENROUTER_VARIANTS, ai_service
 from backend.services.attestation_service import attestation_service
 from backend.services.x402_service import X402Payment, x402_service
+from backend.services.archive_service import archive_service
 from backend.utils.rate_limit import UserRateLimitInfo, user_rate_limiter
 from shared.models import QueryStatus
 
@@ -202,6 +203,24 @@ class AttestationVerifyRequest(BaseModel):
     attestation: dict[str, Any]
 
 
+class SaveResearchRequest(BaseModel):
+    visibility: str = "private"
+    pin_to_ipfs: bool = False
+    save_label: str | None = None
+    tags: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_visibility(self) -> "SaveResearchRequest":
+        normalized = (self.visibility or "private").strip().lower()
+        if normalized not in {"private", "unlisted", "public"}:
+            raise ValueError("visibility must be one of: private, unlisted, public")
+        self.visibility = normalized
+        self.tags = [tag.strip().lower() for tag in self.tags if tag.strip()][:8]
+        if self.save_label is not None:
+            self.save_label = self.save_label.strip()[:120] or None
+        return self
+
+
 def _configured_consensus_routes() -> dict[str, Any]:
     routes: list[dict[str, str]] = []
 
@@ -361,6 +380,14 @@ async def start_analysis(
         "platforms": request.platforms,
         "models": request.models,
         "sponsor_address": x_wallet_address,  # Track who funded this research
+        "owner_address": x_wallet_address,
+        "is_saved": False,
+        "visibility": "private",
+        "saved_at": None,
+        "ipfs_cid": None,
+        "ipfs_uri": None,
+        "save_label": None,
+        "tags": [],
         "created_at": now,
         "updated_at": now,
         "run_telemetry": {
@@ -473,9 +500,11 @@ async def run_agent_workflow(
 
 
 @app.get("/api/trends/history")
-async def get_history() -> dict[str, Any]:
+async def get_history(saved_only: bool = False) -> dict[str, Any]:
     """Returns a list of all past queries."""
     records = repo.get_all_tasks()
+    if saved_only:
+        records = [item for item in records if item.get("is_saved")]
     return {
         "queries": [
             {
@@ -483,9 +512,126 @@ async def get_history() -> dict[str, Any]:
                 "idea": item.get("topic", ""),
                 "status": item.get("status", QueryStatus.PENDING),
                 "createdAt": item.get("created_at", ""),
+                "savedAt": item.get("saved_at"),
+                "isSaved": bool(item.get("is_saved")),
+                "visibility": item.get("visibility", "private"),
+                "ipfsUri": item.get("ipfs_uri"),
+                "saveLabel": item.get("save_label"),
             }
             for item in records
         ]
+    }
+
+
+@app.get("/api/trends/saved")
+async def get_saved_research(
+    limit: int = 100,
+    x_wallet_address: str | None = Header(None, alias="X-Wallet-Address"),
+) -> dict[str, Any] | Response:
+    if not x_wallet_address:
+        return Response(
+            status_code=401,
+            content=json.dumps({"error": "Wallet connection required to fetch saved research."}),
+        )
+    records = repo.get_saved_research(x_wallet_address, limit=limit)
+    return {
+        "saved": [
+            {
+                "id": item.get("task_id"),
+                "idea": item.get("topic", ""),
+                "status": item.get("status", QueryStatus.PENDING),
+                "platforms": item.get("platforms", []),
+                "createdAt": item.get("created_at", ""),
+                "savedAt": item.get("saved_at"),
+                "visibility": item.get("visibility", "private"),
+                "ipfsCid": item.get("ipfs_cid"),
+                "ipfsUri": item.get("ipfs_uri"),
+                "saveLabel": item.get("save_label"),
+                "tags": item.get("tags", []),
+                "hasAttestation": bool(item.get("has_attestation")),
+            }
+            for item in records
+        ],
+        "total": len(records),
+    }
+
+
+@app.post("/api/trends/{task_id}/save")
+async def save_research(
+    task_id: str,
+    request: SaveResearchRequest,
+    x_wallet_address: str | None = Header(None, alias="X-Wallet-Address"),
+) -> dict[str, Any] | Response:
+    if not x_wallet_address:
+        return Response(
+            status_code=401,
+            content=json.dumps({"error": "Connect wallet before saving research."}),
+        )
+
+    task = tasks.get(task_id) or repo.get_task(task_id)
+    if not task:
+        return Response(status_code=404, content=json.dumps({"error": "Task not found"}))
+
+    result_node = task.get("result") if isinstance(task.get("result"), dict) else task
+    archive_payload = {
+        "task_id": task_id,
+        "topic": task.get("topic"),
+        "created_at": task.get("created_at"),
+        "updated_at": task.get("updated_at"),
+        "platforms": task.get("platforms", []),
+        "models": task.get("models", []),
+        "summary": result_node.get("summary") if isinstance(result_node, dict) else task.get("summary"),
+        "final_report_md": result_node.get("final_report_md") if isinstance(result_node, dict) else task.get("final_report_md"),
+        "consensus_data": result_node.get("consensus_data") if isinstance(result_node, dict) else task.get("consensus_data"),
+        "attestation_data": result_node.get("attestation_data") if isinstance(result_node, dict) else task.get("attestation_data"),
+    }
+    archive_info = await archive_service.archive_payload(
+        archive_payload,
+        prefer_ipfs=request.pin_to_ipfs,
+    )
+
+    try:
+        saved = repo.mark_task_saved(
+            task_id=task_id,
+            wallet_address=x_wallet_address,
+            visibility=request.visibility,
+            ipfs_cid=archive_info.get("cid"),
+            ipfs_uri=archive_info.get("uri"),
+            save_label=request.save_label,
+            tags=request.tags,
+        )
+    except PermissionError as exc:
+        return Response(status_code=403, content=json.dumps({"error": str(exc)}))
+
+    if not saved:
+        return Response(status_code=404, content=json.dumps({"error": "Task not found"}))
+
+    if task_id in tasks:
+        tasks[task_id].update(
+            {
+                "owner_address": saved.get("owner_address"),
+                "is_saved": saved.get("is_saved"),
+                "visibility": saved.get("visibility"),
+                "saved_at": saved.get("saved_at"),
+                "ipfs_cid": saved.get("ipfs_cid"),
+                "ipfs_uri": saved.get("ipfs_uri"),
+                "save_label": saved.get("save_label"),
+                "tags": saved.get("tags"),
+            }
+        )
+
+    return {
+        "saved": {
+            "id": task_id,
+            "owner": saved.get("owner_address"),
+            "visibility": saved.get("visibility"),
+            "savedAt": saved.get("saved_at"),
+            "ipfsCid": saved.get("ipfs_cid"),
+            "ipfsUri": saved.get("ipfs_uri"),
+            "saveLabel": saved.get("save_label"),
+            "tags": saved.get("tags", []),
+        },
+        "archive": archive_info,
     }
 
 
@@ -616,6 +762,11 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             if isinstance(res_node, dict)
             else 0,
             "relevanceThreshold": 0.5,
+            "isSaved": bool(task.get("is_saved")),
+            "visibility": task.get("visibility", "private"),
+            "savedAt": task.get("saved_at"),
+            "ipfsUri": task.get("ipfs_uri"),
+            "saveLabel": task.get("save_label"),
         },
         "results": results,
         "summary": {

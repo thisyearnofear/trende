@@ -8,6 +8,9 @@ import {
   ResultsResponse, 
   StreamEvent,
   CommonsResponse,
+  SaveResearchRequest,
+  SaveResearchResponse,
+  SavedResearchItem,
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -144,9 +147,9 @@ export const api = {
   /**
    * Get list of past analyses
    */
-  async getHistory(): Promise<{ queries: { id: string; idea: string; status: string; createdAt: string }[] }> {
-    const response = await fetch(`${API_BASE}/api/trends/history`);
-    return handleResponse<{ queries: { id: string; idea: string; status: string; createdAt: string }[] }>(response);
+  async getHistory(savedOnly = false): Promise<{ queries: { id: string; idea: string; status: string; createdAt: string; savedAt?: string; isSaved?: boolean; visibility?: string; ipfsUri?: string; saveLabel?: string }[] }> {
+    const response = await fetch(`${API_BASE}/api/trends/history${savedOnly ? '?saved_only=true' : ''}`);
+    return handleResponse<{ queries: { id: string; idea: string; status: string; createdAt: string; savedAt?: string; isSaved?: boolean; visibility?: string; ipfsUri?: string; saveLabel?: string }[] }>(response);
   },
 
   /**
@@ -158,6 +161,33 @@ export const api = {
     const query = params.toString();
     const response = await fetch(`${API_BASE}/api/commons${query ? `?${query}` : ''}`);
     return handleResponse<CommonsResponse>(response);
+  },
+
+  /**
+   * Save/claim a research task to wallet-bound storage with optional archival.
+   */
+  async saveResearch(queryId: string, request: SaveResearchRequest): Promise<SaveResearchResponse> {
+    const response = await fetch(`${API_BASE}/api/trends/${queryId}/save`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        visibility: request.visibility,
+        pin_to_ipfs: request.pinToIpfs ?? false,
+        save_label: request.saveLabel,
+        tags: request.tags ?? [],
+      }),
+    });
+    return handleResponse<SaveResearchResponse>(response);
+  },
+
+  /**
+   * Fetch wallet-scoped saved research list.
+   */
+  async getSavedResearch(limit = 100): Promise<{ saved: SavedResearchItem[]; total: number }> {
+    const response = await fetch(`${API_BASE}/api/trends/saved?limit=${limit}`, {
+      headers: getHeaders(),
+    });
+    return handleResponse<{ saved: SavedResearchItem[]; total: number }>(response);
   },
 
   /**
