@@ -118,6 +118,7 @@ export interface Platform {
 export interface QueryRequest {
   idea: string;
   platforms: string[];
+  models?: string[];
   relevanceThreshold?: number;
 }
 

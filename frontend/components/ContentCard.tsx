@@ -3,6 +3,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import { TrendItem } from '@/lib/types';
 import { ExternalLink, MessageCircle, Repeat, Heart, Eye, Radar } from 'lucide-react';
+import { Card, Badge } from './DesignSystem';
 
 interface ContentCardProps {
   item: TrendItem;
@@ -40,35 +41,41 @@ export function ContentCard({ item, onClick, animationDelayMs = 0 }: ContentCard
   const relevance = Math.round((item.relevanceScore || 0) * 100);
 
   return (
-    <article
-      className="bg-slate-900/80 border border-slate-700 rounded-2xl p-4 hover:border-cyan-400/40 transition-all hover:shadow-lg hover:shadow-cyan-500/10 animate-fade-up"
+    <Card
+      accent="white"
+      shadow="sm"
+      interactive={!!onClick}
+      className="p-4 animate-fade-up"
       style={{ animationDelay: `${animationDelayMs}ms` }}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-3 min-w-0">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-white"
+            className="w-10 h-10 flex items-center justify-center text-sm font-bold text-[var(--bg-primary)]"
             style={{ backgroundColor: config.color }}
           >
             {config.icon}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
-              <h4 className="font-medium text-slate-100 truncate">{item.author}</h4>
-              <span className="text-[10px] uppercase tracking-wide text-slate-400 px-2 py-0.5 rounded-full border border-slate-700 bg-slate-800/80">
+              <h4 className="font-black uppercase tracking-wider text-[var(--text-primary)] truncate">{item.author}</h4>
+              <span
+                className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 border-2"
+                style={{ color: 'var(--text-muted)', borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-tertiary)' }}
+              >
                 {config.label}
               </span>
             </div>
-            <p className="text-sm text-slate-500 truncate">{handle ? `@${handle}` : 'source profile'}</p>
+            <p className="text-sm text-[var(--text-muted)] truncate">{handle ? `@${handle}` : 'source profile'}</p>
           </div>
         </div>
-        <span className="text-xs text-slate-500 shrink-0">{formatDate(item.timestamp)}</span>
+        <span className="text-xs text-[var(--text-muted)] shrink-0">{formatDate(item.timestamp)}</span>
       </div>
 
-      <h3 className="font-semibold text-slate-100 mb-2 line-clamp-2">{item.title}</h3>
-      <p className="text-sm text-slate-400 mb-4 line-clamp-3">{item.content}</p>
+      <h3 className="font-black uppercase tracking-wider text-[var(--text-primary)] mb-2 line-clamp-2">{item.title}</h3>
+      <p className="text-sm text-[var(--text-secondary)] mb-4 line-clamp-3">{item.content}</p>
 
-      <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-slate-400">
+      <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-[var(--text-secondary)]">
         {item.metrics.likes !== undefined && (
           <span className="flex items-center gap-1">
             <Heart className="w-4 h-4" />
@@ -95,19 +102,20 @@ export function ContentCard({ item, onClick, animationDelayMs = 0 }: ContentCard
         )}
 
         {item.relevanceScore !== undefined && (
-          <div className="ml-auto flex items-center gap-2 text-xs text-cyan-300">
+          <div className="ml-auto flex items-center gap-2 text-xs" style={{ color: 'var(--accent-cyan)' }}>
             <Radar className="w-3.5 h-3.5" />
-            <span>{relevance}% relevance</span>
+            <span className="font-black uppercase tracking-wider">{relevance}% relevance</span>
           </div>
         )}
       </div>
 
-      <div className="mt-3 pt-3 border-t border-slate-700/60 flex items-center justify-between gap-2">
+      <div className="mt-3 pt-3 border-t-2 border-[var(--border-color)] flex items-center justify-between gap-2">
         {onClick && (
           <button
             type="button"
             onClick={onClick}
-            className="text-sm text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 px-4 py-2.5 rounded-lg transition-colors min-h-[44px] flex-1 sm:flex-none flex items-center justify-center"
+            className="text-sm font-black uppercase tracking-wider bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-primary)] px-4 py-2.5 transition-colors min-h-[44px] flex-1 sm:flex-none flex items-center justify-center border-2 border-[var(--border-color)]"
+            style={{ boxShadow: '2px 2px 0px 0px var(--shadow-color)' }}
             aria-label={`Open details for ${item.title}`}
           >
             Open details
@@ -118,12 +126,13 @@ export function ContentCard({ item, onClick, animationDelayMs = 0 }: ContentCard
           href={item.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 text-sm text-cyan-300 hover:text-cyan-200 min-h-[44px] px-3 flex-1 sm:flex-none"
+          className="flex items-center justify-center gap-1.5 text-sm font-black uppercase tracking-wider min-h-[44px] px-3 flex-1 sm:flex-none"
+          style={{ color: 'var(--accent-cyan)' }}
         >
           <ExternalLink className="w-4 h-4" />
           <span className="sm:inline">View original</span>
         </a>
       </div>
-    </article>
+    </Card>
   );
 }

@@ -5,6 +5,7 @@ class GraphState(TypedDict):
     # Input
     topic: str
     platforms: List[str]
+    models: List[str]
     
     # Internal State
     query_id: str

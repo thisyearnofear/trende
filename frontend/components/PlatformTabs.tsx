@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { TrendResult, TrendItem } from '@/lib/types';
 import { ContentCard } from './ContentCard';
 import { ArrowUpRight } from 'lucide-react';
+import { Card } from './DesignSystem';
 
 interface PlatformTabsProps {
   results: TrendResult[];
@@ -130,12 +131,12 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
       <div className="space-y-4">
         <div className="flex gap-2 overflow-x-auto pb-2">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-10 w-20 bg-slate-800 rounded-lg animate-pulse" />
+            <div key={i} className="h-10 w-20 bg-[var(--bg-tertiary)] animate-pulse" />
           ))}
         </div>
         <div className="grid gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-48 bg-slate-800 rounded-xl animate-pulse" />
+            <div key={i} className="h-48 bg-[var(--bg-tertiary)] animate-pulse" />
           ))}
         </div>
       </div>
@@ -144,14 +145,14 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-3 sm:p-4">
+      <Card accent="white" shadow="sm" className="p-3 sm:p-4">
         <div className="flex items-center justify-between gap-3 mb-3">
-          <h3 className="text-sm font-medium text-slate-200">Signal Feed</h3>
+          <h3 className="text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">Signal Feed</h3>
           {stats && (
-            <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider font-bold">
-              <span className="text-cyan-400">{stats.avgRelevance}% Relevance</span>
-              <span className="text-slate-600 hidden sm:inline">•</span>
-              <span className="text-emerald-400 hidden sm:inline">{stats.totalEngagement.toLocaleString()} Engagement</span>
+            <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider font-black">
+              <span style={{ color: 'var(--accent-cyan)' }}>{stats.avgRelevance}% Relevance</span>
+              <span className="text-[var(--text-muted)] hidden sm:inline">•</span>
+              <span className="hidden sm:inline" style={{ color: 'var(--accent-emerald)' }}>{stats.totalEngagement.toLocaleString()} Engagement</span>
             </div>
           )}
         </div>
@@ -171,14 +172,14 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
                 aria-selected={isActive}
                 aria-controls={`tabpanel-${tab.id}`}
                 tabIndex={isActive ? 0 : -1}
-                className={`px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all border snap-start min-h-[44px] flex items-center justify-center ${
+                className={`px-4 py-2.5 text-sm font-black uppercase whitespace-nowrap transition-all border-2 snap-start min-h-[44px] flex items-center justify-center ${
                   isActive
-                    ? 'text-white border-transparent'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'
+                    ? 'text-[var(--bg-primary)] border-transparent'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] border-[var(--border-color)]'
                 }`}
                 style={
                   isActive
-                    ? { backgroundColor: config?.color || '#0e7490' }
+                    ? { backgroundColor: config?.color || 'var(--accent-cyan)' }
                     : undefined
                 }
               >
@@ -195,7 +196,7 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
             );
           })}
         </div>
-      </div>
+      </Card>
 
       <div
         id={`tabpanel-${activeTab}`}
@@ -204,9 +205,9 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
         className="grid gap-4"
       >
         {activeItems.length === 0 ? (
-          <div className="text-center py-12 text-slate-500 border border-slate-700 rounded-2xl bg-slate-900/60">
+          <Card accent="white" className="text-center py-12 text-[var(--text-muted)]">
             No results found. Try another source combination.
-          </div>
+          </Card>
         ) : (
           activeItems.map((item, index) => (
             <ContentCard
@@ -221,11 +222,12 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
 
       {selectedItem && (
         <div
-          className="fixed inset-0 bg-black/60 animate-overlay flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+          className="fixed inset-0 bg-[var(--bg-primary)]/80 animate-overlay flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
           onClick={() => setSelectedItem(null)}
         >
           <div
-            className="bg-slate-900 rounded-t-2xl sm:rounded-2xl max-w-3xl w-full max-h-[88vh] sm:max-h-[84vh] overflow-y-auto p-5 sm:p-6 border border-slate-700 animate-scale-in"
+            className="bg-[var(--bg-secondary)] border-2 border-[var(--border-color)] w-full max-w-3xl max-h-[88vh] sm:max-h-[84vh] overflow-y-auto p-5 sm:p-6 animate-scale-in"
+            style={{ boxShadow: '8px 8px 0px 0px var(--shadow-color)' }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -236,30 +238,30 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-3 min-w-0">
                 <span
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold text-white shrink-0"
-                  style={{ backgroundColor: PLATFORM_CONFIG[selectedItem.platform]?.color || '#6366F1' }}
+                  className="w-10 h-10 flex items-center justify-center text-lg font-bold text-[var(--bg-primary)] shrink-0"
+                  style={{ backgroundColor: PLATFORM_CONFIG[selectedItem.platform]?.color || 'var(--accent-violet)' }}
                 >
                   {PLATFORM_CONFIG[selectedItem.platform]?.icon || '🌐'}
                 </span>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-slate-100 break-words line-clamp-1">{selectedItem.author}</h3>
-                  <p className="text-sm text-slate-500 break-all line-clamp-1">{selectedItem.authorHandle}</p>
+                  <h3 className="font-black uppercase tracking-wider text-[var(--text-primary)] break-words line-clamp-1">{selectedItem.author}</h3>
+                  <p className="text-sm text-[var(--text-muted)] break-all line-clamp-1">{selectedItem.authorHandle}</p>
                 </div>
               </div>
               <button
                 ref={closeButtonRef}
                 onClick={() => setSelectedItem(null)}
-                className="text-slate-500 hover:text-slate-300 min-h-[44px] min-w-[44px] flex items-center justify-center -mt-2 -mr-2"
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] min-h-[44px] min-w-[44px] flex items-center justify-center -mt-2 -mr-2"
                 aria-label="Close detail view"
               >
                 ✕
               </button>
             </div>
 
-            <h2 id="content-modal-title" className="text-xl font-semibold text-slate-100 mb-3 break-words">
+            <h2 id="content-modal-title" className="text-xl font-black uppercase tracking-wider text-[var(--text-primary)] mb-3 break-words">
               {selectedItem.title}
             </h2>
-            <p id="content-modal-body" className="text-slate-300 whitespace-pre-wrap mb-4">
+            <p id="content-modal-body" className="text-[var(--text-secondary)] whitespace-pre-wrap mb-4">
               {selectedItem.content}
             </p>
 
@@ -267,7 +269,7 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
               href={selectedItem.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 text-cyan-300 hover:text-cyan-200 min-h-[44px] w-full sm:w-auto"
+              className="inline-flex items-center justify-center gap-2 text-[var(--accent-cyan)] hover:text-[var(--text-primary)] min-h-[44px] w-full sm:w-auto font-black uppercase tracking-wider"
             >
               View original <ArrowUpRight className="w-4 h-4" />
             </a>

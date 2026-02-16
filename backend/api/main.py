@@ -1,5 +1,6 @@
-from fastapi import FastAPI, BackgroundTasks, Response
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, BackgroundTasks, Response, Request, Header
+from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, model_validator
 from typing import List, Optional, Dict, Any
 import uuid
@@ -13,8 +14,77 @@ from backend.services.x402_service import x402_service, X402Payment
 from backend.services.attestation_service import attestation_service
 from backend.services.ai_service import ai_service, OPENROUTER_VARIANTS
 from backend.database.repository import Repository, init_db
+from backend.utils.rate_limit import user_rate_limiter, UserRateLimitInfo
 
 app = FastAPI(title="Trende Agent API")
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure properly for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-RateLimit-Remaining", "X-RateLimit-Limit", "X-RateLimit-Reset", "X-RateLimit-Tier",
+                   "X-402-Amount", "X-402-Recipient", "X-402-Chain-ID", "X-402-Token-Type", "X-402-Scheme"],
+)
+
+
+def get_client_ip(request: Request) -> str:
+    """Extract client IP from request, handling proxies."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+async def check_rate_limit(
+    request: Request,
+    wallet_address: Optional[str] = None,
+) -> tuple[bool, UserRateLimitInfo, Response | None]:
+    """
+    Check rate limit and return (allowed, info, error_response).
+    If not allowed and X402 is enabled, returns 402 response.
+    """
+    ip_address = get_client_ip(request)
+    allowed, info = await user_rate_limiter.check_and_consume(wallet_address, ip_address)
+    
+    if allowed:
+        return True, info, None
+    
+    # Rate limit exceeded - check if X402 payment can unlock
+    require_x402 = os.getenv("REQUIRE_X402", "false").lower() == "true"
+    
+    if require_x402:
+        # Return 402 Payment Required
+        headers = x402_service.get_payment_headers(
+            os.getenv("X402_PAYMENT_AMOUNT", "0.001"),
+            os.getenv("X402_RECIPIENT_ADDRESS", ""),
+            int(os.getenv("MONAD_CHAIN_ID", "10143"))
+        )
+        headers.update(info.to_headers())
+        return False, info, JSONResponse(
+            status_code=402,
+            content={
+                "error": "Rate limit exceeded",
+                "message": f"You've used all {info.limit} searches for today. Connect wallet or pay to continue.",
+                "tier": info.tier,
+                "reset_at": info.reset_at.isoformat(),
+            },
+            headers=headers
+        )
+    
+    # X402 not enabled, just return 429
+    return False, info, JSONResponse(
+        status_code=429,
+        content={
+            "error": "Rate limit exceeded",
+            "message": f"You've used all {info.limit} searches for today. Try again after {info.reset_at.isoformat()}.",
+            "tier": info.tier,
+            "reset_at": info.reset_at.isoformat(),
+        },
+        headers=info.to_headers()
+    )
 
 # Initialize DB on startup
 @app.on_event("startup")
@@ -66,6 +136,7 @@ class QueryRequest(BaseModel):
     topic: Optional[str] = None
     idea: Optional[str] = None
     platforms: List[str] = Field(default_factory=lambda: ["twitter", "newsapi", "linkedin"])
+    models: List[str] = Field(default_factory=lambda: ["venice", "aisa", "openrouter"])
     relevance_threshold: Optional[float] = None
 
     @model_validator(mode="after")
@@ -189,20 +260,54 @@ async def attestation_health(probe: bool = False):
     """
     return await attestation_service.health_check(probe=probe)
 
+
+@app.get("/api/user/rate-limit")
+async def get_user_rate_limit(
+    http_request: Request,
+    x_wallet_address: Optional[str] = Header(None, alias="X-Wallet-Address"),
+):
+    """
+    Get current rate limit info for the user.
+    Returns tier, remaining searches, and reset time.
+    """
+    ip_address = get_client_ip(http_request)
+    info = await user_rate_limiter.get_info(x_wallet_address, ip_address)
+    return {
+        "tier": info.tier,
+        "remaining": info.remaining,
+        "limit": info.limit,
+        "reset_at": info.reset_at.isoformat(),
+        "wallet_connected": x_wallet_address is not None,
+    }
+
+
 @app.post("/api/trends/start")
-async def start_analysis(request: QueryRequest, background_tasks: BackgroundTasks, response: Response, payment: Optional[X402Payment] = None):
-    require_x402 = os.getenv("REQUIRE_X402", "false").lower() == "true"
-
-    # If payment is required and none is provided, return 402 Payment Required with X402 headers
-    if require_x402 and not payment:
-        headers = x402_service.get_payment_headers("0.1", "0xYourWalletAddress", 8453) # Base chain
-        for k, v in headers.items():
-            response.headers[k] = v
-        return Response(status_code=402, content="Payment Required")
-
-    # Verify real payment when x402 is enabled
-    if require_x402 and payment and not x402_service.verify_payment(payment):
-        return Response(status_code=403, content="Invalid Payment")
+async def start_analysis(
+    request: QueryRequest,
+    background_tasks: BackgroundTasks,
+    http_request: Request,
+    response: Response,
+    payment: Optional[X402Payment] = None,
+    x_wallet_address: Optional[str] = Header(None, alias="X-Wallet-Address"),
+):
+    # Check if payment bypasses rate limit (premium tier)
+    has_premium = False
+    if payment and x402_service.verify_payment(payment):
+        has_premium = True
+    
+    # Check rate limit
+    allowed, rate_info, error_response = await check_rate_limit(
+        http_request,
+        wallet_address=x_wallet_address,
+    )
+    
+    # Add rate limit headers to response
+    for k, v in rate_info.to_headers().items():
+        response.headers[k] = v
+    
+    # If rate limit exceeded and no valid payment, return error
+    if not allowed and not has_premium:
+        return error_response
 
     task_id = str(uuid.uuid4())
     tasks[task_id] = {
@@ -212,6 +317,8 @@ async def start_analysis(request: QueryRequest, background_tasks: BackgroundTask
         "result": None,
         "topic": request.topic,
         "platforms": request.platforms,
+        "models": request.models,
+        "sponsor_address": x_wallet_address,  # Track who funded this research
         "created_at": datetime.utcnow().isoformat(),
         "updated_at": datetime.utcnow().isoformat(),
         "run_telemetry": {
@@ -227,7 +334,7 @@ async def start_analysis(request: QueryRequest, background_tasks: BackgroundTask
     # Save to DB
     repo.save_task(task_id, tasks[task_id])
     
-    background_tasks.add_task(run_agent_workflow, task_id, request.topic, request.platforms)
+    background_tasks.add_task(run_agent_workflow, task_id, request.topic, request.platforms, request.models)
     
     created_at = tasks[task_id]["created_at"]
     return {
@@ -237,11 +344,12 @@ async def start_analysis(request: QueryRequest, background_tasks: BackgroundTask
         "createdAt": created_at,
     }
 
-async def run_agent_workflow(task_id: str, topic: str, platforms: List[str]):
+async def run_agent_workflow(task_id: str, topic: str, platforms: List[str], models: List[str]):
     workflow = create_workflow()
     initial_state = {
         "topic": topic,
         "platforms": platforms,
+        "models": models,
         "query_id": task_id,
         "status": QueryStatus.PENDING,
         "logs": ["Task initialized."],
@@ -435,6 +543,35 @@ async def get_history():
             }
             for item in records
         ]
+    }
+
+
+@app.get("/api/commons")
+async def get_public_commons(limit: int = 50, sponsor: Optional[str] = None):
+    """
+    Public Research Commons - browse all completed, attested research.
+    
+    This endpoint is publicly accessible without authentication.
+    All completed research becomes part of the commons.
+    """
+    records = repo.get_public_research(limit=limit, sponsor=sponsor)
+    
+    return {
+        "research": [
+            {
+                "id": item.get("task_id"),
+                "topic": item.get("topic", ""),
+                "sponsor": item.get("sponsor_address"),
+                "platforms": item.get("platforms", []),
+                "hasAttestation": item.get("has_attestation", False),
+                "createdAt": item.get("created_at", ""),
+            }
+            for item in records
+        ],
+        "total": len(records),
+        "filter": {
+            "sponsor": sponsor,
+        },
     }
 
 @app.get("/api/trends/stream/{task_id}")

@@ -204,10 +204,11 @@ async def analyzer_node(state: GraphState) -> GraphState:
     ... (Markdown Content) ...
     """
     
-    # Use Consensus Engine to reduce single-model bias and capture verifiability metadata
+    # Use Consensus Engine with user-selected models
     consensus_bundle = await ai_service.get_consensus_bundle(
         prompt,
         system_prompt="You are a professional, neutral trend analyst.",
+        providers=state.get('models'),
     )
     report = str(consensus_bundle.get("consensus_report", ""))
     state['final_report_md'] = report

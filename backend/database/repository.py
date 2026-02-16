@@ -22,6 +22,8 @@ if HAS_SQL:
         logs = Column(JSON)
         result = Column(JSON)
         platforms = Column(JSON)
+        models = Column(JSON, nullable=True)
+        sponsor_address = Column(String, nullable=True)  # Wallet that funded this research
         created_at = Column(DateTime, default=datetime.utcnow)
         updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -53,6 +55,8 @@ class Repository:
             task.status = state.get("status")
             task.logs = state.get("logs", [])
             task.platforms = state.get("platforms", [])
+            task.models = state.get("models", [])
+            task.sponsor_address = state.get("sponsor_address")
             
             result_data = {
                 "summary": state.get("summary"),
@@ -84,6 +88,8 @@ class Repository:
                 "logs": task.logs,
                 "result": task.result,
                 "platforms": task.platforms,
+                "models": task.models,
+                "sponsor_address": task.sponsor_address,
                 "created_at": task.created_at.isoformat(),
                 "updated_at": task.updated_at.isoformat() if task.updated_at else task.created_at.isoformat(),
             }
@@ -98,7 +104,30 @@ class Repository:
                     "task_id": t.task_id,
                     "topic": t.topic,
                     "status": t.status,
+                    "sponsor_address": t.sponsor_address,
                     "created_at": t.created_at.isoformat()
+                }
+                for t in tasks
+            ]
+    
+    def get_public_research(self, limit: int = 50, sponsor: str = None):
+        """Get completed research for the public commons."""
+        if not HAS_SQL or not self.Session:
+            return []
+        with self.Session() as session:
+            query = session.query(TaskModel).filter(TaskModel.status == "completed")
+            if sponsor:
+                query = query.filter(TaskModel.sponsor_address == sponsor.lower())
+            tasks = query.order_by(TaskModel.created_at.desc()).limit(limit).all()
+            return [
+                {
+                    "task_id": t.task_id,
+                    "topic": t.topic,
+                    "status": t.status,
+                    "sponsor_address": t.sponsor_address,
+                    "platforms": t.platforms,
+                    "created_at": t.created_at.isoformat(),
+                    "has_attestation": bool(t.result and t.result.get("attestation_data")),
                 }
                 for t in tasks
             ]

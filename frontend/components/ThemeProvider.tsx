@@ -1,0 +1,73 @@
+'use client';
+
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+
+type Theme = 'dark' | 'light';
+
+interface ThemeContextValue {
+  theme: Theme;
+  toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
+}
+
+const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+}
+
+interface ThemeProviderProps {
+  children: ReactNode;
+  defaultTheme?: Theme;
+}
+
+export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProviderProps) {
+  const [theme, setThemeState] = useState<Theme>(defaultTheme);
+  const [mounted, setMounted] = useState(false);
+
+  // Initialize theme from localStorage or system preference
+  useEffect(() => {
+    setMounted(true);
+    
+    const stored = localStorage.getItem('trende-theme') as Theme | null;
+    if (stored) {
+      setThemeState(stored);
+    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+      setThemeState('light');
+    }
+  }, []);
+
+  // Apply theme class to document
+  useEffect(() => {
+    if (!mounted) return;
+    
+    const root = document.documentElement;
+    root.classList.remove('dark', 'light');
+    root.classList.add(theme);
+    
+    localStorage.setItem('trende-theme', theme);
+  }, [theme, mounted]);
+
+  const toggleTheme = () => {
+    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'))
+  };
+
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+  };
+
+  // Prevent flash of wrong theme
+  if (!mounted) {
+    return <>{children}</>;
+  }
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}

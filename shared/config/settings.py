@@ -49,6 +49,17 @@ class Settings(BaseSettings):
     # Frontend URL (for CORS)
     frontend_url: str = Field(default="http://localhost:3000", alias="FRONTEND_URL")
 
+    # Monad Configuration
+    monad_rpc_url: str = Field(default="https://testnet-rpc.monad.xyz", alias="MONAD_RPC_URL")
+    monad_chain_id: int = Field(default=10143, alias="MONAD_CHAIN_ID")
+    monad_explorer_url: str = Field(default="https://testnet.monadexplorer.com", alias="MONAD_EXPLORER_URL")
+    x402_recipient_address: str = Field(default="", alias="X402_RECIPIENT_ADDRESS")
+    x402_payment_amount: str = Field(default="0.001", alias="X402_PAYMENT_AMOUNT")  # MON per search
+
+    # Rate Limiting Tiers
+    free_tier_daily_limit: int = Field(default=3, alias="FREE_TIER_DAILY_LIMIT")
+    connected_tier_daily_limit: int = Field(default=10, alias="CONNECTED_TIER_DAILY_LIMIT")
+
     # Processing
     max_results_per_platform: int = 20
     relevance_threshold: float = 0.5

@@ -3,6 +3,8 @@ import { JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { ToastProvider } from '@/components/Toast';
 import { KeyboardShortcutsProvider, KeyboardShortcutsHint } from '@/components/KeyboardShortcuts';
+import { WalletProvider } from '@/components/WalletProvider';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -25,14 +27,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} text-slate-100 min-h-screen antialiased`}>
-        <ToastProvider>
-          <KeyboardShortcutsProvider>
-            {children}
-            <KeyboardShortcutsHint />
-          </KeyboardShortcutsProvider>
-        </ToastProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} min-h-screen antialiased`}>
+        <ThemeProvider>
+          <WalletProvider>
+            <ToastProvider>
+              <KeyboardShortcutsProvider>
+                {children}
+                <KeyboardShortcutsHint />
+              </KeyboardShortcutsProvider>
+            </ToastProvider>
+          </WalletProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

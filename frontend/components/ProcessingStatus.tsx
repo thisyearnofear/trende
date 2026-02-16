@@ -2,9 +2,10 @@
 
 import { useMemo } from 'react';
 import { StreamEvent, QueryStatus } from '@/lib/types';
-import { Terminal, Fingerprint, Bot, CheckCircle2, Circle } from 'lucide-react';
+import { Terminal, Fingerprint, CheckCircle2, Circle } from 'lucide-react';
 import { TerminalLog } from './TypewriterText';
 import { AgentPersona } from './AgentPersona';
+import { Card, Progress, Badge } from './DesignSystem';
 
 interface ProcessingStatusProps {
   status: QueryStatus | null;
@@ -44,35 +45,30 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
       <AgentPersona status={getAgentStatus()} progress={progress} currentStage={status || undefined} />
 
       {/* Main Processing Card */}
-      <div className="bg-[#141414] border-2 border-white" style={{ boxShadow: '6px 6px 0px 0px #00ffff' }}>
+      <Card accent="cyan" shadow="lg">
         {/* Header */}
-        <div className="border-b-2 border-white p-4 flex items-center justify-between">
+        <div className="border-b-2 border-[var(--border-color)] p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#00ffff] flex items-center justify-center">
-              <Fingerprint className="w-5 h-5 text-black" />
+            <div className="w-8 h-8 flex items-center justify-center" style={{ backgroundColor: 'var(--accent-cyan)' }}>
+              <Fingerprint className="w-5 h-5 text-[var(--bg-primary)]" />
             </div>
             <div>
-              <h3 className="font-black uppercase tracking-wider text-white">TEE Processing</h3>
-              <p className="text-xs font-mono text-[#00ffff]">EigenCompute Secure Enclave</p>
+              <h3 className="font-black uppercase tracking-wider">TEE Processing</h3>
+              <p className="text-xs font-mono text-[var(--accent-cyan)]">EigenCompute Secure Enclave</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-black text-[#00ffff]">{progress}%</p>
+            <p className="text-3xl font-black text-[var(--accent-cyan)]">{progress}%</p>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="p-4 border-b-2 border-white">
-          <div className="w-full h-6 bg-[#0a0a0a] border-2 border-white">
-            <div
-              className="h-full bg-[#00ffff] border-r-2 border-white transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+        <div className="p-4 border-b-2 border-[var(--border-color)]">
+          <Progress value={progress} accent="cyan" />
         </div>
 
         {/* Stages */}
-        <div className="p-4 border-b-2 border-white">
+        <div className="p-4 border-b-2 border-[var(--border-color)]">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {STAGES.map((stage, index) => {
               const isComplete = index < currentStageIndex;
@@ -81,29 +77,26 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
               return (
                 <div
                   key={stage.id}
-                  className={`p-3 border-2 transition-colors ${
-                    isComplete ? 'border-[#00ff88] bg-[#00ff88]/10' :
-                    isActive ? 'border-[#00ffff] bg-[#00ffff]/10' :
-                    'border-gray-700 bg-[#0a0a0a]'
-                  }`}
+                  className="p-3 border-2 min-h-[80px]"
+                  style={{
+                    borderColor: isComplete ? 'var(--accent-emerald)' : isActive ? 'var(--accent-cyan)' : 'var(--text-muted)',
+                    backgroundColor: isComplete ? 'rgba(0, 255, 136, 0.1)' : isActive ? 'rgba(0, 255, 255, 0.1)' : 'var(--bg-primary)',
+                    boxShadow: isComplete ? '2px 2px 0px 0px var(--accent-emerald)' : isActive ? '2px 2px 0px 0px var(--accent-cyan)' : 'none',
+                  }}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     {isComplete ? (
-                      <CheckCircle2 className="w-4 h-4 text-[#00ff88]" />
+                      <CheckCircle2 className="w-4 h-4 text-[var(--accent-emerald)]" />
                     ) : isActive ? (
-                      <div className="w-4 h-4 bg-[#00ffff] animate-pulse" />
+                      <div className="w-4 h-4 animate-pulse" style={{ backgroundColor: 'var(--accent-cyan)' }} />
                     ) : (
-                      <Circle className="w-4 h-4 text-gray-600" />
+                      <Circle className="w-4 h-4 text-[var(--text-muted)]" />
                     )}
-                    <span className={`text-xs font-black uppercase ${
-                      isComplete ? 'text-[#00ff88]' :
-                      isActive ? 'text-[#00ffff]' :
-                      'text-gray-600'
-                    }`}>
+                    <span className="text-xs font-black uppercase" style={{ color: isComplete ? 'var(--accent-emerald)' : isActive ? 'var(--accent-cyan)' : 'var(--text-muted)' }}>
                       {stage.label}
                     </span>
                   </div>
-                  <p className="text-[10px] text-gray-500 font-mono">{stage.description}</p>
+                  <p className="text-[10px] text-[var(--text-muted)] font-mono">{stage.description}</p>
                 </div>
               );
             })}
@@ -113,10 +106,10 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
         {/* Terminal */}
         {terminalEvents.length > 0 && (
           <div className="p-4">
-            <div className="border-2 border-gray-700 bg-[#0a0a0a]">
-              <div className="flex items-center gap-2 px-3 py-2 border-b-2 border-gray-700 bg-[#141414]">
-                <Terminal className="w-3.5 h-3.5 text-gray-500" />
-                <span className="text-[10px] font-mono text-gray-500">TEE_TELEMETRY.LOG</span>
+            <div className="border-2 bg-[var(--bg-primary)]" style={{ borderColor: 'var(--text-muted)' }}>
+              <div className="flex items-center gap-2 px-3 py-2 border-b-2 bg-[var(--bg-secondary)]" style={{ borderColor: 'var(--text-muted)' }}>
+                <Terminal className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                <span className="text-[10px] font-mono text-[var(--text-muted)]">TEE_TELEMETRY.LOG</span>
               </div>
               <div className="p-3">
                 <TerminalLog events={terminalEvents} maxHeight="100px" className="text-xs" />
@@ -124,7 +117,7 @@ export function ProcessingStatus({ status, progress, events, isProcessing }: Pro
             </div>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

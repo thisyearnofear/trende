@@ -2,6 +2,33 @@
 
 Trende is a **Sovereign AI Agent** that bridges real-world social signal into verifiable on-chain intelligence. It is built to serve as the "Truth Layer" for the Monad Agent Economy.
 
+## ⚡ Monad Integration
+
+Trende is built natively on **Monad Testnet** (Chain ID: 10143) with:
+
+- **Wallet-Gated Access**: Connect your Monad wallet to unlock higher rate limits
+- **X402 Micropayments**: Pay-per-query using EIP-712 signed authorizations (0.001 MON/search)
+- **Research Commons**: All completed research is publicly browsable at `/commons`, with sponsor attribution
+- **On-Chain Identity**: Research queries are tagged with sponsor wallet addresses for permanent attribution
+
+### Rate Limits
+| Tier | Daily Searches | Requirement |
+|------|---------------|-------------|
+| Anonymous | 3 | None |
+| Connected | 10 | Wallet connected |
+| Premium | Unlimited | X402 payment |
+
+### Environment Variables (Monad)
+```bash
+MONAD_RPC_URL=https://testnet-rpc.monad.xyz
+MONAD_CHAIN_ID=10143
+MONAD_EXPLORER_URL=https://testnet.monadexplorer.com
+X402_RECIPIENT_ADDRESS=0xYourWallet
+X402_PAYMENT_AMOUNT=0.001
+FREE_TIER_DAILY_LIMIT=3
+CONNECTED_TIER_DAILY_LIMIT=10
+```
+
 ## 🤖 Agent Ecosystem (A2A)
 Trende is designed to be **hired by other agents**. 
 - **llms.txt**: [Master Discovery File](/llms.txt) for LLM-based agents.
@@ -91,4 +118,6 @@ curl -s "http://localhost:8000/api/health/attestation?probe=true" | jq
 
 ---
 
-Built for the [Moltiverse Hackathon](https://moltiverse.dev) (Agent Track) and the [EigenCloud Open Innovation Challenge](https://x.com/eigencloud/status/2022385148189397227).
+Built for the [Moltiverse Hackathon](https://moltiverse.dev) (Agent Track) on **Monad** and the [EigenCloud Open Innovation Challenge](https://x.com/eigencloud/status/2022385148189397227).
+
+**Monad Testnet**: Chain ID `10143` | RPC `https://testnet-rpc.monad.xyz` | [Explorer](https://testnet.monadexplorer.com)
