@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import './globals.css';
+import { ToastProvider } from '@/components/Toast';
+import { KeyboardShortcutsProvider, KeyboardShortcutsHint } from '@/components/KeyboardShortcuts';
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -25,7 +27,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} text-slate-100 min-h-screen antialiased`}>
-        {children}
+        <ToastProvider>
+          <KeyboardShortcutsProvider>
+            {children}
+            <KeyboardShortcutsHint />
+          </KeyboardShortcutsProvider>
+        </ToastProvider>
       </body>
     </html>
   );

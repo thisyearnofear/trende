@@ -2,7 +2,7 @@
  * Custom hooks for trend data management
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import useSWR from 'swr';
 import { api, ApiError } from '@/lib/api';
 import { 
@@ -59,19 +59,35 @@ export function useTrendData(
   const [events, setEvents] = useState<StreamEvent[]>([]);
   
   const sseCleanupRef = useRef<(() => void) | null>(null);
+
+  // Determine if we should poll based on queryId
+  const shouldFetch = !!queryId;
   
-  // Fetch results with SWR
-  const { data, error, isLoading, mutate } = useSWR<ResultsResponse, ApiError>(
-    queryId ? ['/api/trends', queryId] : null,
-    () => api.getResults(queryId!),
+  // Fetch results with SWR - use useMemo to avoid circular reference
+  const swrKey = useMemo(() => 
+    shouldFetch ? ['/api/trends', queryId] : null, 
+    [shouldFetch, queryId]
+  );
+
+  const fetchFn = useCallback(() => {
+    if (!queryId) throw new Error('Query ID required');
+    return api.getResults(queryId);
+  }, [queryId]);
+
+  const swrResult = useSWR<ResultsResponse, ApiError>(
+    swrKey,
+    fetchFn,
     {
-      refreshInterval: polling && isProcessing ? pollInterval : 0,
+      refreshInterval: 0,
       revalidateOnFocus: false,
       dedupingInterval: 5000,
     }
   );
+  const { data, error, isLoading, mutate } = swrResult;
 
-  const status = data?.query?.status ?? optimisticStatus;
+  // Determine processing status from data
+  const currentStatus = data?.query?.status;
+  const status: QueryStatus | null = currentStatus ?? optimisticStatus;
   const isProcessing =
     status === 'pending' ||
     status === 'planning' ||
@@ -130,8 +146,8 @@ export function useTrendData(
 
   return {
     status,
-    data: data || null,
-    error: error || null,
+    data: data ?? null,
+    error: error ?? null,
     isLoading,
     isProcessing,
     progress,
@@ -154,7 +170,7 @@ export function useTrendHistory() {
   );
 
   return {
-    queries: data?.queries || [],
+    queries: data?.queries ?? [],
     error,
     isLoading,
     refresh: mutate,
@@ -171,7 +187,7 @@ export function usePlatforms() {
   );
 
   return {
-    platforms: data?.platforms || [],
+    platforms: data?.platforms ?? [],
     error,
     isLoading,
   };

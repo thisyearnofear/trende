@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp } from 'lucide-react';
+import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp, Check } from 'lucide-react';
 import { TrendSummary as TrendSummaryType } from '@/lib/types';
+import { useToast } from '@/components/Toast';
 
 interface ForgeViewerProps {
     summary: TrendSummaryType;
@@ -50,11 +51,13 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const data = (summary.memePageData || {}) as MemeData;
     const consensus = summary.consensusData;
     const attestation = summary.attestationData;
+    const { showToast } = useToast();
 
     const [verifyStatus, setVerifyStatus] = useState<string>('');
     const [showVerificationDetails, setShowVerificationDetails] = useState(false);
     const [showAgentManifest, setShowAgentManifest] = useState(false);
     const [manifestData, setManifestData] = useState<AgentManifest | null>(null);
+    const [copiedManifest, setCopiedManifest] = useState(false);
 
     if (!summary.memePageData) {
         return (
@@ -166,6 +169,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                         onClick={() => {
                                             const url = `${window.location.origin}/proof/${queryId}`;
                                             navigator.clipboard.writeText(url);
+                                            showToast('Proof URL copied to clipboard', 'success');
                                         }}
                                         className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors"
                                     >
@@ -550,11 +554,20 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                 disabled={!manifestData}
                                 onClick={() => {
                                     navigator.clipboard.writeText(JSON.stringify(manifestData, null, 2));
-                                    alert('Manifest copied for agent handoff!');
+                                    setCopiedManifest(true);
+                                    showToast('Manifest copied for agent handoff!', 'success');
+                                    setTimeout(() => setCopiedManifest(false), 2000);
                                 }}
-                                className="flex-1 py-3 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold transition-all disabled:opacity-50"
+                                className="flex-1 py-3 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                             >
-                                Copy Manifest
+                                {copiedManifest ? (
+                                    <>
+                                        <Check className="w-5 h-5" />
+                                        Copied!
+                                    </>
+                                ) : (
+                                    'Copy Manifest'
+                                )}
                             </button>
                         </div>
                     </div>

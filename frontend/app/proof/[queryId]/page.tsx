@@ -5,10 +5,12 @@ import { useTrendData } from '@/hooks/useTrendData';
 import { ForgeViewer } from '@/components/ForgeViewer';
 import { ShieldCheck, ArrowLeft, Loader2, Link2 } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/components/Toast';
 
 export default function ProofPage({ params }: { params: Promise<{ queryId: string }> }) {
     const { queryId } = use(params);
     const { data, isProcessing, status } = useTrendData(queryId);
+    const { showToast } = useToast();
 
     return (
         <div className="min-h-screen bg-[#020617] text-slate-100 font-sans selection:bg-emerald-500/30">
@@ -44,6 +46,7 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText(window.location.href);
+                                    showToast('Proof URL copied to clipboard', 'success');
                                 }}
                                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors"
                             >
