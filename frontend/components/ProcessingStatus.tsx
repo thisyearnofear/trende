@@ -25,41 +25,50 @@ const STAGES = [
   {
     id: "researcher",
     label: "HARVEST",
-    description: "Multi-Platform Data Collection",
+    description: "Data Mining & Social Signal",
   },
-  {
-    id: "validator",
-    label: "VALIDATE",
-    description: "Cross-Reference & Confidence",
-  },
-  { id: "architect", label: "ATTEST", description: "TEE Signing & Output" },
+  { id: "validator", label: "VALIDATE", description: "Truth Verification" },
+  { id: "consensus", label: "FORGE", description: "Multi-Model Consensus" },
+  { id: "architect", label: "ATTEST", description: "TEE Proof Signing" },
 ];
 
 const SIMULATED_LOGS: Record<string, string[]> = {
   planner: [
-    "ANALYZING INTENT VECTORS...",
+    "DECODING MISSION PARAMETERS...",
     "MAPPING SEARCH SPACE...",
-    "IDENTIFYING KEY ENTITIES...",
+    "IDENTIFYING CORE ENTITIES...",
     "OPTIMIZING QUERY STRATEGY...",
+    "ANALYZING INTENT VECTORS...",
   ],
   researcher: [
-    "CONNECTING TO SOCIAL GRAPH API...",
-    "SCRAPING NEWS FEEDS...",
+    "CONNECTING TO TWITTER API (RAPIDAPI)...",
+    "SCRAPING NEWSAPI ENDPOINTS...",
+    "QUERYING TABSTACK WEB SOURCE...",
     "PARSING UNSTRUCTURED DATA...",
     "DETECTING VIRAL SIGNALS...",
-    "FILTERING NOISE...",
+    "FILTERING PLATFORM NOISE...",
   ],
   validator: [
     "CROSS-REFERENCING SOURCES...",
     "CALCULATING CONFIDENCE SCORE...",
     "DETECTING HALLUCINATIONS...",
     "VERIFYING CITATIONS...",
+    "AUDITING DATA INTEGRITY...",
+  ],
+  consensus: [
+    "INITIALIZING CONSENSUS FORGE...",
+    "CONSULTING VENICE AI (PRIVACY-FIRST)...",
+    "CONSULTING GPT-4O...",
+    "CONSULTING LLAMA 3.3...",
+    "AGGREGATING MULTI-MODEL OUTPUTS...",
+    "RESOLVING DIVERGENT SIGNALS...",
   ],
   architect: [
-    "SYNTHESIZING REPORT...",
+    "SYNTHESIZING SOVEREIGN REPORT...",
     "GENERATING EIGEN PROOF...",
     "SIGNING ATTESTATION PAYLOAD...",
-    "FINALIZING OUTPUT...",
+    "ESTABLISHING PROOF OF COMPUTE...",
+    "MISSION COMPLETE.",
   ],
 };
 
@@ -200,7 +209,7 @@ export function ProcessingStatus({
 
         {/* Stages */}
         <div className="p-4 border-b-2 border-[var(--border-color)]">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             {STAGES.map((stage, index) => {
               const isComplete = index < currentStageIndex;
               const isActive = index === currentStageIndex;

@@ -1,7 +1,7 @@
 import os
 import httpx
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from backend.integrations.base import AbstractPlatformConnector
 from shared.models import TrendItem, PlatformType
 from shared.config import get_settings
@@ -39,7 +39,7 @@ class NewsConnector(AbstractPlatformConnector):
                         author=res.get('source', 'Web'),
                         author_handle=res.get('source', 'Web'),
                         url=res.get('url', ''),
-                        timestamp=datetime.now(),
+                        timestamp=datetime.now(timezone.utc),
                         metrics={},
                         raw_data=res
                     ))
@@ -72,7 +72,7 @@ class NewsConnector(AbstractPlatformConnector):
                         author=art.get('author') or art.get('source', {}).get('name') or "Unknown Source",
                         author_handle=art.get('source', {}).get('name') or "News",
                         url=art.get('url', ''),
-                        timestamp=datetime.fromisoformat(art.get('publishedAt').replace('Z', '+00:00')) if art.get('publishedAt') else datetime.now(),
+                        timestamp=datetime.fromisoformat(art.get('publishedAt').replace('Z', '+00:00')) if art.get('publishedAt') else datetime.now(timezone.utc),
                         metrics={},
                         raw_data=art
                     ))

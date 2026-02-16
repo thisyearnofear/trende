@@ -13,14 +13,16 @@ from shared.models import QueryStatus
 
 async def planner_node(state: GraphState) -> GraphState:
     state["status"] = QueryStatus.PLANNING
-    state["logs"].append(f"Planning research for topic: {state['topic']}")
+    state["logs"].append(f"🧠 INITIALIZING: Crafting a strategic research blueprint for '{state['topic']}'...")
 
     # RAG: Check historical context
     historical_matches = vector_store.query_historical_context(state["topic"], n_results=3)
     historical_context = ""
     if historical_matches:
-        state["logs"].append(f"Found {len(historical_matches)} relevant historical trends.")
+        state["logs"].append(f"📚 MEMORY BANK: Retrieved {len(historical_matches)} relevant historical trends for cross-referencing.")
         historical_context = "\n".join([f"- {m['content']}" for m in historical_matches])
+    else:
+        state["logs"].append(f"🔍 EXPLORATION MODE: No prior data found. Venturing into uncharted territory...")
 
     prompt = f"""
     The user wants to find trends about: {state["topic"]}
@@ -53,10 +55,10 @@ async def planner_node(state: GraphState) -> GraphState:
         state["plan"] = plan
         state["search_queries"] = plan.get("search_queries", [])
         state["logs"].append(
-            f"Research plan created with {len(state['search_queries'])} target queries."
+            f"🎯 STRATEGY FORMULATED: Created {len(state['search_queries'])} precision-targeted queries for optimal coverage."
         )
     except Exception as e:
-        state["logs"].append(f"Failed to parse research plan: {e}")
+        state["logs"].append(f"⚠️  PLAN ADJUSTMENT: Failed to parse research plan, falling back to general queries. Error: {e}")
         # Fallback query
         state["search_queries"] = [
             {"platform": p, "query": state["topic"]} for p in state["platforms"]
@@ -67,7 +69,9 @@ async def planner_node(state: GraphState) -> GraphState:
 
 async def researcher_node(state: GraphState) -> GraphState:
     state["status"] = QueryStatus.RESEARCHING
-    state["logs"].append("Executing search queries...")
+    platforms = list(set(sq["platform"] for sq in state["search_queries"]))
+    platform_names = ', '.join(platforms).upper()
+    state["logs"].append(f"📡 MISSION: Scanning the digital cosmos for signals from {platform_names}...")
 
     # Initialize connectors
     from backend.integrations.connectors.linkedin import LinkedInConnector
@@ -85,35 +89,57 @@ async def researcher_node(state: GraphState) -> GraphState:
 
     tasks = []
     for sq in state["search_queries"]:
-        if sq["platform"] == "twitter":
-            tasks.append(twitter.search(sq["query"], limit=5))
-        elif sq["platform"] == "linkedin":
-            tasks.append(linkedin.search(sq["query"], limit=5))
-        elif sq["platform"] in ["news", "newsapi"]:
-            tasks.append(news.search(sq["query"], limit=5))
-        elif sq["platform"] == "web":
-            tasks.append(tabstack.search(sq["query"], limit=5))
-        elif sq["platform"] == "tiktok":
-            tasks.append(tiktok.search(sq["query"], limit=5))
-        elif sq["platform"] == "youtube":
-            tasks.append(youtube.search(sq["query"], limit=5))
+        platform = sq["platform"]
+        query = sq["query"]
+        state["logs"].append(f"🤖 AGENT >> Establishing quantum link to {platform.upper()} for: '{query}'")
+
+        if platform == "twitter":
+            state["logs"].append(f"🐦 Diving into the Twitterverse for fresh tweets...")
+            tasks.append(twitter.search(query, limit=5))
+        elif platform == "linkedin":
+            state["logs"].append(f"💼 Mining LinkedIn for professional insights...")
+            tasks.append(linkedin.search(query, limit=5))
+        elif platform in ["news", "newsapi"]:
+            state["logs"].append(f"📰 Scanning news feeds for breaking developments...")
+            tasks.append(news.search(query, limit=5))
+        elif platform == "web":
+            state["logs"].append(f"🔍 Casting wide nets across the web...")
+            tasks.append(tabstack.search(query, limit=5))
+        elif platform == "tiktok":
+            state["logs"].append(f"🎵 Catching viral trends on TikTok...")
+            tasks.append(tiktok.search(query, limit=5))
+        elif platform == "youtube":
+            state["logs"].append(f"📺 Analyzing YouTube for video insights...")
+            tasks.append(youtube.search(query, limit=5))
 
     if tasks:
-        results = await asyncio.gather(*tasks)
-        # Flatten results
-        all_items = [item for sublist in results for item in sublist]
+        state["logs"].append(f"🔄 Gathering intelligence from {len(tasks)} sources simultaneously...")
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Handle potential exceptions in results
+        all_items = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                platform = state["search_queries"][i]["platform"] if i < len(state["search_queries"]) else "unknown"
+                state["logs"].append(f"⚠️  Warning: Error fetching from {platform}: {str(result)}")
+            else:
+                all_items.extend(result)
+        
         state["raw_findings"] = all_items
-        state["logs"].append(f"Found {len(all_items)} raw items across platforms.")
+        state["logs"].append(
+            f"✅ SIGNAL ACQUIRED: Harvested {len(all_items)} valuable data points. Preparing for validation..."
+        )
     else:
-        state["logs"].append("No search tasks were generated.")
+        state["logs"].append("😴 No search tasks were generated. Nothing to harvest.")
 
     return state
 
 
 async def validator_node(state: GraphState) -> GraphState:
-    state["logs"].append("Validating research findings...")
+    state["logs"].append("🔍 TRUTH ENGINE: Cross-verifying and validating research findings...")
 
     if not state["raw_findings"]:
+        state["logs"].append("😴 No data to validate. Proceeding with empty dataset.")
         state["filtered_findings"] = []
         state["confidence_score"] = 0.0
         return state
@@ -159,10 +185,10 @@ async def validator_node(state: GraphState) -> GraphState:
             state["raw_findings"][i] for i in valid_indices if i < len(state["raw_findings"])
         ]
         state["logs"].append(
-            f"Validation complete. Confidence: {state['confidence_score']}. Filtered to {len(state['filtered_findings'])} reliable items."
+            f"✅ VERIFICATION COMPLETE: Confidence level: {state['confidence_score']:.2f}. Curated {len(state['filtered_findings'])} high-quality insights."
         )
     except Exception as e:
-        state["logs"].append(f"Validation parsing failed: {e}. Using all raw findings as fallback.")
+        state["logs"].append(f"⚠️  VALIDATION ERROR: Parsing failed: {e}. Using all raw findings as fallback.")
         state["filtered_findings"] = state["raw_findings"]
         state["confidence_score"] = 0.5
 
@@ -171,7 +197,9 @@ async def validator_node(state: GraphState) -> GraphState:
 
 async def analyzer_node(state: GraphState) -> GraphState:
     state["status"] = QueryStatus.ANALYZING
-    state["logs"].append("Synthesizing findings into a final report...")
+    models = state.get("models") or ["venice", "aisa"]
+    state["logs"].append(f"🔮 CONSENSUS FORGE: Activating neural networks {', '.join(models)} for synthesis...")
+    state["logs"].append("🧠 Synthesizing raw signals into actionable intelligence...")
 
     findings_to_use = state["filtered_findings"] or state["raw_findings"]
 
@@ -185,7 +213,7 @@ async def analyzer_node(state: GraphState) -> GraphState:
     to_enrich = [f for f in findings_to_use if f.url and len(f.content) < 500][:3]
 
     if to_enrich and tabstack.api_key:
-        state["logs"].append(f"Enriching {len(to_enrich)} findings with full-text extraction...")
+        state["logs"].append(f"🔬 DEEP DIVE: Enriching {len(to_enrich)} key findings with full-text analysis...")
         for item in to_enrich:
             full_text = await tabstack.extract_content(item.url)
             if full_text:
@@ -227,6 +255,7 @@ async def analyzer_node(state: GraphState) -> GraphState:
     """
 
     # Use Consensus Engine with user-selected models
+    state["logs"].append(f"🤝 CONSOLIDATING WISDOM: Consulting {len(models)} AI oracles for consensus...")
     consensus_bundle = await ai_service.get_consensus_bundle(
         prompt,
         system_prompt="You are a professional, neutral trend analyst.",
@@ -252,18 +281,18 @@ async def analyzer_node(state: GraphState) -> GraphState:
         raw_attest if isinstance(raw_attest, dict) else None
     )  # Ensure dict type
     state["logs"].append(
-        f"Consensus generated from {len(state['consensus_data'].get('providers', []))} model outputs."
+        f"🤝 SYNTHESIS COMPLETE: Generated consensus from {len(state['consensus_data'].get('providers', []))} AI models."
     )
 
     # Persist findings to Vector Store for future RAG
     try:
         vector_store.add_findings(findings_to_use, state["query_id"])
-        state["logs"].append("Findings persisted to vector store for historical correlation.")
+        state["logs"].append("💾 MEMORY ARCHIVED: Findings stored for future intelligence correlation.")
     except Exception as e:
-        state["logs"].append(f"Warning: Failed to persist to vector store: {e}")
+        state["logs"].append(f"⚠️  STORAGE ISSUE: Failed to persist to vector store: {e}")
 
     state["status"] = QueryStatus.COMPLETED
-    state["logs"].append("Trend report generation complete.")
+    state["logs"].append("🏆 MISSION ACCOMPLISHED: Intelligence synthesis complete. Preparing attestation signature.")
 
     return state
 

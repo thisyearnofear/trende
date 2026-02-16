@@ -1,7 +1,7 @@
 import os
 import asyncio
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from backend.integrations.base import AbstractPlatformConnector
 from shared.models import TrendItem, PlatformType
 from shared.config import get_settings
@@ -48,7 +48,7 @@ class LinkedInConnector(AbstractPlatformConnector):
                     author=author,
                     author_handle=author,
                     url=url,
-                    timestamp=datetime.now(),
+                    timestamp=datetime.now(timezone.utc),
                     metrics={}, 
                     raw_data=res
                 ))

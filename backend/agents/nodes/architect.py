@@ -18,27 +18,32 @@ async def architect_node(state: GraphState) -> GraphState:
     pillars = consensus.get('pillars', [])
     anomalies = consensus.get('anomalies', [])
     agreement = consensus.get('agreement_score', 0.5)
+    confidence = consensus.get('confidence_score', 0.7)
+    consensus_depth = consensus.get('consensus_depth', 'moderate')
 
     # Determine mode: Default to NEWS if technical/heavy agreement, MEME if social/viral
     suggested_mode = "NEWS" if agreement > 0.4 else "MEME"
-    
+
     prompt = f"""
     You are a Strategic Architect for the Monad economy.
-    Based on the following research and consensus data, create a high-conviction structured payload.
-    
+    Based on the following research and enhanced consensus data, create a high-conviction structured payload.
+
     Research Report:
     {state['final_report_md']}
-    
-    Consensus Data:
+
+    Enhanced Consensus Data:
     - Pillars (Verified Facts): {pillars}
     - Anomalies (Fringe/Alpha): {anomalies}
     - Agreement Score: {agreement}
-    
+    - Confidence Score: {confidence}
+    - Consensus Depth: {consensus_depth}
+    - Main Divergence: {consensus.get('main_divergence', 'None detected')}
+
     TASK:
-    Generate a JSON payload for the Forge UI. 
+    Generate a JSON payload for the Forge UI.
     If the topic is viral/community-centric, use MODE: "MEME".
     If the topic is technical/news-centric, use MODE: "NEWS".
-    
+
     Output strictly as JSON:
     {{
         "type": "MEME" or "NEWS",
@@ -47,14 +52,17 @@ async def architect_node(state: GraphState) -> GraphState:
             "ticker": "TICKER",
             "description": "2-sentence punchy summary"
         }},
-        "intelligence_summary": "Neutral, multi-model consensus brief focused on the {len(pillars)} verified pillars.",
+        "intelligence_summary": "Neutral, multi-model consensus brief focused on the {len(pillars)} verified pillars with {consensus_depth} depth analysis.",
         "thesis": [
             "Conviction point 1...",
             "Conviction point 2..."
         ],
         "consensus_metrics": {{
             "model_agreement": {agreement},
-            "main_divergence": "{consensus.get('main_divergence', '')}"
+            "confidence_score": {confidence},
+            "consensus_depth": "{consensus_depth}",
+            "main_divergence": "{consensus.get('main_divergence', '')}",
+            "provider_count": {len(consensus.get('providers', []))}
         }},
         "pillars": {pillars},
         "anomalies": {anomalies},

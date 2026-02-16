@@ -30,8 +30,8 @@ class Query(BaseModel):
         description="Platforms to search",
     )
     status: QueryStatus = Field(default=QueryStatus.PENDING)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
     error_message: Optional[str] = None
 
@@ -42,20 +42,20 @@ class Query(BaseModel):
     def mark_processing(self) -> None:
         """Mark query as being processed."""
         self.status = QueryStatus.PROCESSING
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
 
     def mark_completed(self, total_results: int) -> None:
         """Mark query as completed."""
         self.status = QueryStatus.COMPLETED
         self.total_results = total_results
-        self.completed_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.completed_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(timezone.utc)
 
     def mark_failed(self, error: str) -> None:
         """Mark query as failed."""
         self.status = QueryStatus.FAILED
         self.error_message = error
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
 
     class Config:
         use_enum_values = True

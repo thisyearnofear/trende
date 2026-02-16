@@ -2,7 +2,7 @@ import time
 import asyncio
 from typing import Dict, Any, Optional, Tuple
 from collections import deque
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 import os
 
@@ -50,17 +50,17 @@ class TokenBucket:
 class DailyUsage:
     """Tracks daily usage for a user."""
     count: int = 0
-    reset_at: datetime = field(default_factory=lambda: datetime.utcnow().replace(
+    reset_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0
     ) + timedelta(days=1))
     
     def is_expired(self) -> bool:
-        return datetime.utcnow() >= self.reset_at
+        return datetime.now(timezone.utc) >= self.reset_at
     
     def reset_if_expired(self):
         if self.is_expired():
             self.count = 0
-            self.reset_at = datetime.utcnow().replace(
+            self.reset_at = datetime.now(timezone.utc).replace(
                 hour=0, minute=0, second=0, microsecond=0
             ) + timedelta(days=1)
 

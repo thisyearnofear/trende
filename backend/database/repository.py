@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import Any
+import json
 
 from shared.config import get_settings
 
@@ -105,13 +106,58 @@ class Repository:
                 "consensus_data": state.get("consensus_data"),
                 "attestation_data": state.get("attestation_data"),
                 "run_telemetry": state.get("run_telemetry"),
-                "raw_findings": [
-                    item.model_dump(mode="json") if hasattr(item, "model_dump") else item
-                    for item in state.get("raw_findings", [])
-                ],
+                "raw_findings": self._serialize_findings(state.get("raw_findings", [])),
             }
             task.result = result_data
-            session.commit()
+            try:
+                session.commit()
+            except Exception as e:
+                print(f"Database commit failed: {e}")
+                session.rollback()
+                raise
+
+    def _serialize_findings(self, findings):
+        """Safely serialize findings to prevent JSON serialization errors."""
+        serialized_findings = []
+        for item in findings:
+            try:
+                if hasattr(item, "model_dump"):
+                    # Pydantic model
+                    serialized_item = item.model_dump(mode="json")
+                elif hasattr(item, "__dict__"):
+                    # Regular object
+                    serialized_item = {k: v for k, v in item.__dict__.items() if not k.startswith('_')}
+                else:
+                    # Dictionary or other
+                    serialized_item = item
+                
+                # Ensure all datetime objects are properly serialized
+                serialized_item = self._ensure_serializable(serialized_item)
+                serialized_findings.append(serialized_item)
+            except Exception as e:
+                print(f"Failed to serialize finding: {e}")
+                # Create a minimal representation
+                serialized_findings.append({
+                    "id": getattr(item, "id", "unknown"),
+                    "platform": getattr(item, "platform", "unknown"),
+                    "title": getattr(item, "title", "unknown"),
+                    "content": getattr(item, "content", "serialized_failed"),
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                })
+        return serialized_findings
+    
+    def _ensure_serializable(self, obj):
+        """Recursively ensure all datetime objects are properly serialized."""
+        if isinstance(obj, dict):
+            return {k: self._ensure_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._ensure_serializable(item) for item in obj]
+        elif hasattr(obj, 'isoformat'):  # datetime objects
+            return obj.isoformat()
+        elif hasattr(obj, 'model_dump'):  # Pydantic models
+            return self._ensure_serializable(obj.model_dump(mode="json"))
+        else:
+            return obj
 
     def get_task(self, task_id: str) -> dict[str, Any] | None:
         if not HAS_SQL or not self.Session:

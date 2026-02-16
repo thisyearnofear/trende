@@ -1,6 +1,6 @@
 import os
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from backend.integrations.base import AbstractPlatformConnector
 from shared.models import TrendItem, PlatformType
 from backend.services.aisa_service import aisa_service
@@ -33,14 +33,14 @@ class TikTokConnector(AbstractPlatformConnector):
             items = []
             for res in results:
                 items.append(TrendItem(
-                    id=res.get('url', f"tiktok_{datetime.now().timestamp()}"),
+                    id=res.get('url', f"tiktok_{datetime.now(timezone.utc).timestamp()}"),
                     platform=self.platform,
                     title=res.get('title', 'TikTok Trend'),
                     content=res.get('snippet', '') or res.get('content', ''),
                     author="TikTok Creator",
                     author_handle="tiktok",
                     url=res.get('url', ''),
-                    timestamp=datetime.now(),
+                    timestamp=datetime.now(timezone.utc),
                     metrics={}, 
                     raw_data=res
                 ))

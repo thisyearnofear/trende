@@ -1,7 +1,7 @@
 import os
 import http.client
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from backend.integrations.base import AbstractPlatformConnector
 from shared.models import TrendItem, PlatformType
@@ -39,7 +39,7 @@ class TwitterConnector(AbstractPlatformConnector):
                         author=tweet.get('author_name', 'unknown'),
                         author_handle=tweet.get('author_handle', 'unknown'),
                         url=tweet.get('url', ''),
-                        timestamp=datetime.now(),
+                        timestamp=datetime.now(timezone.utc),
                         metrics=tweet.get('metrics', {}),
                         raw_data=tweet
                     ))
@@ -83,7 +83,7 @@ class TwitterConnector(AbstractPlatformConnector):
                     author=tweet.get('user', {}).get('name', 'unknown'),
                     author_handle=tweet.get('user', {}).get('screen_name', 'unknown'),
                     url=f"https://twitter.com/i/web/status/{tweet.get('id_str', '')}",
-                    timestamp=datetime.now(),
+                    timestamp=datetime.now(timezone.utc),
                     metrics={
                         'likes': int(tweet.get('favorites', 0)),
                         'retweets': int(tweet.get('retweets', 0)),

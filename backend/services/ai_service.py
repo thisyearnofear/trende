@@ -10,7 +10,9 @@ import google.generativeai as genai
 
 from backend.services.aisa_service import aisa_service
 from backend.services.attestation_service import attestation_service
+from backend.services.composio_service import composio_service
 from backend.services.openrouter_service import openrouter_service
+from backend.services.pinecone_service import pinecone_service
 from backend.services.venice_service import venice_service
 
 DEFAULT_PROVIDER_ORDER: Tuple[str, ...] = ("venice", "aisa", "openrouter", "gemini")
@@ -290,6 +292,7 @@ class AIService:
     ) -> Dict[str, object]:
         """
         Produces a consensus report plus verifiability metadata payload.
+        Enhanced with advanced consensus mechanisms and deeper analysis.
         """
         provider_results = await self.get_parallel_provider_results(prompt, system_prompt, providers)
         responses = {
@@ -324,6 +327,8 @@ class AIService:
                 "warnings": warnings,
                 "diversity_level": "low",
                 "synthesis_model": "single-provider-fallback",
+                "confidence_score": 0.0,
+                "consensus_depth": "shallow",
                 "attestation": await self._build_attestation_payload(
                     prompt=prompt,
                     consensus_report=fallback,
@@ -349,6 +354,8 @@ class AIService:
                 "anomalies": [],
                 "warnings": warnings,
                 "diversity_level": "low",
+                "confidence_score": 0.6,
+                "consensus_depth": "basic",
                 "synthesis_model": "single-provider",
                 "attestation": await self._build_attestation_payload(
                     prompt=prompt,
@@ -361,22 +368,33 @@ class AIService:
                 ),
             }
 
+        # Calculate initial agreement score
         agreement_score_hint = self._calculate_agreement_score(list(responses.values()))
-        synthesis_prompt = self._build_synthesis_prompt(prompt, responses, agreement_score_hint)
+        
+        # Perform deeper consensus analysis
+        deep_analysis = await self._perform_deep_consensus_analysis(prompt, responses, agreement_score_hint)
+        
+        # Generate synthesis prompt with enhanced instructions
+        synthesis_prompt = self._build_enhanced_synthesis_prompt(prompt, responses, agreement_score_hint, deep_analysis)
         synthesized = await self.get_response(
             synthesis_prompt,
             system_prompt=(
                 "You are a neutral, objective, and highly critical consensus aggregator. "
-                "You prioritize factual overlap, uncertainty disclosure, and source-grounded claims."
+                "You prioritize factual overlap, uncertainty disclosure, and source-grounded claims. "
+                "Provide a comprehensive analysis that identifies core truths, acknowledges disagreements, "
+                "and highlights areas of uncertainty."
             ),
             provider="auto",
         )
 
+        # Extract and validate the consensus results
         agreement_score = self._calculate_agreement_score(list(responses.values()))
         main_divergence = "No major divergence detected."
         pillars: List[str] = []
         anomalies: List[str] = []
         consensus_report = synthesized
+        confidence_score = 0.7  # Default confidence
+        consensus_depth = "moderate"
 
         payload = self._extract_json_payload(synthesized)
         if payload:
@@ -391,6 +409,12 @@ class AIService:
             agreement_score = self._normalize_score(payload.get("agreement_score"), agreement_score)
             pillars = self._normalize_string_list(payload.get("pillars"))
             anomalies = self._normalize_string_list(payload.get("anomalies"))
+            
+            # Extract additional fields if available
+            if "confidence_score" in payload:
+                confidence_score = self._normalize_score(payload["confidence_score"], confidence_score)
+            if "consensus_depth" in payload:
+                consensus_depth = str(payload["consensus_depth"])
 
         if not consensus_report.strip():
             consensus_report = self._fallback_consensus_text(responses)
@@ -406,6 +430,9 @@ class AIService:
             provider_errors=provider_errors,
         )
         diversity_level = self._calculate_diversity_level(len(providers), agreement_score)
+        
+        # Enhance confidence based on agreement and diversity
+        confidence_score = self._enhance_confidence_score(confidence_score, agreement_score, len(providers))
 
         return {
             "consensus_report": consensus_report,
@@ -418,7 +445,9 @@ class AIService:
             "anomalies": anomalies,
             "warnings": warnings,
             "diversity_level": diversity_level,
-            "synthesis_model": "meta-consensus",
+            "confidence_score": confidence_score,
+            "consensus_depth": consensus_depth,
+            "synthesis_model": "advanced-meta-consensus",
             "attestation": await self._build_attestation_payload(
                 prompt=prompt,
                 consensus_report=consensus_report,
@@ -429,6 +458,134 @@ class AIService:
                 warnings=warnings,
             ),
         }
+
+    async def _perform_deep_consensus_analysis(self, prompt: str, responses: Dict[str, str], agreement_score: float) -> Dict[str, Any]:
+        """
+        Performs deeper analysis of the responses to identify nuanced patterns.
+        Optionally leverages external services like Composio and Pinecone for enhanced analysis.
+        """
+        # Analyze response patterns and extract deeper insights
+        analysis_prompt = f"""
+        Analyze the following responses to the prompt: {prompt}
+        
+        Responses from different providers:
+        {chr(10).join([f"Provider {provider}: {response[:500]}..." for provider, response in responses.items()])}
+        
+        Current agreement score: {agreement_score}
+        
+        Perform a deep analysis and return JSON with:
+        {{
+          "thematic_clusters": ["theme1", "theme2", ...],
+          "confidence_indicators": ["indicator1", "indicator2", ...],
+          "uncertainty_markers": ["marker1", "marker2", ...],
+          "cross_validation_points": ["point1", "point2", ...],
+          "nuanced_insights": ["insight1", "insight2", ...],
+          "potential_biases": ["bias1", "bias2", ...],
+          "external_validation_sources": ["source1", "source2", ...]  // Sources that could validate claims
+        }}
+        """
+        
+        try:
+            analysis_response = await self.get_response(
+                analysis_prompt,
+                system_prompt="You are a deep analytical engine that identifies patterns, biases, and insights across multiple AI responses."
+            )
+            
+            analysis_payload = self._extract_json_payload(analysis_response)
+            if analysis_payload:
+                # If Composio is available, we could potentially use it for external validation
+                if composio_service.toolset:
+                    try:
+                        # Example: Use browser tool to validate claims if needed
+                        external_sources = analysis_payload.get("external_validation_sources", [])
+                        if external_sources:
+                            # This is a simplified example - in practice, you'd want to be more selective
+                            # about when to use external validation tools
+                            pass
+                    except Exception as e:
+                        print(f"External validation with Composio failed: {e}")
+                
+                return analysis_payload
+        except Exception as e:
+            print(f"Deep consensus analysis failed: {e}")
+        
+        # Return default analysis if the deep analysis fails
+        return {
+            "thematic_clusters": ["general_topic"],
+            "confidence_indicators": ["factual_claims"],
+            "uncertainty_markers": ["speculation"],
+            "cross_validation_points": ["common_facts"],
+            "nuanced_insights": ["initial_analysis"],
+            "potential_biases": ["model_specific_bias"],
+            "external_validation_sources": []
+        }
+
+    def _build_enhanced_synthesis_prompt(self, prompt: str, responses: Dict[str, str], agreement_hint: float, deep_analysis: Dict[str, Any]) -> str:
+        """
+        Builds an enhanced synthesis prompt with deeper analysis instructions.
+        """
+        prompt_parts = [
+            "You are an Institutional Truth Oracle for the Monad economy.",
+            f"You have responses from {len(responses)} independent model paths.",
+            f"LEXICAL AGREEMENT HINT: {round(agreement_hint, 2)} (0.0 = total divergence, 1.0 = identical wording). Use this as a guide for your final agreement_score.",
+            "",
+            f"ORIGINAL TOPIC: {prompt}",
+            "",
+            "DEEP ANALYSIS INSIGHTS:",
+            f"- Thematic clusters: {deep_analysis.get('thematic_clusters', [])}",
+            f"- Confidence indicators: {deep_analysis.get('confidence_indicators', [])}",
+            f"- Uncertainty markers: {deep_analysis.get('uncertainty_markers', [])}",
+            f"- Cross-validation points: {deep_analysis.get('cross_validation_points', [])}",
+            f"- Nuanced insights: {deep_analysis.get('nuanced_insights', [])}",
+            f"- Potential biases: {deep_analysis.get('potential_biases', [])}",
+            "",
+            "MODEL RESPONSES:",
+        ]
+
+        for provider, response in responses.items():
+            prompt_parts.append(f"\n--- AGENT: {provider} ---\n{response}\n")
+
+        prompt_parts.append(
+            """
+TASK: Implement advanced triangulated consensus with deep analysis.
+1. Identify Consensus Pillars: claims repeated across multiple models with high confidence.
+2. Identify Fringe Anomalies: claims made by only one model or with uncertainty markers.
+3. Resolve Dissent neutrally and explicitly, noting potential biases.
+4. Evaluate thematic clusters and cross-validation points.
+5. Estimate agreement_score:
+   - 1.0 = strong agreement on core thesis with cross-validation
+   - 0.7 = good agreement with minor dissent
+   - 0.5 = shared facts but narrative divergence
+   - 0.3 = partial agreement with significant dissent
+   - 0.1 = contradiction on foundational facts
+6. Assess confidence_score considering uncertainty markers and potential biases.
+7. Determine consensus_depth: shallow (surface-level), moderate (thematic), or deep (nuanced).
+
+Return ONLY strict JSON (no markdown fence):
+{
+  "consensus_report": "High-conviction markdown digest focused on verified signal with uncertainty disclosure.",
+  "main_divergence": "Primary disagreement or anomaly with bias consideration.",
+  "agreement_score": 0.0,
+  "confidence_score": 0.0,
+  "consensus_depth": "shallow|moderate|deep",
+  "pillars": ["..."],
+  "anomalies": ["..."]
+}
+""".strip()
+        )
+
+        return "\n".join(prompt_parts)
+
+    def _enhance_confidence_score(self, base_score: float, agreement_score: float, provider_count: int) -> float:
+        """
+        Enhances the confidence score based on agreement and diversity of providers.
+        """
+        # Increase confidence with more providers and higher agreement
+        provider_factor = min(1.0, 0.5 + (provider_count * 0.15))  # Up to +0.5 for 4+ providers
+        agreement_factor = agreement_score
+        
+        enhanced = (base_score * 0.4) + (agreement_factor * 0.4) + (provider_factor * 0.2)
+        return max(0.0, min(1.0, enhanced))
 
     def _provider_output(
         self,

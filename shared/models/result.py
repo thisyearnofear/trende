@@ -26,7 +26,7 @@ class TrendItem(BaseModel):
 
     # Timestamps
     timestamp: datetime = Field(..., description="When the item was posted")
-    fetched_at: datetime = Field(default_factory=datetime.utcnow)
+    fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Additional data
     raw_data: dict[str, Any] = Field(
@@ -86,7 +86,7 @@ class TrendSummary(BaseModel):
         default="neutral",
         description="Overall sentiment (positive/negative/neutral)",
     )
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class TrendResult(BaseModel):
