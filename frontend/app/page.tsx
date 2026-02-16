@@ -16,6 +16,8 @@ import {
   Clock3,
   Copy,
   ExternalLink,
+  Eye,
+  EyeOff,
   RefreshCw,
   History,
   Zap,
@@ -25,6 +27,7 @@ import {
   Layers3,
   Share2,
   Megaphone,
+  ListTree,
 } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -50,6 +53,8 @@ export default function Home() {
   const [lastQuery, setLastQuery] = useState<QueryRequest | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showForgeInline, setShowForgeInline] = useState(false);
+  const [focusMode, setFocusMode] = useState<"compact" | "full">("compact");
+  const [showFullOverview, setShowFullOverview] = useState(false);
   const { showToast } = useToast();
 
   const {
@@ -227,6 +232,29 @@ export default function Home() {
       reliabilityFlags.length > 0 ? `Known gaps: ${reliabilityFlags.slice(0, 2).join("; ")}` : "Known gaps: none critical",
     ].join("\n");
   }, [data, weightedConfidence, sourceCount, freshness.label, reliabilityFlags]);
+
+  const panelSummaries = useMemo(
+    () => ({
+      brief: `${sourceCount} sources • ${stats.platforms} platforms • ${freshness.label}`,
+      drivers: `Weighted confidence ${weightedConfidence}% across ${confidenceDrivers.length} drivers`,
+      risks:
+        reliabilityFlags.length > 0
+          ? `${reliabilityFlags.length} known reliability flags`
+          : "No critical reliability flags",
+      feed: `${stats.itemCount} signals captured`,
+      forge: showForgeInline ? "Inline forge active" : "Inline forge hidden",
+    }),
+    [
+      sourceCount,
+      stats.platforms,
+      freshness.label,
+      weightedConfidence,
+      confidenceDrivers.length,
+      reliabilityFlags.length,
+      stats.itemCount,
+      showForgeInline,
+    ],
+  );
 
   const activeEta = STATUS_ETAS[status || "pending"] || STATUS_ETAS.pending;
   const startedAt = data?.query?.createdAt ? new Date(data.query.createdAt).getTime() : null;
@@ -527,6 +555,44 @@ export default function Home() {
         {/* Results */}
         {data && data.results && data.results.length > 0 && !isProcessing && (
           <div className="space-y-6">
+            {/* Reliability Strip + Density Controls */}
+            <Card accent={confidenceTone} className="p-3 sm:p-4" id="snapshot">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono w-full">
+                  <div className="border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-2">
+                    <span className="uppercase text-[var(--text-muted)]">Reliability</span>
+                    <p className="font-black mt-1">{reliabilityFlags.length > 0 ? "Caution" : "Stable"}</p>
+                  </div>
+                  <div className="border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-2">
+                    <span className="uppercase text-[var(--text-muted)]">Freshness</span>
+                    <p className="font-black mt-1">{freshness.label}</p>
+                  </div>
+                  <div className="border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-2">
+                    <span className="uppercase text-[var(--text-muted)]">Coverage</span>
+                    <p className="font-black mt-1">{sourceCount} sources / {stats.platforms} platforms</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant={focusMode === "compact" ? "primary" : "secondary"}
+                    size="sm"
+                    onClick={() => setFocusMode("compact")}
+                  >
+                    <Eye className="w-3.5 h-3.5 mr-1 inline-block" />
+                    Compact
+                  </Button>
+                  <Button
+                    variant={focusMode === "full" ? "primary" : "secondary"}
+                    size="sm"
+                    onClick={() => setFocusMode("full")}
+                  >
+                    <EyeOff className="w-3.5 h-3.5 mr-1 inline-block" />
+                    Full
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               <Stat
@@ -538,6 +604,25 @@ export default function Home() {
               <Stat value={stats.itemCount} label="Signals" accent="amber" />
             </div>
 
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              <aside className="hidden lg:block lg:col-span-1">
+                <Card accent="white" className="p-3 sticky top-24">
+                  <div className="flex items-center gap-2 mb-3">
+                    <ListTree className="w-4 h-4 text-[var(--accent-cyan)]" />
+                    <span className="text-xs font-black uppercase tracking-wider">Jump To</span>
+                  </div>
+                  <div className="space-y-2 text-xs font-mono">
+                    <a href="#snapshot" className="block border-2 border-[var(--border-color)] p-2 hover:border-[var(--accent-cyan)]">Snapshot</a>
+                    <a href="#brief" className="block border-2 border-[var(--border-color)] p-2 hover:border-[var(--accent-cyan)]">Brief</a>
+                    <a href="#drivers" className="block border-2 border-[var(--border-color)] p-2 hover:border-[var(--accent-cyan)]">Drivers</a>
+                    <a href="#risks" className="block border-2 border-[var(--border-color)] p-2 hover:border-[var(--accent-cyan)]">Risks</a>
+                    <a href="#feed" className="block border-2 border-[var(--border-color)] p-2 hover:border-[var(--accent-cyan)]">Signal Feed</a>
+                    <a href="#forge" className="block border-2 border-[var(--border-color)] p-2 hover:border-[var(--accent-cyan)]">Forge</a>
+                  </div>
+                </Card>
+              </aside>
+
+              <div className="lg:col-span-3 space-y-6">
             {/* Snapshot + Actions */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <Card accent="cyan" className="lg:col-span-2 p-5">
@@ -554,9 +639,17 @@ export default function Home() {
                     {data.summary?.sentiment || "neutral"}
                   </span>
                 </div>
-                <p className="text-sm leading-relaxed text-[var(--text-secondary)] mb-4">
+                <p className={`text-sm leading-relaxed text-[var(--text-secondary)] mb-2 ${showFullOverview ? "" : "line-clamp-4"}`}>
                   {data.summary?.overview || "No summary available yet."}
                 </p>
+                {(data.summary?.overview?.length || 0) > 280 && (
+                  <button
+                    className="text-xs font-mono underline underline-offset-2 mb-3"
+                    onClick={() => setShowFullOverview((prev) => !prev)}
+                  >
+                    {showFullOverview ? "Show less" : "Show more"}
+                  </button>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                   <div className="p-3 border-2 border-[var(--border-color)] bg-[var(--bg-primary)]">
                     <p className="text-[10px] uppercase text-[var(--text-muted)]">Freshness</p>
@@ -625,15 +718,20 @@ export default function Home() {
 
             {/* Progressive Disclosure Panels */}
             <div className="space-y-4">
-              <details open className="group">
+              <details open={focusMode === "compact"} className="group" id="brief">
                 <summary className="list-none cursor-pointer">
                   <Card accent="white" className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <Sparkles className="w-4 h-4 text-[var(--accent-cyan)]" />
-                        <span className="text-sm font-black uppercase tracking-wider">
-                          Conviction Brief
-                        </span>
+                        <div className="min-w-0">
+                          <span className="text-sm font-black uppercase tracking-wider block">
+                            Conviction Brief
+                          </span>
+                          <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
+                            {panelSummaries.brief}
+                          </span>
+                        </div>
                       </div>
                       <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
                     </div>
@@ -644,15 +742,20 @@ export default function Home() {
                 </div>
               </details>
 
-              <details className="group">
+              <details open={focusMode === "full"} className="group" id="drivers">
                 <summary className="list-none cursor-pointer">
                   <Card accent="amber" className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <Layers3 className="w-4 h-4 text-[var(--accent-amber)]" />
-                        <span className="text-sm font-black uppercase tracking-wider">
-                          Confidence Drivers
-                        </span>
+                        <div className="min-w-0">
+                          <span className="text-sm font-black uppercase tracking-wider block">
+                            Confidence Drivers
+                          </span>
+                          <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
+                            {panelSummaries.drivers}
+                          </span>
+                        </div>
                       </div>
                       <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
                     </div>
@@ -692,15 +795,20 @@ export default function Home() {
                 </div>
               </details>
 
-              <details className="group">
+              <details open={focusMode === "full"} className="group" id="risks">
                 <summary className="list-none cursor-pointer">
                   <Card accent="rose" className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <AlertTriangle className="w-4 h-4 text-[var(--accent-rose)]" />
-                        <span className="text-sm font-black uppercase tracking-wider">
-                          Reliability & Gaps
-                        </span>
+                        <div className="min-w-0">
+                          <span className="text-sm font-black uppercase tracking-wider block">
+                            Reliability & Gaps
+                          </span>
+                          <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
+                            {panelSummaries.risks}
+                          </span>
+                        </div>
                       </div>
                       <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
                     </div>
@@ -735,13 +843,18 @@ export default function Home() {
                 </div>
               </details>
 
-              <details open className="group">
+              <details open className="group" id="feed">
                 <summary className="list-none cursor-pointer">
                   <Card accent="cyan" className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-black uppercase tracking-wider">
-                        Signal Feed
-                      </span>
+                      <div className="min-w-0">
+                        <span className="text-sm font-black uppercase tracking-wider block">
+                          Signal Feed
+                        </span>
+                        <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
+                          {panelSummaries.feed}
+                        </span>
+                      </div>
                       <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
                     </div>
                   </Card>
@@ -752,13 +865,18 @@ export default function Home() {
               </details>
 
               {showForgeInline && data.summary && activeQueryId && (
-                <details open className="group">
+                <details open className="group" id="forge">
                   <summary className="list-none cursor-pointer">
                     <Card accent="emerald" className="p-3 sm:p-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-black uppercase tracking-wider">
-                          Inline Forge Workspace
-                        </span>
+                        <div className="min-w-0">
+                          <span className="text-sm font-black uppercase tracking-wider block">
+                            Inline Forge Workspace
+                          </span>
+                          <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
+                            {panelSummaries.forge}
+                          </span>
+                        </div>
                         <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
                       </div>
                     </Card>
@@ -768,6 +886,8 @@ export default function Home() {
                   </div>
                 </details>
               )}
+            </div>
+            </div>
             </div>
           </div>
         )}
