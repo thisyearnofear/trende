@@ -179,6 +179,7 @@ class QueryRequest(BaseModel):
     platforms: list[str] = Field(default_factory=lambda: ["twitter", "newsapi", "linkedin"])
     models: list[str] = Field(default_factory=lambda: ["venice", "aisa", "openrouter"])
     relevance_threshold: float | None = None
+    payment: X402Payment | None = None
 
     @model_validator(mode="after")
     def validate_topic(self) -> "QueryRequest":
@@ -321,12 +322,11 @@ async def start_analysis(
     background_tasks: BackgroundTasks,
     http_request: Request,
     response: Response,
-    payment: X402Payment | None = None,
     x_wallet_address: str | None = Header(None, alias="X-Wallet-Address"),
 ) -> dict[str, Any] | Response:
     # Check if payment bypasses rate limit (premium tier)
     has_premium = False
-    if payment and x402_service.verify_payment(payment):
+    if request.payment and x402_service.verify_payment(request.payment):
         has_premium = True
 
     # Check rate limit
@@ -454,6 +454,52 @@ async def run_agent_workflow(
 
             # Persist update to DB
             repo.save_task(task_id, tasks[task_id])
+
+
+@app.get("/api/trends/history")
+async def get_history() -> dict[str, Any]:
+    """Returns a list of all past queries."""
+    records = repo.get_all_tasks()
+    return {
+        "queries": [
+            {
+                "id": item.get("task_id"),
+                "idea": item.get("topic", ""),
+                "status": item.get("status", QueryStatus.PENDING),
+                "createdAt": item.get("created_at", ""),
+            }
+            for item in records
+        ]
+    }
+
+
+@app.get("/api/commons")
+async def get_public_commons(limit: int = 50, sponsor: str | None = None) -> dict[str, Any]:
+    """
+    Public Research Commons - browse all completed, attested research.
+
+    This endpoint is publicly accessible without authentication.
+    All completed research becomes part of the commons.
+    """
+    records = repo.get_public_research(limit=limit, sponsor=sponsor)
+
+    return {
+        "research": [
+            {
+                "id": item.get("task_id"),
+                "topic": item.get("topic", ""),
+                "sponsor": item.get("sponsor_address"),
+                "platforms": item.get("platforms", []),
+                "hasAttestation": item.get("has_attestation", False),
+                "createdAt": item.get("created_at", ""),
+            }
+            for item in records
+        ],
+        "total": len(records),
+        "filter": {
+            "sponsor": sponsor,
+        },
+    }
 
 
 @app.get("/api/trends/status/{task_id}", response_model=None)
@@ -621,52 +667,6 @@ async def get_agent_alpha(
         },
         "status": "verifiable_alpha",
         "settlement": "X402_COMPLETED",
-    }
-
-
-@app.get("/api/trends/history")
-async def get_history() -> dict[str, Any]:
-    """Returns a list of all past queries."""
-    records = repo.get_all_tasks()
-    return {
-        "queries": [
-            {
-                "id": item.get("task_id"),
-                "idea": item.get("topic", ""),
-                "status": item.get("status", QueryStatus.PENDING),
-                "createdAt": item.get("created_at", ""),
-            }
-            for item in records
-        ]
-    }
-
-
-@app.get("/api/commons")
-async def get_public_commons(limit: int = 50, sponsor: str | None = None) -> dict[str, Any]:
-    """
-    Public Research Commons - browse all completed, attested research.
-
-    This endpoint is publicly accessible without authentication.
-    All completed research becomes part of the commons.
-    """
-    records = repo.get_public_research(limit=limit, sponsor=sponsor)
-
-    return {
-        "research": [
-            {
-                "id": item.get("task_id"),
-                "topic": item.get("topic", ""),
-                "sponsor": item.get("sponsor_address"),
-                "platforms": item.get("platforms", []),
-                "hasAttestation": item.get("has_attestation", False),
-                "createdAt": item.get("created_at", ""),
-            }
-            for item in records
-        ],
-        "total": len(records),
-        "filter": {
-            "sponsor": sponsor,
-        },
     }
 
 
