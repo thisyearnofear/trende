@@ -6,6 +6,8 @@ REPO_DIR="$DEPLOY_DIR/trende-repo"
 ENV_FILE="$DEPLOY_DIR/.env"
 CONTAINER_NAME="trende-backend"
 IMAGE_NAME="trende/backend:latest"
+NETWORK_NAME="trende-network"
+DB_FILE="$DEPLOY_DIR/trends.db"
 
 cd $REPO_DIR
 
@@ -22,10 +24,13 @@ docker stop $CONTAINER_NAME 2>/dev/null || true
 docker rm $CONTAINER_NAME 2>/dev/null || true
 
 echo "🚀 Starting new container..."
+touch "$DB_FILE"
 docker run -d \
   --name $CONTAINER_NAME \
   --env-file $ENV_FILE \
+  --network $NETWORK_NAME \
   -p 8000:8000 \
+  -v "$DB_FILE:/app/trends.db" \
   --restart unless-stopped \
   $IMAGE_NAME
 
