@@ -153,6 +153,7 @@ class AttestationService:
         if not self.eigen_url:
             return None
 
+        local_input_hash = self._canonical_hash(payload)
         req_body = {
             "request_id": str(uuid.uuid4()),
             "payload": payload,
@@ -179,19 +180,26 @@ class AttestationService:
                     if not attestation_id:
                         last_error = "Missing attestation_id in response"
                     else:
+                        provider_payload = body.get("payload")
+                        provider_input_hash = body.get("input_hash", "")
                         return {
                             "provider": "eigencompute",
                             "status": body.get("status", "signed"),
                             "method": body.get("method", "tee-attestation"),
                             "attestation_id": attestation_id,
-                            "input_hash": body.get("input_hash", self._canonical_hash(payload)),
+                            # Keep hash aligned with original payload so /api/attest/verify
+                            # can deterministically recompute and validate integrity.
+                            "input_hash": local_input_hash,
                             "signature": body.get("signature", ""),
                             "key_id": body.get("key_id", "eigencompute"),
                             "quote": body.get("quote"),
                             "receipt": body.get("receipt"),
-                            "payload": body.get("payload", payload),
+                            "payload": payload,
+                            "provider_input_hash": provider_input_hash,
+                            "provider_payload": provider_payload,
                             "generated_at": body.get("generated_at", datetime.datetime.now(datetime.timezone.utc).isoformat()),
                             "verify_endpoint": body.get("verify_endpoint", "/api/attest/verify"),
+                            "verification_note": "Local integrity verification uses canonical hash of the original request payload; provider-specific quote/receipt verification should be done out-of-band.",
                         }
             except Exception as exc:
                 last_error = str(exc)
