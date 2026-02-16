@@ -86,16 +86,20 @@ export function useTrendData(
   // Determine processing status from data
   const currentStatus = data?.query?.status;
   const status: QueryStatus | null = currentStatus ?? optimisticStatus;
+  
+  // SSE should run if we are in a processing state OR if we don't have final data yet
   const isProcessing =
     status === 'pending' ||
     status === 'planning' ||
     status === 'researching' ||
     status === 'analyzing' ||
     status === 'processing';
+  
+  const needsSync = isProcessing || (status === 'completed' && !data?.results?.length);
 
   // SSE for real-time updates
   useEffect(() => {
-    if (!queryId || !sse || !isProcessing) return;
+    if (!queryId || !sse || !needsSync) return;
 
     const handleEvent = (event: StreamEvent) => {
       setEvents(prev => [...prev, event]);

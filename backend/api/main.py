@@ -681,7 +681,17 @@ async def get_agent_alpha(
 async def stream_status(task_id: str) -> StreamingResponse:
     async def event_generator() -> AsyncIterator[str]:
         while True:
-            if task_id not in tasks:
+            # Try to get from in-memory tasks first
+            state = tasks.get(task_id)
+            
+            # If not in memory, try reloading from DB
+            if not state:
+                state = repo.get_task(task_id)
+                if state:
+                    # Cache it back to memory for streaming
+                    tasks[task_id] = state
+            
+            if not state:
                 payload = {
                     "type": "error",
                     "message": "Task not found",
@@ -690,8 +700,6 @@ async def stream_status(task_id: str) -> StreamingResponse:
                 }
                 yield f"data: {json.dumps(payload)}\n\n"
                 break
-
-            state = tasks[task_id]
 
             # Estimate progress based on current status/logs
             progress = 0
