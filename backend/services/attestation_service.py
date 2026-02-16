@@ -3,7 +3,7 @@ import hmac
 import json
 import os
 import uuid
-from datetime import datetime, timezone
+import datetime
 from typing import Any, Dict, Optional
 
 import httpx
@@ -127,7 +127,7 @@ class AttestationService:
         }
 
     def _attest_locally(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
         digest = self._canonical_hash(payload)
         signature = hmac.new(
             self.dev_secret.encode("utf-8"),
@@ -156,7 +156,7 @@ class AttestationService:
         req_body = {
             "request_id": str(uuid.uuid4()),
             "payload": payload,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
 
         headers = {"Content-Type": "application/json"}
@@ -190,7 +190,7 @@ class AttestationService:
                             "quote": body.get("quote"),
                             "receipt": body.get("receipt"),
                             "payload": body.get("payload", payload),
-                            "generated_at": body.get("generated_at", datetime.now(timezone.utc).isoformat()),
+                            "generated_at": body.get("generated_at", datetime.datetime.now(datetime.timezone.utc).isoformat()),
                             "verify_endpoint": body.get("verify_endpoint", "/api/attest/verify"),
                         }
             except Exception as exc:
@@ -220,8 +220,8 @@ class AttestationService:
                         headers={**headers, "Content-Type": "application/json"},
                         json={
                             "request_id": str(uuid.uuid4()),
-                            "payload": {"kind": "health_probe", "ts": datetime.now(timezone.utc).isoformat()},
-                            "generated_at": datetime.now(timezone.utc).isoformat(),
+                            "payload": {"kind": "health_probe", "ts": datetime.datetime.now(datetime.timezone.utc).isoformat()},
+                            "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                         },
                     )
 
@@ -257,7 +257,7 @@ class AttestationService:
             "signature": "",
             "key_id": "eigencompute",
             "payload": payload,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "verify_endpoint": "/api/attest/verify",
             "error": "Eigen attestation endpoint unreachable and strict mode is enabled.",
         }

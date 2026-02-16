@@ -2,9 +2,9 @@ import asyncio
 import json
 import os
 import uuid
+import datetime
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import BackgroundTasks, FastAPI, Header, Request, Response
@@ -351,7 +351,7 @@ async def start_analysis(
         return error_response or Response(status_code=429)
 
     task_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
     tasks[task_id] = {
         "task_id": task_id,
         "status": QueryStatus.PENDING,
@@ -442,7 +442,7 @@ async def run_agent_workflow(
                     tasks[task_id]["status"] = QueryStatus.COMPLETED
                     tasks[task_id]["logs"].append("🏆 MISSION ACCOMPLISHED: Final results ready.")
 
-                tasks[task_id]["updated_at"] = datetime.now(timezone.utc).isoformat()
+                tasks[task_id]["updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
                 consensus_data = tasks[task_id].get("consensus_data") or {}
                 attestation_data = tasks[task_id].get("attestation_data") or {}
@@ -725,7 +725,7 @@ async def stream_status(task_id: str) -> StreamingResponse:
                 payload = {
                     "type": "error",
                     "message": "Task not found",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                     "data": {"task_id": task_id},
                 }
                 yield f"data: {json.dumps(payload)}\n\n"
@@ -757,7 +757,7 @@ async def stream_status(task_id: str) -> StreamingResponse:
             payload = {
                 "type": "status",
                 "message": f"{state['status']} ({progress}%)",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 "data": {
                     "task_id": task_id,
                     "status": state["status"],
@@ -775,7 +775,7 @@ async def stream_status(task_id: str) -> StreamingResponse:
                     "message": "Analysis completed"
                     if state["status"] == QueryStatus.COMPLETED
                     else "Analysis failed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                     "data": {"task_id": task_id, "status": state["status"]},
                 }
                 yield f"data: {json.dumps(final_payload)}\n\n"

@@ -3,7 +3,7 @@ import json
 import os
 import re
 import time
-from datetime import datetime, timezone
+import datetime
 from typing import Any, Awaitable, Dict, List, Optional, Sequence, Tuple
 
 import google.generativeai as genai
@@ -311,6 +311,7 @@ class AIService:
         Produces a consensus report plus verifiability metadata payload.
         Enhanced with advanced consensus mechanisms and deeper analysis.
         """
+        provider_results: List[Dict[str, Any]] = []
         provider_results = await self.get_parallel_provider_results(prompt, system_prompt, providers)
         responses = {
             item["provider"]: item["response"]
@@ -327,7 +328,7 @@ class AIService:
             for item in provider_results
             if item.get("status") != "ok"
         ]
-        generated_at = datetime.now(timezone.utc).isoformat()
+        generated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         if not responses:
             fallback = await self.get_response(prompt, system_prompt, provider="auto")

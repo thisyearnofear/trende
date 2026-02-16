@@ -2,7 +2,7 @@ import time
 import asyncio
 from typing import Dict, Any, Optional, Tuple
 from collections import deque
-from datetime import datetime, timedelta, timezone
+import datetime
 from dataclasses import dataclass, field
 import os
 
@@ -14,7 +14,7 @@ class UserRateLimitInfo:
     tier: str  # 'anonymous', 'connected', 'premium'
     remaining: int
     limit: int
-    reset_at: datetime
+    reset_at: datetime.datetime
     
     def to_headers(self) -> Dict[str, str]:
         return {
@@ -50,19 +50,19 @@ class TokenBucket:
 class DailyUsage:
     """Tracks daily usage for a user."""
     count: int = 0
-    reset_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc).replace(
+    reset_at: datetime.datetime = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0
-    ) + timedelta(days=1))
+    ) + datetime.timedelta(days=1))
     
     def is_expired(self) -> bool:
-        return datetime.now(timezone.utc) >= self.reset_at
+        return datetime.datetime.now(datetime.timezone.utc) >= self.reset_at
     
     def reset_if_expired(self):
         if self.is_expired():
             self.count = 0
-            self.reset_at = datetime.now(timezone.utc).replace(
+            self.reset_at = datetime.datetime.now(datetime.timezone.utc).replace(
                 hour=0, minute=0, second=0, microsecond=0
-            ) + timedelta(days=1)
+            ) + datetime.timedelta(days=1)
 
 
 class UserRateLimiter:

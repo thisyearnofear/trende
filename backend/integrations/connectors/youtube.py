@@ -1,6 +1,6 @@
 import os
+import datetime
 from typing import List, Optional
-from datetime import datetime, timezone
 from backend.integrations.base import AbstractPlatformConnector
 from shared.models import TrendItem, PlatformType
 from backend.services.aisa_service import aisa_service
@@ -33,14 +33,14 @@ class YouTubeConnector(AbstractPlatformConnector):
             items = []
             for res in results:
                 items.append(TrendItem(
-                    id=res.get('url', f"youtube_{datetime.now(timezone.utc).timestamp()}"),
+                    id=res.get('url', f"youtube_{datetime.datetime.now(datetime.timezone.utc).timestamp()}"),
                     platform=self.platform,
                     title=res.get('title', 'YouTube Video'),
                     content=res.get('snippet', '') or res.get('content', ''),
                     author="YouTube Creator",
                     author_handle="youtube",
                     url=res.get('url', ''),
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.datetime.now(datetime.timezone.utc),
                     metrics={}, 
                     raw_data=res
                 ))

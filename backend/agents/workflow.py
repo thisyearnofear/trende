@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import datetime, timezone
+import datetime
 from typing import Any
 
 from langgraph.graph import END, StateGraph
@@ -353,7 +353,7 @@ async def run_trend_analysis(
         "query_id": task_id,
         "status": QueryStatus.PENDING,
         "logs": ["Task initialized via ACP."],
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "raw_findings": [],
         "filtered_findings": [],
         "plan": None,

@@ -1,6 +1,6 @@
 import os
+import datetime
 from typing import List, Optional
-from datetime import datetime, timezone
 from backend.integrations.base import AbstractPlatformConnector
 from shared.models import TrendItem, PlatformType
 from backend.services.aisa_service import aisa_service

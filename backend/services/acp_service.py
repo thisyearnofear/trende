@@ -8,7 +8,7 @@ allowing other AI agents to purchase research services.
 import asyncio
 import logging
 import os
-from datetime import datetime, timezone
+import datetime
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
@@ -133,8 +133,8 @@ class ACPService:
         deadline = job_data.get("deadline") or job_data.get("expired_at")
         if deadline:
             try:
-                deadline_dt = datetime.fromisoformat(deadline.replace('Z', '+00:00'))
-                time_available = (deadline_dt - datetime.now(timezone.utc)).total_seconds()
+                deadline_dt = datetime.datetime.fromisoformat(deadline.replace('Z', '+00:00'))
+                time_available = (deadline_dt - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
                 if time_available < self.sla_seconds:
                     return {
                         "valid": False,
@@ -162,7 +162,7 @@ class ACPService:
                 "task_id": task_id,
                 "job_data": job_data,
                 "status": "accepted",
-                "accepted_at": datetime.now(timezone.utc).isoformat(),
+                "accepted_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             }
             
             # Respond to ACP
@@ -224,7 +224,7 @@ class ACPService:
             
             # Update status
             job_info["status"] = "processing"
-            job_info["started_at"] = datetime.now(timezone.utc).isoformat()
+            job_info["started_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
             
             # Execute Trende research workflow
             result = await run_trend_analysis(
@@ -242,7 +242,7 @@ class ACPService:
             
             # Update status
             job_info["status"] = "delivered"
-            job_info["completed_at"] = datetime.now(timezone.utc).isoformat()
+            job_info["completed_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
             job_info["result"] = deliverable
             
             logger.info(f"Successfully delivered job {job_id}")

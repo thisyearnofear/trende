@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+import datetime
 from typing import Any
 import json
 
@@ -50,11 +50,11 @@ class TaskModel(Base):  # type: ignore
     platforms = Column(JSON)
     models = Column(JSON, nullable=True)
     sponsor_address = Column(String, nullable=True)  # Wallet that funded this research
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
     updated_at = Column(
         DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.datetime.now(datetime.timezone.utc),
+        onupdate=lambda: datetime.datetime.now(datetime.timezone.utc),
     )
 
 
@@ -142,7 +142,7 @@ class Repository:
                     "platform": getattr(item, "platform", "unknown"),
                     "title": getattr(item, "title", "unknown"),
                     "content": getattr(item, "content", "serialized_failed"),
-                    "timestamp": datetime.now(timezone.utc).isoformat()
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
                 })
         return serialized_findings
     

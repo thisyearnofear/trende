@@ -1,6 +1,6 @@
 import os
 import httpx
-from datetime import datetime, timezone
+import datetime
 from typing import List, Optional
 from backend.integrations.base import AbstractPlatformConnector
 from shared.models import TrendItem, PlatformType
@@ -40,7 +40,7 @@ class NewsConnector(AbstractPlatformConnector):
                         author=res.get('source', 'Web'),
                         author_handle=res.get('source', 'Web'),
                         url=res.get('url', ''),
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.datetime.now(datetime.timezone.utc),
                         metrics={},
                         raw_data=res
                     ))
@@ -70,11 +70,11 @@ class NewsConnector(AbstractPlatformConnector):
                     published_at = art.get('publishedAt')
                     if published_at:
                         try:
-                            timestamp = datetime.fromisoformat(published_at.replace('Z', '+00:00'))
+                            timestamp = datetime.datetime.fromisoformat(published_at.replace('Z', '+00:00'))
                         except Exception:
-                            timestamp = datetime.now(timezone.utc)
+                            timestamp = datetime.datetime.now(datetime.timezone.utc)
                     else:
-                        timestamp = datetime.now(timezone.utc)
+                        timestamp = datetime.datetime.now(datetime.timezone.utc)
                     
                     items.append(TrendItem(
                         id=art.get('url', 'unknown'),
