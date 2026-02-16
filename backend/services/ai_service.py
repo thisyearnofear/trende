@@ -1,150 +1,235 @@
-import os
 import asyncio
 import json
+import os
+import re
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
 import google.generativeai as genai
-from typing import List, Optional, Dict
+
 from backend.services.aisa_service import aisa_service
-from backend.services.venice_service import venice_service
-from backend.services.openrouter_service import openrouter_service
 from backend.services.attestation_service import attestation_service
+from backend.services.openrouter_service import openrouter_service
+from backend.services.venice_service import venice_service
+
+DEFAULT_PROVIDER_ORDER: Tuple[str, ...] = ("venice", "aisa", "openrouter", "gemini")
+OPENROUTER_VARIANTS: Tuple[Tuple[str, str], ...] = (
+    ("openrouter_llama", "meta-llama/llama-3.3-70b-instruct:free"),
+    ("openrouter_gemini", "google/gemini-2.0-flash-exp:free"),
+    ("openrouter_deepseek", "deepseek/deepseek-chat:free"),
+)
+MAX_EXCERPT_CHARS = 600
+
 
 class AIService:
     def __init__(self):
         self._gemini_model = None
 
-    def _ensure_configured(self):
-        # Lazy load Gemini
-        if not self._gemini_model:
-            gemini_key = os.getenv('GEMINI_API_KEY')
-            if gemini_key:
-                try:
-                    genai.configure(api_key=gemini_key)
-                    self._gemini_model = genai.GenerativeModel('gemini-1.5-flash')
-                except Exception as e:
-                    print(f"Gemini configuration error: {e}")
+    def _ensure_configured(self) -> None:
+        if self._gemini_model:
+            return
 
-    async def get_response(self, prompt: str, system_prompt: Optional[str] = None, provider: str = "venice") -> str:
-        """
-        Gets a response from an AI provider.
-        Priority: Venice -> AIsa -> OpenRouter -> Gemini.
-        """
-        self._ensure_configured()
-        
-        messages = []
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            return
+
+        try:
+            genai.configure(api_key=gemini_key)
+            self._gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+        except Exception as exc:
+            print(f"Gemini configuration error: {exc}")
+
+    def _build_messages(self, prompt: str, system_prompt: Optional[str]) -> List[Dict[str, str]]:
+        messages: List[Dict[str, str]] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
+        return messages
 
-        # 1. Try Venice first
-        if provider == "venice" or os.getenv('VENICE_API_KEY'):
-            # Corrected model name for Venice
-            response = await venice_service.chat_completion(
-                model="llama-3.3-70b", 
-                messages=messages
+    async def _call_venice(self, prompt: str, system_prompt: Optional[str]) -> Optional[str]:
+        if not os.getenv("VENICE_API_KEY"):
+            return None
+        return await venice_service.chat_completion(
+            model="llama-3.3-70b",
+            messages=self._build_messages(prompt, system_prompt),
+        )
+
+    async def _call_aisa(self, prompt: str, system_prompt: Optional[str]) -> Optional[str]:
+        if not os.getenv("AISA_API_KEY"):
+            return None
+        return await aisa_service.chat_completion(
+            model="gpt-4o",
+            messages=self._build_messages(prompt, system_prompt),
+        )
+
+    async def _call_openrouter(
+        self,
+        prompt: str,
+        system_prompt: Optional[str],
+        model: str,
+    ) -> Optional[str]:
+        if not os.getenv("OPENROUTER_API_KEY"):
+            return None
+        return await openrouter_service.chat_completion(
+            model=model,
+            messages=self._build_messages(prompt, system_prompt),
+        )
+
+    async def _call_gemini(self, prompt: str, system_prompt: Optional[str]) -> Optional[str]:
+        self._ensure_configured()
+        if not self._gemini_model:
+            return None
+
+        full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+        try:
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                None,
+                lambda: self._gemini_model.generate_content(full_prompt).text,
             )
-            if response:
-                return response
+        except Exception as exc:
+            print(f"Gemini fallback failed: {exc}")
+            return None
 
-        # 2. Try AIsa fallback
-        if os.getenv('AISA_API_KEY'):
-            response = await aisa_service.chat_completion(
-                model="gpt-4o",
-                messages=messages
-            )
-            if response:
-                return response
+    async def get_response(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        provider: str = "auto",
+    ) -> str:
+        """
+        Gets a response from AI providers.
+        - provider="auto": Venice -> AIsa -> OpenRouter -> Gemini fallback chain
+        - provider explicit: strict provider first, then fallback chain
+        """
+        self._ensure_configured()
 
-        # 3. Try OpenRouter fallback (great for free models or diverse options)
-        if os.getenv('OPENROUTER_API_KEY'):
-            response = await openrouter_service.chat_completion(
-                model="google/gemini-flash-1.5-exp", # Fast and often cheap/free on OpenRouter
-                messages=messages
-            )
-            if response:
-                return response
+        provider_key = provider.lower().strip()
+        explicit_result = None
 
-        # 4. Fallback to Gemini
-        if self._gemini_model:
-            full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-            try:
-                response = self._gemini_model.generate_content(full_prompt)
-                return response.text
-            except Exception as e:
-                print(f"Gemini fallback failed: {e}")
+        if provider_key not in {"", "auto"}:
+            explicit_result = await self._fetch_from_provider(provider_key, prompt, system_prompt)
+            if explicit_result:
+                return explicit_result
+
+        for fallback in DEFAULT_PROVIDER_ORDER:
+            result = await self._fetch_from_provider(fallback, prompt, system_prompt)
+            if result:
+                return result
 
         return "No AI provider configured or available."
 
-    async def get_parallel_responses(self, prompt: str, system_prompt: Optional[str] = None, providers: Optional[List[str]] = None) -> Dict[str, str]:
+    async def _fetch_from_provider(
+        self,
+        provider: str,
+        prompt: str,
+        system_prompt: Optional[str],
+    ) -> Optional[str]:
+        if provider == "venice":
+            return await self._call_venice(prompt, system_prompt)
+        if provider == "aisa":
+            return await self._call_aisa(prompt, system_prompt)
+        if provider == "openrouter":
+            return await self._call_openrouter(
+                prompt,
+                system_prompt,
+                model="google/gemini-flash-1.5-exp",
+            )
+        if provider == "gemini":
+            return await self._call_gemini(prompt, system_prompt)
+
+        for label, model in OPENROUTER_VARIANTS:
+            if provider == label:
+                return await self._call_openrouter(prompt, system_prompt, model=model)
+
+        return None
+
+    async def get_parallel_responses(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        providers: Optional[Sequence[str]] = None,
+    ) -> Dict[str, str]:
         """
         Gets responses from multiple providers in parallel.
-        Used for bias-free consensus synthesis.
         """
-        if not providers:
-            providers = ["venice", "aisa", "openrouter", "gemini"]
-            
-        tasks = []
-        active_providers = []
+        requested = list(providers) if providers else ["venice", "aisa", "openrouter", "gemini"]
+        requested = self._dedupe_preserve_order([value.lower().strip() for value in requested if value])
 
-        # Check availability and build task list
-        if "venice" in providers and os.getenv('VENICE_API_KEY'):
-            active_providers.append("venice")
-            tasks.append(self.get_response(prompt, system_prompt, provider="venice"))
-        
-        if "aisa" in providers and os.getenv('AISA_API_KEY'):
-            active_providers.append("aisa")
-            tasks.append(aisa_service.chat_completion(model="gpt-4o", messages=[
-                {"role": "system", "content": system_prompt or ""},
-                {"role": "user", "content": prompt}
-            ]))
+        tasks: List[asyncio.Task] = []
+        labels: List[str] = []
+        scheduled = set()
 
-        if os.getenv('OPENROUTER_API_KEY'):
-            # Fetch from multiple free models on OpenRouter to prove diversity
-            free_models = [
-                ("meta-llama/llama-3.3-70b-instruct:free", "openrouter_llama"),
-                ("google/gemini-2.0-flash-exp:free", "openrouter_gemini"),
-                ("openrouter/free", "openrouter_auto")
-            ]
-            
-            for model_id, provider_label in free_models:
-                if provider_label in providers or "openrouter" in providers:
-                    active_providers.append(provider_label)
-                    tasks.append(openrouter_service.chat_completion(model=model_id, messages=[
-                        {"role": "system", "content": system_prompt or ""},
-                        {"role": "user", "content": prompt}
-                    ]))
+        for name in requested:
+            if name == "openrouter":
+                for label, model in OPENROUTER_VARIANTS:
+                    if os.getenv("OPENROUTER_API_KEY") and label not in scheduled:
+                        scheduled.add(label)
+                        labels.append(label)
+                        tasks.append(
+                            asyncio.create_task(
+                                self._call_openrouter(prompt, system_prompt, model=model)
+                            )
+                        )
+                continue
 
-        if "gemini" in providers:
-            self._ensure_configured()
-            if self._gemini_model:
-                active_providers.append("gemini")
-                full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-                # Wrap sync call in async
-                loop = asyncio.get_event_loop()
-                tasks.append(loop.run_in_executor(None, lambda: self._gemini_model.generate_content(full_prompt).text))
+            if name in {"venice", "aisa", "gemini"}:
+                if name not in scheduled:
+                    scheduled.add(name)
+                    labels.append(name)
+                    tasks.append(
+                        asyncio.create_task(
+                            self._fetch_from_provider(name, prompt, system_prompt)
+                        )
+                    )
+                continue
+
+            for label, model in OPENROUTER_VARIANTS:
+                if (
+                    name == label
+                    and os.getenv("OPENROUTER_API_KEY")
+                    and label not in scheduled
+                ):
+                    scheduled.add(label)
+                    labels.append(label)
+                    tasks.append(
+                        asyncio.create_task(
+                            self._call_openrouter(prompt, system_prompt, model=model)
+                        )
+                    )
 
         if not tasks:
             return {}
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        provider_responses = {}
-        for provider, res in zip(active_providers, results):
-            if isinstance(res, Exception):
-                print(f"Provider {provider} failed in parallel batch: {res}")
+        provider_responses: Dict[str, str] = {}
+
+        for label, value in zip(labels, results):
+            if isinstance(value, Exception):
+                print(f"Provider {label} failed in parallel batch: {value}")
                 continue
-            provider_responses[provider] = str(res)
-            
+            if not value:
+                continue
+            normalized = str(value).strip()
+            if not normalized:
+                continue
+            provider_responses[label] = normalized
+
         return provider_responses
 
-    async def get_consensus_response(self, prompt: str, system_prompt: Optional[str] = None) -> str:
-        """
-        Gets a synthesized consensus response from all available models.
-        """
+    async def get_consensus_response(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+    ) -> str:
         bundle = await self.get_consensus_bundle(prompt, system_prompt)
         return str(bundle.get("consensus_report", "No AI providers available for consensus."))
 
-    async def get_consensus_bundle(self, prompt: str, system_prompt: Optional[str] = None) -> Dict[str, object]:
+    async def get_consensus_bundle(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+    ) -> Dict[str, object]:
         """
         Produces a consensus report plus verifiability metadata payload.
         """
@@ -152,19 +237,23 @@ class AIService:
         generated_at = datetime.now(timezone.utc).isoformat()
 
         if not responses:
-            fallback = await self.get_response(prompt, system_prompt)
+            fallback = await self.get_response(prompt, system_prompt, provider="auto")
             return {
                 "consensus_report": fallback,
                 "providers": [],
                 "provider_outputs": [],
                 "agreement_score": 0.0,
                 "main_divergence": "No parallel providers available.",
+                "pillars": [],
+                "anomalies": [],
                 "synthesis_model": "single-provider-fallback",
                 "attestation": await self._build_attestation_payload(
                     prompt=prompt,
                     consensus_report=fallback,
                     providers=[],
                     generated_at=generated_at,
+                    agreement_score=0.0,
+                    main_divergence="No parallel providers available.",
                 ),
             }
 
@@ -173,65 +262,58 @@ class AIService:
             return {
                 "consensus_report": output,
                 "providers": [provider],
-                "provider_outputs": [
-                    {"provider": provider, "response_excerpt": output[:600]}
-                ],
+                "provider_outputs": [self._provider_output(provider, output)],
                 "agreement_score": 1.0,
                 "main_divergence": "Only one provider was available.",
+                "pillars": [],
+                "anomalies": [],
                 "synthesis_model": "single-provider",
                 "attestation": await self._build_attestation_payload(
                     prompt=prompt,
                     consensus_report=output,
                     providers=[provider],
                     generated_at=generated_at,
+                    agreement_score=1.0,
+                    main_divergence="Only one provider was available.",
                 ),
             }
 
-        synthesis_prompt = f"""
-        I have gathered responses from multiple AI models.
-        REQUEST:
-        {prompt}
-
-        MODEL RESPONSES:
-        """
-        for provider, response in responses.items():
-            synthesis_prompt += f"\n--- MODEL: {provider} ---\n{response}\n"
-
-        synthesis_prompt += """
-        Return STRICT JSON:
-        {
-          "consensus_report": "Neutral merged report in markdown.",
-          "main_divergence": "Biggest disagreement between models.",
-          "agreement_score": 0.0
-        }
-        """
-
+        synthesis_prompt = self._build_synthesis_prompt(prompt, responses)
         synthesized = await self.get_response(
             synthesis_prompt,
-            system_prompt="You are a neutral consensus synthesizer.",
+            system_prompt=(
+                "You are a neutral, objective, and highly critical consensus aggregator. "
+                "You prioritize factual overlap, uncertainty disclosure, and source-grounded claims."
+            ),
+            provider="auto",
         )
 
-        consensus_report = ""
-        main_divergence = "No major divergence detected."
         agreement_score = self._calculate_agreement_score(list(responses.values()))
+        main_divergence = "No major divergence detected."
+        pillars: List[str] = []
+        anomalies: List[str] = []
+        consensus_report = synthesized
 
-        try:
-            json_str = synthesized[synthesized.find("{"):synthesized.rfind("}") + 1]
-            payload = json.loads(json_str)
-            consensus_report = str(payload.get("consensus_report", "")).strip()
-            if payload.get("main_divergence"):
-                main_divergence = str(payload["main_divergence"])
-            if isinstance(payload.get("agreement_score"), (int, float)):
-                agreement_score = max(0.0, min(1.0, float(payload["agreement_score"])))
-        except Exception:
-            consensus_report = synthesized
+        payload = self._extract_json_payload(synthesized)
+        if payload:
+            parsed_report = str(payload.get("consensus_report", "")).strip()
+            if parsed_report:
+                consensus_report = parsed_report
 
-        if not consensus_report:
-            consensus_report = synthesized
+            parsed_divergence = payload.get("main_divergence")
+            if isinstance(parsed_divergence, str) and parsed_divergence.strip():
+                main_divergence = parsed_divergence.strip()
+
+            agreement_score = self._normalize_score(payload.get("agreement_score"), agreement_score)
+            pillars = self._normalize_string_list(payload.get("pillars"))
+            anomalies = self._normalize_string_list(payload.get("anomalies"))
+
+        if not consensus_report.strip():
+            consensus_report = self._fallback_consensus_text(responses)
 
         providers = list(responses.keys())
         provider_outputs = [
-            {"provider": provider, "response_excerpt": response[:600]}
+            self._provider_output(provider, response)
             for provider, response in responses.items()
         ]
 
@@ -241,39 +323,135 @@ class AIService:
             "provider_outputs": provider_outputs,
             "agreement_score": agreement_score,
             "main_divergence": main_divergence,
+            "pillars": pillars,
+            "anomalies": anomalies,
             "synthesis_model": "meta-consensus",
             "attestation": await self._build_attestation_payload(
                 prompt=prompt,
                 consensus_report=consensus_report,
                 providers=providers,
                 generated_at=generated_at,
+                agreement_score=agreement_score,
+                main_divergence=main_divergence,
             ),
         }
+
+    def _provider_output(self, provider: str, text: str) -> Dict[str, object]:
+        return {
+            "provider": provider,
+            "response_excerpt": text[:MAX_EXCERPT_CHARS],
+            "char_count": len(text),
+        }
+
+    def _build_synthesis_prompt(self, prompt: str, responses: Dict[str, str]) -> str:
+        prompt_parts = [
+            "You are an Institutional Truth Oracle for the Monad economy.",
+            f"You have responses from {len(responses)} independent model paths.",
+            "",
+            f"ORIGINAL TOPIC: {prompt}",
+            "",
+            "MODEL RESPONSES:",
+        ]
+
+        for provider, response in responses.items():
+            prompt_parts.append(f"\n--- AGENT: {provider} ---\n{response}\n")
+
+        prompt_parts.append(
+            """
+TASK: Implement triangulated consensus.
+1. Identify Consensus Pillars: claims repeated across multiple models.
+2. Identify Fringe Anomalies: claims made by only one model.
+3. Resolve Dissent neutrally and explicitly.
+4. Estimate agreement_score:
+   - 1.0 = strong agreement on core thesis
+   - 0.5 = shared facts but narrative divergence
+   - 0.1 = contradiction on foundational facts
+
+Return ONLY strict JSON (no markdown fence):
+{
+  "consensus_report": "High-conviction markdown digest focused on verified signal.",
+  "main_divergence": "Primary disagreement or anomaly.",
+  "agreement_score": 0.0,
+  "pillars": ["..."],
+  "anomalies": ["..."]
+}
+""".strip()
+        )
+
+        return "\n".join(prompt_parts)
+
+    def _extract_json_payload(self, text: str) -> Optional[Dict[str, Any]]:
+        if not text:
+            return None
+
+        # Prefer fenced JSON blocks first.
+        fenced = re.findall(r"```(?:json)?\\s*(\{.*?\})\\s*```", text, flags=re.DOTALL)
+        candidates = fenced or [text[text.find("{"): text.rfind("}") + 1] if "{" in text and "}" in text else ""]
+
+        for candidate in candidates:
+            if not candidate:
+                continue
+            try:
+                parsed = json.loads(candidate)
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception:
+                continue
+
+        return None
+
+    def _normalize_string_list(self, value: Any) -> List[str]:
+        if not isinstance(value, list):
+            return []
+        normalized: List[str] = []
+        for item in value:
+            if isinstance(item, str) and item.strip():
+                normalized.append(item.strip())
+        return normalized
+
+    def _normalize_score(self, value: Any, fallback: float) -> float:
+        if isinstance(value, (int, float)):
+            return max(0.0, min(1.0, float(value)))
+        return fallback
+
+    def _fallback_consensus_text(self, responses: Dict[str, str]) -> str:
+        # Prefer longest response as fallback digest when synthesis payload is malformed.
+        return max(responses.values(), key=len)
 
     def _calculate_agreement_score(self, responses: List[str]) -> float:
         if len(responses) < 2:
             return 1.0
 
-        token_sets = []
+        token_sets: List[set[str]] = []
         for response in responses:
-            words = {w.strip(".,:;!?()[]{}\"'").lower() for w in response.split()}
-            token_sets.append({w for w in words if len(w) > 3})
+            words = {
+                word.strip(".,:;!?()[]{}\"'`").lower()
+                for word in response.split()
+            }
+            filtered = {word for word in words if len(word) > 3}
+            if filtered:
+                token_sets.append(filtered)
 
-        overlaps = []
+        if len(token_sets) < 2:
+            return 0.5
+
+        overlaps: List[float] = []
         for i in range(len(token_sets)):
             for j in range(i + 1, len(token_sets)):
-                a = token_sets[i]
-                b = token_sets[j]
-                union = len(a | b)
+                left = token_sets[i]
+                right = token_sets[j]
+                union = len(left | right)
                 if union == 0:
                     continue
-                overlaps.append(len(a & b) / union)
+                overlaps.append(len(left & right) / union)
 
         if not overlaps:
             return 0.5
 
         score = sum(overlaps) / len(overlaps)
-        return max(0.0, min(1.0, score))
+        # Mild smoothing to avoid overconfident extremes from lexical overlap alone.
+        smoothed = 0.1 + (0.8 * score)
+        return max(0.0, min(1.0, smoothed))
 
     async def _build_attestation_payload(
         self,
@@ -281,6 +459,8 @@ class AIService:
         consensus_report: str,
         providers: List[str],
         generated_at: str,
+        agreement_score: float,
+        main_divergence: str,
     ) -> Dict[str, object]:
         payload = {
             "prompt": prompt,
@@ -288,7 +468,20 @@ class AIService:
             "consensus_report": consensus_report,
             "generated_at": generated_at,
             "provider_count": len(providers),
+            "agreement_score": round(agreement_score, 4),
+            "main_divergence": main_divergence,
         }
         return await attestation_service.attest(payload)
+
+    def _dedupe_preserve_order(self, values: Sequence[str]) -> List[str]:
+        seen = set()
+        output: List[str] = []
+        for value in values:
+            if value in seen:
+                continue
+            seen.add(value)
+            output.append(value)
+        return output
+
 
 ai_service = AIService()

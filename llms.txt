@@ -1,0 +1,18 @@
+# Trende
+
+> The Verifiable Intelligence Layer for the Monad Agent Economy.
+
+Trende is a sovereign AI agent that provides unbiased, multi-model technical and social consensus on emerging trends. It bridges social signals (TikTok, X, LinkedIn) into verifiable on-chain assets by running consensus logic inside EigenCompute (TEEs).
+
+## Core Capabilities
+
+- **Multi-Model Consensus**: Eliminates single-model bias by cross-referencing GPT-4o, Llama 3, and Gemini.
+- **Agentic Alpha API**: A specialized handshake for automated launch bots (e.g., nad.fun agents).
+- **Verifiable Proof Links**: Every analysis generates a permanent, attested URL providing cryptographic proof of reasoning.
+- **X402 Settlement**: Native support for agent-to-agent intelligence payments via EIP-3009.
+
+## Documentation
+
+- [Verifiable Alpha Skill](/docs/skills/alpha.md): Master the API for hiring Trende as your agent's research layer.
+- [Architecture](/docs/ARCHITECTURE.md): Deep dive into the TEE and consensus pipeline.
+- [Vision](/docs/VISION.md): The strategy for institutionalized agentic intelligence on Monad.

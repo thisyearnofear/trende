@@ -35,6 +35,17 @@ interface MemeData {
     };
 }
 
+interface AgentManifest {
+    signal: string;
+    confidence: number;
+    execution_path: string[];
+    attestation_id: string;
+    propose_to_buy?: {
+        action: string;
+        amount_usdc: number;
+    };
+}
+
 export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const data = (summary.memePageData || {}) as MemeData;
     const consensus = summary.consensusData;
@@ -43,7 +54,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const [verifyStatus, setVerifyStatus] = useState<string>('');
     const [showVerificationDetails, setShowVerificationDetails] = useState(false);
     const [showAgentManifest, setShowAgentManifest] = useState(false);
-    const [manifestData, setManifestData] = useState<any>(null);
+    const [manifestData, setManifestData] = useState<AgentManifest | null>(null);
 
     if (!summary.memePageData) {
         return (
@@ -72,7 +83,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
             } else {
                 setVerifyStatus('Failed to fetch agent manifest.');
             }
-        } catch (e) {
+        } catch {
             setVerifyStatus('Error connecting to Alpha API.');
         }
     };
@@ -252,10 +263,37 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                     </span>
                                 </div>
                                 <div className="p-5 rounded-2xl bg-slate-800/40 border-2 border-emerald-500/20">
-                                    <p className="text-sm text-slate-300 leading-relaxed italic">
+                                    <p className="text-sm text-slate-300 leading-relaxed italic mb-4">
                                         &quot;{summary.overview || 'No consensus overview provided.'}&quot;
                                     </p>
-                                    <div className="mt-4 flex flex-col gap-1 text-xs text-slate-500">
+
+                                    {consensus?.pillars && consensus.pillars.length > 0 && (
+                                        <div className="mb-4">
+                                            <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mb-2">Consensus Pillars</p>
+                                            <ul className="space-y-1">
+                                                {consensus.pillars.slice(0, 3).map((pillar: string, idx: number) => (
+                                                    <li key={idx} className="text-xs text-slate-400 flex items-start gap-2">
+                                                        <span className="text-emerald-500">•</span> {pillar}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    {consensus?.anomalies && consensus.anomalies.length > 0 && (
+                                        <div className="mb-4">
+                                            <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-2">Fringe Anomalies</p>
+                                            <ul className="space-y-1">
+                                                {consensus.anomalies.slice(0, 2).map((anomaly: string, idx: number) => (
+                                                    <li key={idx} className="text-xs text-slate-500 flex items-start gap-2">
+                                                        <span className="text-amber-500">?</span> {anomaly}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-col gap-1 text-xs text-slate-500">
                                         <span className="flex items-center gap-1">
                                             <ShieldCheck className="w-3 h-3 text-emerald-400" />
                                             Attestation: {attestation?.attestation_id || 'n/a'}

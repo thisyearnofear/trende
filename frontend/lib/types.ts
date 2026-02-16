@@ -61,6 +61,8 @@ export interface TrendSummary {
       provider: string;
       response_excerpt: string;
     }>;
+    pillars?: string[];
+    anomalies?: string[];
     synthesis_model?: string;
   };
   attestationData?: {

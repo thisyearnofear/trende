@@ -13,18 +13,17 @@
 - [x] **Verification Detail UX**: Added verification details modal and attestation check action in Forge news mode.
 
 ## 🟢 Priority 3: Agentic Interoperability (A2A)
-- [ ] **Alpha API**: Create a specialized `/api/agent/alpha` endpoint that returns a concise, signed JSON suitable for `nad.fun` launch agents.
-- [ ] **Permanent Proof URL**: Implement a public `/proof/[queryId]` page that displays the multi-model consensus for any token to link to.
+- [x] **Alpha API**: Create a specialized `/api/agent/alpha` endpoint that returns a concise, signed JSON suitable for `nad.fun` launch agents.
+- [x] **Permanent Proof URL**: Implement a public `/proof/[queryId]` page that displays the multi-model consensus for any token to link to.
 - [ ] **Agent Wallet (Treasury)**: Maintain the Monad wallet to receive X402 payments from other agents hiring Trende for research.
-- [ ] **nad.fun Skill**: Create a `nadfun-skill.json` or `skill.md` that allows Trende to be "installed" by Monad ecosystem bots.
+- [x] **nad.fun Skill**: Created `llms.txt` and `docs/skills/alpha.md` to list Trende as a hireable skill for Monad bots.
 
 ## ⚙️ Infrastructure
-- [x] **EigenCompute Dockerization**: Created `.dockerignore` for a lean backend image.
-- [ ] **TEE Deployment**: Deploy the container to EigenCompute and verify attestation.
-- [x] **Consensus Attestation Wiring**: Attached model-level consensus metadata and attestation payloads to API responses.
-- [x] **Attestation Service Abstraction**: Added pluggable provider flow (`local_hmac` fallback + `eigencompute` endpoint hook).
-- [x] **Verification Endpoint**: Added `/api/attest/verify` to validate attestation payloads.
-- [ ] **OpenRouter Free Fallback**: Implement logic to switch to `free` models if balance is low.
+- [x] **ecloud CLI Migration**: Installed `@layr-labs/ecloud-cli` and locked the key standard.
+- [ ] **Baseline Dry Run**: Deploy `baseline-attested` (attested-api template) to Sepolia using `ecloud deploy`.
+- [ ] **Staging Switch**: Point `ATTESTATION_PROVIDER` to `eigencompute` in a TEE environment.
+- [ ] **Production Hardening**: Use verifiable builds, pinned digests, and restricted log visibility.
+- [ ] **CI Integration**: Add checks to fail deploy if attestation verification fails.
 - [ ] **Sovereign Persona**: Define the "Trende Bot" personality for social posts.
 
 ---

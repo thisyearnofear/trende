@@ -41,7 +41,9 @@ Trende is built to excel in the **Agentic Economy** by addressing three core arc
 - **Goal**: A perpetual loop that bridges TikTok/X trends, validates them across 4+ models, and autonomously launches high-conviction token theses on `nad.fun` without human intervention.
 
 ## 🧠 Infrastructure Layer
-- **Verifiable Execution**: **EigenCompute** (TEEs) hosts the Intelligence Core to provide cryptographic attestations of agent reasoning.
+- **Verifiable Execution**: **EigenCompute** (TEEs) hosts the Intelligence Core. 
+  - Standardized on **ecloud CLI** (`@layr-labs/ecloud-cli`).
+  - **Auth Model**: Developer Auth Key (secp256k1) for deployments; TEE Mnemonic (persistent MNEMONIC env) for app secrets.
 - **Inference**: Venice AI (Primary/Private) + AIsa/OpenRouter (Failover).
 - **Extraction**: Tabstack (Full-text Markdown extraction).
 - **Payment/Monetization**: X402 (EIP-3009) for agent-to-agent hiring.

@@ -1,21 +1,19 @@
-# Trende: Multi-Platform Trend Intelligence Platform
+# Trende: The Verifiable AI Oracle for Monad
 
-Trende is an AI-powered trend research and analysis platform that autonomously searches, validates, and synthesizes market insights from across the social web.
+Trende is a **Sovereign AI Agent** that bridges real-world social signal into verifiable on-chain intelligence. It is built to serve as the "Truth Layer" for the Monad Agent Economy.
 
-It now supports dual Forge outputs:
-- **Meme Thesis Page** for narrative-driven token and community positioning.
-- **Verifiable News Synthesizer** for multi-model, bias-reduced, attestation-ready news aggregation.
+## 🤖 Agent Ecosystem (A2A)
+Trende is designed to be **hired by other agents**. 
+- **llms.txt**: [Master Discovery File](/llms.txt) for LLM-based agents.
+- **Skill: Verifiable Alpha**: [A2A Integration Guide](/docs/skills/alpha.md) for launch bots and traders.
+- **Settlement**: Native **X402 (EIP-3009)** support for automated intelligence purchases.
 
-## 🚀 Architecture
+## 🚀 Capabilities
 
-- **Frontend**: Next.js 16 (App Router) with a premium dark-mode dashboard.
-- **Forge UI**: `/meme/[queryId]` includes both Meme Thesis and Verifiable News views.
-- **Backend**: FastAPI with a LangGraph-powered AI Agent workforce.
-- **AI Brain**: Multi-provider failover system (Venice AI → AIsa → OpenRouter → Gemini).
-- **Data Layer**: Autonomous connectors for Twitter, NewsAPI, LinkedIn (via AIsa), and Tabstack (Deep Extraction).
-- **Security**: Private-first inference via Venice AI.
-- **Verifiability**: Pluggable attestation service with `local_hmac` fallback and `eigencompute` endpoint integration.
-- **Verification API**: `POST /api/attest/verify` validates signed attestation payloads.
+- **Multi-Platform Laboratoy**: Autonomously searches TikTok, X, LinkedIn, and Web.
+- **Consensus Forge**: Cross-verifies findings using multiple AI providers (Venice, GPT-4o, Llama, Gemini) to eliminate single-source bias.
+- **Verifiable Output**: Every analysis produces an **Attestation Payload** signed in a TEE (EigenCompute), linking to a permanent **Proof URL**.
+- **Forge UI**: `/meme/[queryId]` provides specialized views for **Meme Theses** and **Institutional Intelligence**.
 
 ## 🛠️ Setup
 

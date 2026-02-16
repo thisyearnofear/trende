@@ -216,6 +216,8 @@ async def analyzer_node(state: GraphState) -> GraphState:
         "providers": consensus_bundle.get("providers", []),
         "agreement_score": consensus_bundle.get("agreement_score", 0.0),
         "main_divergence": consensus_bundle.get("main_divergence", ""),
+        "pillars": consensus_bundle.get("pillars", []),
+        "anomalies": consensus_bundle.get("anomalies", []),
         "provider_outputs": consensus_bundle.get("provider_outputs", []),
         "synthesis_model": consensus_bundle.get("synthesis_model", "unknown"),
     }
