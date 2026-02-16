@@ -89,20 +89,28 @@ export function Onboarding() {
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-start gap-3 p-3 border-2 border-[var(--border-color)] hover:border-[var(--accent-cyan)] transition-colors">
-                  <div className="mt-1"><Zap className="w-4 h-4 text-[var(--accent-amber)]" /></div>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-3 border-2 border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)] transition-colors" style={{ boxShadow: '3px 3px 0px 0px var(--shadow-color)' }}>
+                  <div className="mt-1"><Zap className="w-5 h-5 text-[var(--accent-amber)]" /></div>
                   <div>
-                    <h4 className="font-bold text-sm uppercase">Research</h4>
-                    <p className="text-xs text-[var(--text-muted)] font-mono">Agent autonomously scrapes Twitter, TikTok, and News.</p>
+                    <h4 className="font-black text-sm uppercase tracking-wide">Multi-Model Consensus</h4>
+                    <p className="text-xs text-[var(--text-secondary)] font-mono mt-1">Cross-references Venice, AIsA, and OpenRouter to filter bias and ensure factual accuracy.</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 border-2 border-[var(--border-color)] hover:border-[var(--accent-cyan)] transition-colors">
-                  <div className="mt-1"><Shield className="w-4 h-4 text-[var(--accent-emerald)]" /></div>
+                <div className="flex items-start gap-3 p-3 border-2 border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)] transition-colors" style={{ boxShadow: '3px 3px 0px 0px var(--shadow-color)' }}>
+                  <div className="mt-1"><Shield className="w-5 h-5 text-[var(--accent-emerald)]" /></div>
                   <div>
-                    <h4 className="font-bold text-sm uppercase">Attest</h4>
-                    <p className="text-xs text-[var(--text-muted)] font-mono">Findings are signed in an EigenCompute TEE Enclave.</p>
+                    <h4 className="font-black text-sm uppercase tracking-wide">TEE Verification</h4>
+                    <p className="text-xs text-[var(--text-secondary)] font-mono mt-1">All research executes in a secure EigenCompute enclave, generating verifiable cryptographic proofs.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 border-2 border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)] transition-colors" style={{ boxShadow: '3px 3px 0px 0px var(--shadow-color)' }}>
+                  <div className="mt-1"><Bot className="w-5 h-5 text-[var(--accent-cyan)]" /></div>
+                  <div>
+                    <h4 className="font-black text-sm uppercase tracking-wide">Autonomous Agents</h4>
+                    <p className="text-xs text-[var(--text-secondary)] font-mono mt-1">Specialized nodes handle strategy, data harvesting, and architectural synthesis for the Monad economy.</p>
                   </div>
                 </div>
               </div>
