@@ -34,7 +34,7 @@ const SUGGESTIONS = [
 
 export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [idea, setIdea] = useState('');
-  const [platforms, setPlatforms] = useState<string[]>(['twitter', 'newsapi']);
+  const [platforms, setPlatforms] = useState<string[]>(['twitter', 'linkedin', 'newsapi', 'web']);
   const [models, setModels] = useState<string[]>(['venice', 'aisa', 'openrouter']);
   const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
 

@@ -47,8 +47,8 @@ class NewsConnector(AbstractPlatformConnector):
 
         # 2. Fallback to NewsAPI
         if not self.news_api_key:
-            print("Warning: Neither AISA_API_KEY nor NEWSAPI_KEY set")
-            return []
+            print("Warning: Neither AISA_API_KEY nor NEWSAPI_KEY set for News")
+            raise ValueError("No API key configured for News")
 
         try:
             async with httpx.AsyncClient() as client:

@@ -17,22 +17,42 @@ from virtuals_acp.contract_clients.contract_client_v2 import ACPContractClientV2
 from virtuals_acp.configs.configs import BASE_MAINNET_ACP_X402_CONFIG_V2
 
 from backend.agents.workflow import run_trend_analysis
-from backend.database.repository import TrendRepository
+
+from backend.database.repository import Repository
+
+
+
+
 
 logger = logging.getLogger(__name__)
 
 
+
+
+
 class ACPService:
+
     """
+
     Service for handling ACP (Agent Commerce Protocol) interactions.
+
     
+
     Trende operates as a Provider Agent, offering research services to other agents.
+
     """
+
     
+
     def __init__(self):
+
         """Initialize ACP service with configuration from environment."""
+
         self.env = EnvSettings()
-        self.repository = TrendRepository()
+
+        self.repository = Repository()
+
+
         
         # ACP configuration
         self.enabled = self.env.get("ACP_ENABLED", "false").lower() == "true"

@@ -47,8 +47,8 @@ class TwitterConnector(AbstractPlatformConnector):
 
         # 2. Fallback to RapidAPI
         if not self.rapid_api_key:
-            print("Warning: Neither AISA_API_KEY nor RAPIDAPI_KEY set")
-            return []
+            print("Warning: Neither AISA_API_KEY nor RAPIDAPI_KEY set for Twitter")
+            raise ValueError("No API key configured for Twitter")
 
         try:
             # Note: In a real async implementation, we would use httpx
