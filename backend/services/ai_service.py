@@ -245,6 +245,7 @@ class AIService:
             print(f"Parallel batch execution failed: {e}")
             return []
 
+        provider_results: List[Dict[str, Any]] = []
         for (label, model_id), value in zip(labels, results):
             if isinstance(value, Exception):
                 print(f"Provider {label} failed in parallel batch: {value}")
