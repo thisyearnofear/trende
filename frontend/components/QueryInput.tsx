@@ -68,6 +68,15 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const avgQuality = models.length > 0 
     ? models.reduce((sum, m) => sum + (MODEL_OPTIONS.find(opt => opt.id === m)?.quality || 0), 0) / models.length
     : 0;
+  const estimatedSeconds = Math.max(
+    20,
+    Math.round(
+      12 +
+      platforms.length * 9 +
+      models.length * 11 +
+      (relevanceThreshold > 0.75 ? 10 : 0),
+    ),
+  );
 
   return (
     <Card accent="cyan" shadow="lg" className="p-4 sm:p-8">
@@ -165,6 +174,10 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                <div className="flex flex-col items-end">
                 <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Est. Cost</span>
                 <span className="text-xs font-black text-[var(--accent-amber)]">{totalCost.toFixed(4)} MON</span>
+              </div>
+              <div className="flex flex-col items-end border-l-2 border-[var(--bg-tertiary)] pl-3">
+                <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Est. Time</span>
+                <span className="text-xs font-black text-[var(--accent-emerald)]">~{estimatedSeconds}s</span>
               </div>
               <div className="flex flex-col items-end border-l-2 border-[var(--bg-tertiary)] pl-3">
                 <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Mitigation Power</span>

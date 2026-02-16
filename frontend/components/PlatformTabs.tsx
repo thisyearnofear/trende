@@ -53,6 +53,13 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
     });
   }, [activeTab, platformData]);
 
+  const gridClassName = useMemo(() => {
+    const count = activeItems.length;
+    if (count >= 12) return 'grid gap-4 sm:grid-cols-2 xl:grid-cols-3';
+    if (count >= 6) return 'grid gap-4 sm:grid-cols-2';
+    return 'grid gap-4';
+  }, [activeItems.length]);
+
   const stats = useMemo(() => {
     const items = activeItems;
     if (items.length === 0) return null;
@@ -202,7 +209,7 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
         id={`tabpanel-${activeTab}`}
         role="tabpanel"
         aria-labelledby={`tab-${activeTab}`}
-        className="grid gap-4"
+        className={gridClassName}
       >
         {activeItems.length === 0 ? (
           <Card accent="white" className="text-center py-12 text-[var(--text-muted)]">

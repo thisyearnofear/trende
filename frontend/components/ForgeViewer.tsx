@@ -49,7 +49,27 @@ interface AgentManifest {
 }
 
 export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
-    const data = (summary.memePageData || {}) as MemeData;
+    const fallbackMemeData: MemeData = {
+        token: {
+            name: "Consensus Brief",
+            ticker: "ALPHA",
+            description: summary.overview || "No high-level overview provided.",
+        },
+        intelligence_summary: summary.overview || "No intelligence summary available.",
+        thesis: summary.keyThemes?.length
+            ? summary.keyThemes.slice(0, 4).map((theme) => `Theme: ${theme}`)
+            : [summary.overview || "No thesis data available."],
+        consensus_metrics: {
+            model_agreement: summary.consensusData?.agreement_score || summary.confidenceScore || 0,
+            main_divergence: summary.consensusData?.main_divergence || "No major divergence reported.",
+        },
+        citations: [],
+        brand: {
+            aesthetic: "Institutional",
+            primary_color: "#06b6d4",
+        },
+    };
+    const data = ((summary.memePageData as MemeData) || fallbackMemeData) as MemeData;
     const consensus = summary.consensusData;
     const attestation = summary.attestationData;
     const { showToast } = useToast();
@@ -62,14 +82,6 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const [manifestData, setManifestData] = useState<AgentManifest | null>(null);
     const [copiedManifest, setCopiedManifest] = useState(false);
     const [copiedSignature, setCopiedSignature] = useState(false);
-
-    if (!summary.memePageData) {
-        return (
-            <div className="rounded-2xl border border-slate-700 bg-slate-900/50 p-8 text-center">
-                <p className="text-slate-400 italic">No forge data available for this analysis.</p>
-            </div>
-        );
-    }
 
     const isMeme = mode === 'meme';
     const providers = consensus?.providers || [];

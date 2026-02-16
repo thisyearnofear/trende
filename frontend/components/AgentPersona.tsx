@@ -35,15 +35,15 @@ const personaMessages = {
     "Initializing secure enclave...",
   ],
   processing: [
-    "🕵️ Scouting the landscape across multiple platforms...",
-    "🔍 Harvesting signals from X, LinkedIn, and news sources...",
-    "🛡️ Hardening results in TEE...",
-    "⚖️ Weighting source credibility...",
-    "🔬 Running multi-model consensus inside TEE...",
-    "🧠 Performing cross-model verification...",
-    "📝 Synthesizing findings into actionable intelligence...",
-    "🔒 Generating cryptographic attestation...",
-    "✓ Sealing results with EigenCompute...",
+    "Trusted Execution Environment (TEE) is isolating this workflow from host tampering.",
+    "Connectors are harvesting source data and normalizing it into comparable signal objects.",
+    "Rate-limiter and source checks are reducing spam/noise before scoring begins.",
+    "Cross-model consensus is running to compare independent model outputs for overlap.",
+    "Divergence analysis is identifying where models disagree and why confidence may drop.",
+    "Evidence weighting is combining freshness, breadth, and agreement into confidence.",
+    "Architect stage is structuring a shareable brief + forge payload from validated findings.",
+    "Attestation is signing the result so provenance can be verified later.",
+    "Pipeline finalization complete. Persisting telemetry and preparing UI payload.",
   ],
   complete: [
     "Analysis complete. Your conviction brief is ready.",
@@ -76,6 +76,7 @@ export function AgentPersona({
   const messageRef = useRef<HTMLParagraphElement>(null);
   const [displayMessage, setDisplayMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const lastTargetMessageRef = useRef('');
 
   // Animate avatar based on status
   useEffect(() => {
@@ -117,18 +118,16 @@ export function AgentPersona({
 
   // Typewriter effect for messages
   useEffect(() => {
-    let targetMessage = message;
-    
-    if (!targetMessage) {
-      if (status === 'processing') {
-        targetMessage = getProcessingMessage(progress);
-      } else {
-        const messages = personaMessages[status];
-        targetMessage = messages[Math.floor(Math.random() * messages.length)];
-      }
-    }
+    const targetMessage =
+      message ||
+      (status === 'processing'
+        ? getProcessingMessage(progress)
+        : personaMessages[status][
+            Math.floor(Math.random() * personaMessages[status].length)
+          ]);
 
-    if (targetMessage === displayMessage) return;
+    if (!targetMessage || targetMessage === lastTargetMessageRef.current) return;
+    lastTargetMessageRef.current = targetMessage;
 
     setIsTyping(true);
     let currentIndex = 0;
@@ -145,7 +144,7 @@ export function AgentPersona({
     }, 30);
 
     return () => clearInterval(typeInterval);
-  }, [status, progress, message, displayMessage]);
+  }, [status, progress, message]);
 
   // Status indicator config
   const statusConfig = {

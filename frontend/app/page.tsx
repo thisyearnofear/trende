@@ -46,9 +46,13 @@ const STATUS_ETAS: Record<
   completed: { label: "Completed", minSeconds: 0, maxSeconds: 0 },
   failed: { label: "Failed", minSeconds: 0, maxSeconds: 0 },
 };
+const LAST_QUERY_STORAGE_KEY = "trende:last_query_id";
 
 export default function Home() {
-  const [queryId, setQueryId] = useState<string | null>(null);
+  const [queryId, setQueryId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(LAST_QUERY_STORAGE_KEY);
+  });
   const [showHistory, setShowHistory] = useState(false);
   const [lastQuery, setLastQuery] = useState<QueryRequest | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -74,6 +78,9 @@ export default function Home() {
         setLastQuery(request);
         const response = await startAnalysis(request);
         setQueryId(response.id);
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(LAST_QUERY_STORAGE_KEY, response.id);
+        }
       } catch (error) {
         console.error("Failed to start analysis:", error);
       }
@@ -84,6 +91,9 @@ export default function Home() {
   const handleSelectHistory = (id: string) => {
     setQueryId(id);
     setShowHistory(false);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LAST_QUERY_STORAGE_KEY, id);
+    }
     // When selecting history, we don't necessarily have the full request details
     // unless we fetch them or find them in history data.
     // For now, we'll just clear lastQuery to avoid showing potentially wrong brief
@@ -94,6 +104,9 @@ export default function Home() {
     setQueryId(null);
     setShowHistory(false);
     setShowForgeInline(false);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(LAST_QUERY_STORAGE_KEY);
+    }
   };
 
   const stats = useMemo(() => {
