@@ -36,7 +36,7 @@ class ConsensusEngineLogicTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertIn('openrouter_llama', responses)
             self.assertIn('openrouter_gemini', responses)
-            self.assertIn('openrouter_mistral', responses)
+            self.assertIn('openrouter_auto', responses)
             self.assertEqual(service._call_openrouter.await_count, 3)
 
     async def test_consensus_bundle_parses_json_and_normalizes_score(self) -> None:

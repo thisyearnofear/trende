@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "trende"
 version = "0.1.0"
@@ -21,6 +25,10 @@ dependencies = [
     "sqlalchemy>=2.0.0",
     "redis>=5.0.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["backend*", "shared*"]
+exclude = ["frontend*", "tests*", "docs*"]
 
 [project.optional-dependencies]
 dev = [

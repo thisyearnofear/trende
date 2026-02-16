@@ -3,8 +3,14 @@
 import os
 from typing import Any, Dict, List, Optional
 
-from composio_openai import ComposioToolSet
 from openai import OpenAI
+
+try:
+    from composio import ComposioToolSet
+    COMPOSIO_AVAILABLE = True
+except ImportError:
+    COMPOSIO_AVAILABLE = False
+    print("Warning: Composio not available. Install with: pip install composio-core")
 
 
 class ComposioService:
@@ -14,13 +20,21 @@ class ComposioService:
         self.composio_api_key = os.getenv("COMPOSIO_API_KEY", "")
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
         
-        if not self.composio_api_key:
-            print("Warning: COMPOSIO_API_KEY not set. Composio integration will be disabled.")
+        if not COMPOSIO_AVAILABLE or not self.composio_api_key:
+            if not COMPOSIO_AVAILABLE:
+                print("Warning: Composio package not installed. Composio integration will be disabled.")
+            elif not self.composio_api_key:
+                print("Warning: COMPOSIO_API_KEY not set. Composio integration will be disabled.")
             self.toolset = None
             self.client = None
         else:
-            self.toolset = ComposioToolSet(api_key=self.composio_api_key)
-            self.client = OpenAI(api_key=self.openai_api_key) if self.openai_api_key else None
+            try:
+                self.toolset = ComposioToolSet(api_key=self.composio_api_key)
+                self.client = OpenAI(api_key=self.openai_api_key) if self.openai_api_key else None
+            except Exception as e:
+                print(f"Warning: Failed to initialize Composio: {e}")
+                self.toolset = None
+                self.client = None
             
     def get_tools(self, apps: List[str] = None) -> List[Any]:
         """

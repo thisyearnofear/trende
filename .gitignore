@@ -19,6 +19,16 @@ env/
 .ruff_cache/
 *.db
 *.sqlite
+*.egg-info/
+.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
+
+# Local data
+data/
+!data/.gitkeep
 
 # AI/Agent Data
 trends/
@@ -38,8 +48,10 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
 
 # Deploy artifacts
 *.tar.gz
 temp_eigen/
-.junie
+.junie/
