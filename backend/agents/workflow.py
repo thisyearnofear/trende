@@ -54,12 +54,41 @@ async def planner_node(state: GraphState) -> GraphState:
     response = await ai_service.get_response(
         prompt, system_prompt="You are an expert trend researcher."
     )
+
+    def normalize_platform(value: str) -> str:
+        v = (value or "").strip().lower()
+        alias = {
+            "news": "newsapi",
+            "hn": "hackernews",
+            "se": "stackexchange",
+        }
+        return alias.get(v, v)
+
+    requested = [normalize_platform(p) for p in (state.get("platforms") or [])]
+    requested_set = set(requested)
+
     try:
         # Simple extraction logic (could be more robust with regex)
         plan_json = response[response.find("{") : response.rfind("}") + 1]
         plan = json.loads(plan_json)
         state["plan"] = plan
-        state["search_queries"] = plan.get("search_queries", [])
+        raw_queries = plan.get("search_queries", []) or []
+        cleaned_queries = []
+
+        for sq in raw_queries:
+            platform = normalize_platform(str(sq.get("platform", "")))
+            query = (sq.get("query") or state["topic"]).strip()
+            if not platform or platform not in requested_set:
+                continue
+            cleaned_queries.append({"platform": platform, "query": query})
+
+        # Guarantee coverage for every requested platform.
+        covered = {sq["platform"] for sq in cleaned_queries}
+        for platform in requested:
+            if platform not in covered:
+                cleaned_queries.append({"platform": platform, "query": state["topic"]})
+
+        state["search_queries"] = cleaned_queries
         state["logs"].append(
             f"🎯 STRATEGY FORMULATED: Created {len(state['search_queries'])} precision-targeted queries for optimal coverage."
         )
