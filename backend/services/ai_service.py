@@ -17,9 +17,8 @@ from backend.services.venice_service import venice_service
 
 DEFAULT_PROVIDER_ORDER: Tuple[str, ...] = ("venice", "aisa", "openrouter", "gemini")
 OPENROUTER_VARIANTS: Tuple[Tuple[str, str], ...] = (
-    ("openrouter_llama", "meta-llama/llama-3-8b-instruct:free"),
-    ("openrouter_gemini", "google/gemini-flash-1.5:free"),
-    ("openrouter_auto", "openrouter/free"),
+    ("openrouter_auto", "openrouter/auto"),  # Auto-select best available model
+    ("openrouter_free", "nousresearch/hermes-3-llama-3.1-405b:free"),  # Free model that works
 )
 MAX_EXCERPT_CHARS = 600
 

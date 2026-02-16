@@ -64,6 +64,16 @@ class NewsConnector(AbstractPlatformConnector):
                 items = []
 
                 for art in articles:
+                    # Parse timestamp safely
+                    published_at = art.get('publishedAt')
+                    if published_at:
+                        try:
+                            timestamp = datetime.fromisoformat(published_at.replace('Z', '+00:00'))
+                        except Exception:
+                            timestamp = datetime.now(timezone.utc)
+                    else:
+                        timestamp = datetime.now(timezone.utc)
+                    
                     items.append(TrendItem(
                         id=art.get('url', 'unknown'),
                         platform=self.platform,
@@ -72,7 +82,7 @@ class NewsConnector(AbstractPlatformConnector):
                         author=art.get('author') or art.get('source', {}).get('name') or "Unknown Source",
                         author_handle=art.get('source', {}).get('name') or "News",
                         url=art.get('url', ''),
-                        timestamp=datetime.fromisoformat(art.get('publishedAt').replace('Z', '+00:00')) if art.get('publishedAt') else datetime.now(timezone.utc),
+                        timestamp=timestamp,
                         metrics={},
                         raw_data=art
                     ))

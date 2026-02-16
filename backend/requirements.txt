@@ -20,6 +20,7 @@ composio-langchain>=0.1.0
 
 # Vector Store
 pinecone>=8.0.0
+virtuals-acp>=0.1.0
 chromadb>=0.4.0
 
 # LLMs

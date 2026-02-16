@@ -13,9 +13,11 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 from backend.agents.workflow import create_workflow
+from backend.api.routes import acp as acp_routes
 from backend.database.repository import Repository, init_db
 from backend.services.ai_service import OPENROUTER_VARIANTS, ai_service
 from backend.services.attestation_service import attestation_service
+from backend.services.acp_service import acp_service
 from backend.services.x402_service import X402Payment, x402_service
 from backend.utils.rate_limit import UserRateLimitInfo, user_rate_limiter
 from shared.models import QueryStatus
@@ -28,10 +30,16 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     await enforce_attestation_startup_gate()
     # Resume interrupted tasks
     await resume_interrupted_tasks()
+    # Start ACP listener if enabled
+    if acp_service.enabled:
+        asyncio.create_task(acp_service.start_listening())
     yield
 
 
 app = FastAPI(title="Trende Agent API", lifespan=lifespan)
+
+# Register ACP routes
+app.include_router(acp_routes.router)
 
 # CORS middleware
 app.add_middleware(
