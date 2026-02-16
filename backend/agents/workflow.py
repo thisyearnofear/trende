@@ -1,5 +1,6 @@
 import asyncio
 import json
+from datetime import datetime, timezone
 from typing import Any
 
 from langgraph.graph import END, StateGraph
@@ -316,3 +317,52 @@ def create_workflow() -> Any:
     workflow.add_edge("architect", END)
 
     return workflow.compile()
+
+
+async def run_trend_analysis(
+    idea: str, 
+    platforms: list[str], 
+    task_id: str, 
+    models: list[str] = None,
+    sponsor: str = None
+) -> dict[str, Any]:
+    """
+    Run the full trend research workflow for a given idea and platforms.
+    Used by external services like ACP.
+    """
+    if models is None:
+        models = ["venice", "aisa"]
+        
+    workflow = create_workflow()
+    
+    # Initialize state matching GraphState
+    initial_state = {
+        "topic": idea,
+        "platforms": platforms,
+        "models": models,
+        "query_id": task_id,
+        "status": QueryStatus.PENDING,
+        "logs": ["Task initialized via ACP."],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "raw_findings": [],
+        "filtered_findings": [],
+        "plan": None,
+        "search_queries": [],
+        "summary": None,
+        "final_report_md": None,
+        "relevance_score": 0.0,
+        "impact_score": 0.0,
+        "confidence_score": 0.0,
+        "validation_results": [],
+        "meme_page_data": None,
+        "consensus_data": None,
+        "attestation_data": None,
+        "error": None,
+    }
+
+    final_state = initial_state
+    async for output in workflow.astream(initial_state):
+        for node_name, state_update in output.items():
+            final_state.update(state_update)
+            
+    return final_state
