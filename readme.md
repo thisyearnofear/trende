@@ -53,21 +53,37 @@ Trende is designed to be **hired by other agents**.
 1. Navigate to the root directory.
 2. Create and activate a virtual environment:
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 3. Install dependencies:
    ```bash
-   pip install -r backend/requirements.txt
+   pip install -e .
    ```
 4. Configure your `.env` file (see `.env.example`).
-5. Optional attestation config:
+5. Run the development server:
+   ```bash
+   uvicorn backend.api.main:app --reload
+   ```
+6. Optional attestation config:
    - `ATTESTATION_PROVIDER=local_hmac` for local signatures.
    - `ATTESTATION_PROVIDER=eigencompute` with `EIGEN_ATTEST_URL=https://attest.famile.xyz/random` for remote attestations.
    - Production hardening toggles:
      - `ATTESTATION_STRICT_MODE=true` to prevent local fallback when Eigen is unavailable.
      - `EIGEN_HEALTH_URL=https://attest.famile.xyz/random` for baseline reachability checks.
      - `EIGEN_ATTEST_TIMEOUT_SECS`, `EIGEN_ATTEST_RETRIES`, `EIGEN_ATTEST_BACKOFF_MS` for network resiliency.
+
+### Running Tests
+```bash
+# Activate virtual environment
+source venv/bin/activate
+
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage
+pytest tests/ --cov=backend --cov=shared --cov-report=term-missing
+```
 
 ### Frontend Setup
 1. Navigate to `frontend/`:
@@ -83,22 +99,49 @@ Trende is designed to be **hired by other agents**.
 ## 🚀 Deployment
 
 ### Backend (Docker)
-For production, run the backend using Docker Compose.
+For production, the backend is deployed using Docker on Hetzner.
 
-1. **Configure Environment**:
-   Ensure your `.env` file is present on the server with all API keys and `ATTESTATION_PROVIDER=eigencompute`.
+**Server Setup** (snel-bot):
+- Location: `/opt/trende-deploy/`
+- Repository: `/opt/trende-deploy/trende-repo` (tracking `main` branch)
+- Configuration: `/opt/trende-deploy/.env`
 
-2. **Start Service**:
-   ```bash
-   docker compose up -d api
-   ```
+**Deployment Script**:
+```bash
+ssh snel-bot
+cd /opt/trende-deploy
+./deploy-backend.sh
+```
 
-3. **Update**:
-   ```bash
-   git pull origin master
-   docker compose build api
-   docker compose up -d api
-   ```
+The deployment script automatically:
+1. Pulls latest changes from `main` branch
+2. Builds Docker image from `config/docker/Dockerfile`
+3. Restarts the container with updated code
+4. Verifies service health
+
+**Manual Deployment**:
+```bash
+# On the server
+cd /opt/trende-deploy/trende-repo
+git pull origin main
+docker build -t trende/backend:latest -f config/docker/Dockerfile .
+docker stop trende-backend && docker rm trende-backend
+docker run -d --name trende-backend \
+  --env-file /opt/trende-deploy/.env \
+  -p 8000:8000 \
+  --restart unless-stopped \
+  trende/backend:latest
+```
+
+**View Logs**:
+```bash
+ssh snel-bot "docker logs -f trende-backend"
+```
+
+**API Endpoints**:
+- Production: `https://api.trende.famile.xyz`
+- Health Check: `https://api.trende.famile.xyz/api/health/consensus`
+- API Docs: `https://api.trende.famile.xyz/docs`
 
 ### Frontend (Vercel)
 1. Deploy the `frontend/` directory to Vercel.
