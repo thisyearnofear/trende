@@ -144,7 +144,7 @@ async def researcher_node(state: GraphState) -> GraphState:
 async def validator_node(state: GraphState) -> GraphState:
     state["logs"].append("🔍 TRUTH ENGINE: Cross-verifying and validating research findings...")
 
-    if not state["raw_findings"]:
+    if not state.get("raw_findings"):
         state["logs"].append("😴 No data to validate. Proceeding with empty dataset.")
         state["filtered_findings"] = []
         state["confidence_score"] = 0.0

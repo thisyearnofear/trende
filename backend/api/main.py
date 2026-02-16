@@ -422,50 +422,54 @@ async def run_agent_workflow(
     }
 
     # Run the graph
-    async for output in workflow.astream(initial_state):  # type: ignore
-        for node_name, state_update in output.items():
-            # Set explicit QueryStatus based on node name
-            if node_name == "planner":
-                tasks[task_id]["status"] = QueryStatus.PLANNING
-            elif node_name == "researcher":
-                tasks[task_id]["status"] = QueryStatus.RESEARCHING
-            elif node_name == "validator":
-                tasks[task_id]["status"] = QueryStatus.PROCESSING  # Use PROCESSING as a bridge
-            elif node_name == "analyzer":
-                tasks[task_id]["status"] = QueryStatus.ANALYZING
-            elif node_name == "architect":
-                tasks[task_id]["status"] = QueryStatus.PROCESSING  # Wrapping up
+    try:
+        async for output in workflow.astream(initial_state):  # type: ignore
+            for node_name, state_update in output.items():
+                # Update the global task state with the latest changes from the agent
+                for key, value in state_update.items():
+                    tasks[task_id][key] = value
+                
+                # Set explicit QueryStatus based on node name
+                if node_name == "planner":
+                    tasks[task_id]["status"] = QueryStatus.PLANNING
+                elif node_name == "researcher":
+                    tasks[task_id]["status"] = QueryStatus.RESEARCHING
+                elif node_name == "validator":
+                    tasks[task_id]["status"] = QueryStatus.PROCESSING
+                elif node_name == "analyzer":
+                    tasks[task_id]["status"] = QueryStatus.ANALYZING
+                elif node_name == "architect":
+                    tasks[task_id]["status"] = QueryStatus.COMPLETED
+                    tasks[task_id]["logs"].append("🏆 MISSION ACCOMPLISHED: Final results ready.")
 
-            # Update the global task state with the latest changes from the agent
-            for key, value in state_update.items():
-                tasks[task_id][key] = value
-            tasks[task_id]["updated_at"] = datetime.now(timezone.utc).isoformat()
+                tasks[task_id]["updated_at"] = datetime.now(timezone.utc).isoformat()
 
-            consensus_data = tasks[task_id].get("consensus_data") or {}
-            attestation_data = tasks[task_id].get("attestation_data") or {}
-            tasks[task_id]["run_telemetry"] = {
-                "run_id": task_id,
-                "provider_count": len(consensus_data.get("providers", [])),
-                "agreement_score": consensus_data.get("agreement_score", 0.0),
-                "diversity_level": consensus_data.get("diversity_level", "low"),
-                "attestation_status": attestation_data.get("status", "pending"),
-                "warnings": consensus_data.get("warnings", []),
-                "logs": tasks[task_id].get("logs", [])[-12:],
-                "updated_at": tasks[task_id]["updated_at"],
-            }
+                consensus_data = tasks[task_id].get("consensus_data") or {}
+                attestation_data = tasks[task_id].get("attestation_data") or {}
+                tasks[task_id]["run_telemetry"] = {
+                    "run_id": task_id,
+                    "provider_count": len(consensus_data.get("providers", [])),
+                    "agreement_score": consensus_data.get("agreement_score", 0.0),
+                    "diversity_level": consensus_data.get("diversity_level", "low"),
+                    "attestation_status": attestation_data.get("status", "pending"),
+                    "warnings": consensus_data.get("warnings", []),
+                    "logs": tasks[task_id].get("logs", [])[-12:],
+                    "updated_at": tasks[task_id]["updated_at"],
+                }
 
-            # Log the node completion
-            if "logs" not in tasks[task_id]:
-                tasks[task_id]["logs"] = []
-            tasks[task_id]["logs"].append(f"Completed step: {node_name}")
+                # Log the node completion
+                if "logs" not in tasks[task_id]:
+                    tasks[task_id]["logs"] = []
+                tasks[task_id]["logs"].append(f"Completed step: {node_name}")
 
-            # If node was architect, it's the last step
-            if node_name == "architect":
-                tasks[task_id]["status"] = QueryStatus.COMPLETED
-                tasks[task_id]["logs"].append("🏆 MISSION ACCOMPLISHED: Final results ready.")
-
-            # Persist update to DB
-            repo.save_task(task_id, tasks[task_id])
+                # Persist update to DB
+                repo.save_task(task_id, tasks[task_id])
+    except Exception as e:
+        print(f"Workflow error for task {task_id}: {e}")
+        tasks[task_id]["status"] = QueryStatus.FAILED
+        tasks[task_id]["error"] = str(e)
+        tasks[task_id]["logs"].append(f"❌ CRITICAL ERROR: {str(e)}")
+        repo.save_task(task_id, tasks[task_id])
 
 
 @app.get("/api/trends/history")
