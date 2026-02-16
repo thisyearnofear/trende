@@ -36,14 +36,17 @@ class ConsensusEngineLogicTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertIn('openrouter_llama', responses)
             self.assertIn('openrouter_gemini', responses)
-            self.assertIn('openrouter_deepseek', responses)
+            self.assertIn('openrouter_mistral', responses)
             self.assertEqual(service._call_openrouter.await_count, 3)
 
     async def test_consensus_bundle_parses_json_and_normalizes_score(self) -> None:
         service = AIService()
 
-        service.get_parallel_responses = AsyncMock(  # type: ignore[method-assign]
-            return_value={'venice': 'A', 'openrouter_llama': 'B'}
+        service.get_parallel_provider_results = AsyncMock(  # type: ignore[method-assign]
+            return_value=[
+                {'provider': 'venice', 'model_id': 'venice', 'status': 'ok', 'response': 'A', 'error': None, 'latency_ms': 12.0},
+                {'provider': 'openrouter_llama', 'model_id': 'meta-llama/llama', 'status': 'ok', 'response': 'B', 'error': None, 'latency_ms': 20.0},
+            ]
         )
         service.get_response = AsyncMock(  # type: ignore[method-assign]
             return_value='''```json\n{"consensus_report":"Merged report","main_divergence":"minor","agreement_score": 9,"pillars":["p1", 2],"anomalies":["a1", null]}\n```'''
@@ -64,8 +67,11 @@ class ConsensusEngineLogicTests(unittest.IsolatedAsyncioTestCase):
     async def test_consensus_bundle_uses_synthesized_fallback_text(self) -> None:
         service = AIService()
 
-        service.get_parallel_responses = AsyncMock(  # type: ignore[method-assign]
-            return_value={'venice': 'Response one', 'aisa': 'Response two'}
+        service.get_parallel_provider_results = AsyncMock(  # type: ignore[method-assign]
+            return_value=[
+                {'provider': 'venice', 'model_id': 'venice', 'status': 'ok', 'response': 'Response one', 'error': None, 'latency_ms': 10.0},
+                {'provider': 'aisa', 'model_id': 'gpt-4o', 'status': 'ok', 'response': 'Response two', 'error': None, 'latency_ms': 14.0},
+            ]
         )
         service.get_response = AsyncMock(  # type: ignore[method-assign]
             return_value='Not JSON response'

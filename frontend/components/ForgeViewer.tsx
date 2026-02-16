@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Info, Quote, ShieldCheck, Sparkles, TrendingUp } from 'lucide-react';
+import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp } from 'lucide-react';
 import { TrendSummary as TrendSummaryType } from '@/lib/types';
 
 interface ForgeViewerProps {
@@ -66,6 +66,9 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
 
     const isMeme = mode === 'meme';
     const providers = consensus?.providers || [];
+    const consensusWarnings = consensus?.warnings || [];
+    const providerOutputs = consensus?.provider_outputs || [];
+    const isLowDiversity = (consensus?.diversity_level || 'low') === 'low';
     const agreement = Math.round(
         (consensus?.agreement_score || data.consensus_metrics?.model_agreement || 0) * 100
     );
@@ -143,7 +146,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                     <ShieldCheck className="w-7 h-7 text-white" />
                                 )}
                             </div>
-                            <div>
+                            <div className="flex-1">
                                 <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
                                     {data.token?.name || 'Research Forge'}
                                     {data.token?.ticker && (
@@ -152,11 +155,24 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                         </span>
                                     )}
                                 </h1>
-                                <p className="text-slate-400 text-sm">
-                                    Generated via{' '}
-                                    {summary.confidenceScore ? (summary.confidenceScore * 100).toFixed(0) : 0}% evidence
-                                    confidence
-                                </p>
+                                <div className="flex items-center gap-3 mt-1">
+                                    <p className="text-slate-400 text-sm">
+                                        Generated via{' '}
+                                        {summary.confidenceScore ? (summary.confidenceScore * 100).toFixed(0) : 0}% evidence
+                                        confidence
+                                    </p>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                                    <button
+                                        onClick={() => {
+                                            const url = `${window.location.origin}/proof/${queryId}`;
+                                            navigator.clipboard.writeText(url);
+                                        }}
+                                        className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors"
+                                    >
+                                        <Link2 className="w-3 h-3" />
+                                        Share Proof
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -187,6 +203,11 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                 'No overview available.'}
                             &quot;
                         </p>
+                        {isLowDiversity && (
+                            <p className="mt-3 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+                                Low-diversity consensus detected. Treat this as directional and review provenance before execution.
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -307,6 +328,20 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                             Providers: {providers.length > 0 ? providers.join(', ') : 'n/a'}
                                         </span>
                                     </div>
+                                    {consensusWarnings.length > 0 && (
+                                        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                                            <p className="text-[10px] text-amber-300 font-bold uppercase tracking-widest mb-1">
+                                                Runtime Warnings
+                                            </p>
+                                            <ul className="space-y-1">
+                                                {consensusWarnings.map((warning, idx) => (
+                                                    <li key={idx} className="text-xs text-amber-100/90">
+                                                        - {warning}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
                                     <div className="mt-3 flex flex-wrap gap-2">
                                         <button
                                             type="button"
@@ -325,6 +360,34 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                     </div>
                                     {verifyStatus && <p className="text-xs text-slate-400 mt-2">{verifyStatus}</p>}
                                 </div>
+                                {providerOutputs.length > 0 && (
+                                    <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+                                        <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-widest mb-2">
+                                            Provider Provenance
+                                        </p>
+                                        <div className="space-y-2">
+                                            {providerOutputs.map((output, idx) => (
+                                                <div key={`${output.provider}-${idx}`} className="rounded-lg border border-slate-700 bg-slate-800/70 p-2.5">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <p className="text-xs text-slate-200">
+                                                            {output.provider}
+                                                            {output.model_id ? ` (${output.model_id})` : ''}
+                                                        </p>
+                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${output.status === 'ok' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                                                            {output.status || 'ok'}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[11px] text-slate-400 mt-1">
+                                                        latency: {Math.round(output.latency_ms || 0)}ms
+                                                    </p>
+                                                    {output.error && (
+                                                        <p className="text-[11px] text-rose-300 mt-1 line-clamp-2">{output.error}</p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 

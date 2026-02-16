@@ -62,6 +62,23 @@ async def run_test(topic: str):
             if "confidence_score" in state_update:
                 print(f"   ⚖️ Confidence Score: {state_update.get('confidence_score', 'N/A')}")
             
+            if "consensus_data" in state_update:
+                c_data = state_update["consensus_data"]
+                print(f"   🏛️ Consensus Providers: {', '.join(c_data.get('providers', []))}")
+                print(f"   ⚖️ Agreement Score: {c_data.get('agreement_score', 0.0)}")
+                
+                pillars = c_data.get("pillars", [])
+                if pillars:
+                    print("   🔗 Consensus Pillars:")
+                    for p in pillars:
+                        print(f"      • {p}")
+                
+                anomalies = c_data.get("anomalies", [])
+                if anomalies:
+                    print("   ❓ Fringe Anomalies:")
+                    for a in anomalies:
+                        print(f"      • {a}")
+            
             if "final_report_md" in state_update and state_update["final_report_md"]:
                 print("\n✅ Final Report Generated!")
                 print("-" * 50)

@@ -11,6 +11,7 @@ from backend.agents.workflow import create_workflow
 from shared.models import QueryStatus, TrendItem
 from backend.services.x402_service import x402_service, X402Payment
 from backend.services.attestation_service import attestation_service
+from backend.services.ai_service import ai_service, OPENROUTER_VARIANTS
 from backend.database.repository import Repository, init_db
 
 app = FastAPI(title="Trende Agent API")
@@ -19,8 +20,30 @@ app = FastAPI(title="Trende Agent API")
 @app.on_event("startup")
 async def startup_event():
     init_db()
+    await enforce_attestation_startup_gate()
     # Resume interrupted tasks
     await resume_interrupted_tasks()
+
+
+async def enforce_attestation_startup_gate() -> None:
+    """
+    In strict Eigen mode, fail fast on startup if attestation endpoint is not reachable.
+    """
+    if attestation_service.provider != "eigencompute" or not attestation_service.strict_mode:
+        return
+
+    health = await attestation_service.health_check(probe=True)
+    if health.get("ok"):
+        return
+
+    message = health.get("message") or "Attestation health check failed."
+    probe = health.get("probe") or {}
+    endpoint = probe.get("endpoint") or attestation_service.eigen_health_url or attestation_service.eigen_url
+    status_code = probe.get("status_code")
+    raise RuntimeError(
+        "Startup aborted: ATTESTATION_STRICT_MODE=true requires live Eigen attestation reachability. "
+        f"endpoint={endpoint!r} status_code={status_code!r} reason={message}"
+    )
 
 async def resume_interrupted_tasks():
     # Only resume if they are in a processing state
@@ -59,7 +82,94 @@ class AttestationVerifyRequest(BaseModel):
     attestation: Dict[str, Any]
 
 
-@app.post("/api/attest/verify")
+def _configured_consensus_routes() -> Dict[str, Any]:
+    routes: List[Dict[str, str]] = []
+
+    if os.getenv("VENICE_API_KEY"):
+        routes.append({"provider": "venice", "model_id": "llama-3.3-70b"})
+    if os.getenv("AISA_API_KEY"):
+        routes.append({"provider": "aisa", "model_id": "gpt-4o"})
+    if os.getenv("GEMINI_API_KEY"):
+        routes.append({"provider": "gemini", "model_id": "gemini-1.5-flash"})
+    if os.getenv("OPENROUTER_API_KEY"):
+        for label, model in OPENROUTER_VARIANTS:
+            routes.append({"provider": label, "model_id": model})
+
+    providers = sorted({route["provider"] for route in routes})
+    return {
+        "routes": routes,
+        "providers": providers,
+        "provider_count": len(providers),
+        "route_count": len(routes),
+        "can_run_consensus": len(routes) >= 2,
+    }
+
+
+@app.get("/api/health/consensus")
+async def consensus_health(probe: bool = False):
+    """
+    Consensus preflight endpoint.
+    - probe=false: reports configured providers/routes from env keys
+    - probe=true: performs lightweight live provider checks
+    """
+    snapshot = _configured_consensus_routes()
+    response: Dict[str, Any] = {
+        "ok": snapshot["can_run_consensus"],
+        "probe_enabled": probe,
+        "provider_count": snapshot["provider_count"],
+        "route_count": snapshot["route_count"],
+        "providers": snapshot["providers"],
+        "routes": snapshot["routes"],
+        "status": "ready" if snapshot["can_run_consensus"] else "degraded",
+        "message": (
+            "Consensus engine has enough configured routes."
+            if snapshot["can_run_consensus"]
+            else "Less than 2 configured routes. Consensus will degrade to fallback behavior."
+        ),
+    }
+
+    if not probe:
+        return response
+
+    probe_prompt = "Consensus health probe: return one short sentence."
+    results = await ai_service.get_parallel_provider_results(
+        probe_prompt,
+        system_prompt="You are a health probe assistant.",
+        providers=["venice", "aisa", "openrouter", "gemini"],
+    )
+
+    successful = [item for item in results if item.get("status") == "ok"]
+    failed = [item for item in results if item.get("status") != "ok"]
+    live_ok = len(successful) >= 2
+
+    response.update(
+        {
+            "ok": live_ok,
+            "status": "ready" if live_ok else "degraded",
+            "message": (
+                "Live probe confirms consensus viability."
+                if live_ok
+                else "Live probe returned fewer than 2 healthy routes."
+            ),
+            "live_probe": {
+                "healthy_route_count": len(successful),
+                "failed_route_count": len(failed),
+                "healthy_routes": successful,
+                "failed_routes": failed,
+            },
+        }
+    )
+    return response
+
+
+@app.get("/api/health/attestation")
+async def attestation_health(probe: bool = False):
+    """
+    Attestation preflight endpoint.
+    - probe=false: reports configured provider from env 
+    - probe=true: performs live reachability check to EigenCompute
+    """
+    return await attestation_service.health_check(probe=probe)
 async def verify_attestation(request: AttestationVerifyRequest):
     verified = attestation_service.verify(request.payload, request.attestation)
     return {
@@ -68,6 +178,16 @@ async def verify_attestation(request: AttestationVerifyRequest):
         "method": request.attestation.get("method"),
         "attestation_id": request.attestation.get("attestation_id"),
     }
+
+
+@app.get("/api/health/attestation")
+async def attestation_health(probe: bool = False):
+    """
+    Attestation preflight endpoint.
+    - probe=false: reports provider config readiness
+    - probe=true: performs live Eigen endpoint reachability test when configured
+    """
+    return await attestation_service.health_check(probe=probe)
 
 @app.post("/api/trends/start")
 async def start_analysis(request: QueryRequest, background_tasks: BackgroundTasks, response: Response, payment: Optional[X402Payment] = None):
@@ -94,6 +214,14 @@ async def start_analysis(request: QueryRequest, background_tasks: BackgroundTask
         "platforms": request.platforms,
         "created_at": datetime.utcnow().isoformat(),
         "updated_at": datetime.utcnow().isoformat(),
+        "run_telemetry": {
+            "run_id": task_id,
+            "provider_count": 0,
+            "agreement_score": 0.0,
+            "diversity_level": "low",
+            "attestation_status": "pending",
+            "logs": [],
+        },
     }
     
     # Save to DB
@@ -141,6 +269,19 @@ async def run_agent_workflow(task_id: str, topic: str, platforms: List[str]):
             for key, value in state_update.items():
                 tasks[task_id][key] = value
             tasks[task_id]["updated_at"] = datetime.utcnow().isoformat()
+
+            consensus_data = tasks[task_id].get("consensus_data") or {}
+            attestation_data = tasks[task_id].get("attestation_data") or {}
+            tasks[task_id]["run_telemetry"] = {
+                "run_id": task_id,
+                "provider_count": len(consensus_data.get("providers", [])),
+                "agreement_score": consensus_data.get("agreement_score", 0.0),
+                "diversity_level": consensus_data.get("diversity_level", "low"),
+                "attestation_status": attestation_data.get("status", "pending"),
+                "warnings": consensus_data.get("warnings", []),
+                "logs": tasks[task_id].get("logs", [])[-12:],
+                "updated_at": tasks[task_id]["updated_at"],
+            }
             
             # Log the node completion
             if "logs" not in tasks[task_id]:
@@ -194,6 +335,7 @@ async def get_task_results(task_id: str):
     attestation_data = res_node.get("attestation_data", task.get("attestation_data"))
     summary_text = res_node.get("summary", task.get("summary", ""))
     final_report_md = res_node.get("final_report_md", task.get("final_report_md", ""))
+    run_telemetry = res_node.get("run_telemetry", task.get("run_telemetry", {}))
 
     # Construct response matching ResultsResponse in frontend/lib/types.ts
     return {
@@ -221,7 +363,18 @@ async def get_task_results(task_id: str):
             "consensusData": consensus_data,
             "attestationData": attestation_data,
             "generatedAt": task.get("updated_at", task.get("created_at", ""))
-        }
+        },
+        "telemetry": {
+            "runId": run_telemetry.get("run_id", task_id),
+            "providerCount": run_telemetry.get("provider_count", len((consensus_data or {}).get("providers", [])),
+            ),
+            "agreementScore": run_telemetry.get("agreement_score", (consensus_data or {}).get("agreement_score", 0.0)),
+            "diversityLevel": run_telemetry.get("diversity_level", (consensus_data or {}).get("diversity_level", "low")),
+            "attestationStatus": run_telemetry.get("attestation_status", (attestation_data or {}).get("status", "pending")),
+            "warnings": run_telemetry.get("warnings", (consensus_data or {}).get("warnings", [])),
+            "logs": run_telemetry.get("logs", task.get("logs", [])[-12:]),
+            "updatedAt": run_telemetry.get("updated_at", task.get("updated_at", task.get("created_at", ""))),
+        },
     }
 
 @app.get("/api/agent/alpha/{task_id}")

@@ -37,6 +37,10 @@ Trende is designed to be **hired by other agents**.
 5. Optional attestation config:
    - `ATTESTATION_PROVIDER=local_hmac` for local signatures.
    - `ATTESTATION_PROVIDER=eigencompute` with `EIGEN_ATTEST_URL`/`EIGEN_ATTEST_TOKEN` for remote attestations.
+   - Production hardening toggles:
+     - `ATTESTATION_STRICT_MODE=true` to prevent local fallback when Eigen is unavailable.
+     - `EIGEN_HEALTH_URL` for baseline reachability checks.
+     - `EIGEN_ATTEST_TIMEOUT_SECS`, `EIGEN_ATTEST_RETRIES`, `EIGEN_ATTEST_BACKOFF_MS` for network resiliency.
 
 ### Frontend Setup
 1. Navigate to `frontend/`:
@@ -54,6 +58,29 @@ Trende is designed to be **hired by other agents**.
 You can run a live research task directly from the CLI to verify the AI backbone:
 ```bash
 python3 scripts/test_agent.py "Your Research Topic"
+```
+
+For an end-to-end real run flow (start -> poll -> Forge links):
+```bash
+./scripts/finals_flow.sh "Your Research Topic"
+```
+
+Consensus preflight checks:
+```bash
+# Config-only readiness (no model calls)
+curl -s "http://localhost:8000/api/health/consensus" | jq
+
+# Live probe (lightweight calls to configured providers)
+curl -s "http://localhost:8000/api/health/consensus?probe=true" | jq
+```
+
+Attestation preflight checks:
+```bash
+# Config-only readiness
+curl -s "http://localhost:8000/api/health/attestation" | jq
+
+# Live Eigen endpoint probe (when using eigencompute mode)
+curl -s "http://localhost:8000/api/health/attestation?probe=true" | jq
 ```
 
 ## 🛡️ Core Principles

@@ -64,6 +64,7 @@ class Repository:
                 "meme_page_data": state.get("meme_page_data"),
                 "consensus_data": state.get("consensus_data"),
                 "attestation_data": state.get("attestation_data"),
+                "run_telemetry": state.get("run_telemetry"),
                 "raw_findings": [item.model_dump() if hasattr(item, 'model_dump') else item for item in state.get("raw_findings", [])]
             }
             task.result = result_data

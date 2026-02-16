@@ -214,6 +214,9 @@ async def analyzer_node(state: GraphState) -> GraphState:
     state['summary'] = report[:500] + "..." if report else "No report generated."
     state['consensus_data'] = {
         "providers": consensus_bundle.get("providers", []),
+        "provider_errors": consensus_bundle.get("provider_errors", []),
+        "warnings": consensus_bundle.get("warnings", []),
+        "diversity_level": consensus_bundle.get("diversity_level", "low"),
         "agreement_score": consensus_bundle.get("agreement_score", 0.0),
         "main_divergence": consensus_bundle.get("main_divergence", ""),
         "pillars": consensus_bundle.get("pillars", []),

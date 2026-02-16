@@ -2,8 +2,9 @@ import asyncio
 import json
 import os
 import re
+import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Awaitable, Dict, List, Optional, Sequence, Tuple
 
 import google.generativeai as genai
 
@@ -14,9 +15,9 @@ from backend.services.venice_service import venice_service
 
 DEFAULT_PROVIDER_ORDER: Tuple[str, ...] = ("venice", "aisa", "openrouter", "gemini")
 OPENROUTER_VARIANTS: Tuple[Tuple[str, str], ...] = (
-    ("openrouter_llama", "meta-llama/llama-3.3-70b-instruct:free"),
-    ("openrouter_gemini", "google/gemini-2.0-flash-exp:free"),
-    ("openrouter_deepseek", "deepseek/deepseek-chat:free"),
+    ("openrouter_llama", "meta-llama/llama-3-8b-instruct:free"),
+    ("openrouter_gemini", "google/gemini-flash-1.5:free"),
+    ("openrouter_auto", "openrouter/free"),
 )
 MAX_EXCERPT_CHARS = 600
 
@@ -153,11 +154,27 @@ class AIService:
         """
         Gets responses from multiple providers in parallel.
         """
+        results = await self.get_parallel_provider_results(prompt, system_prompt, providers)
+        return {
+            item["provider"]: item["response"]
+            for item in results
+            if item.get("status") == "ok" and isinstance(item.get("response"), str)
+        }
+
+    async def get_parallel_provider_results(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        providers: Optional[Sequence[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Returns per-provider execution telemetry for consensus orchestration.
+        """
         requested = list(providers) if providers else ["venice", "aisa", "openrouter", "gemini"]
         requested = self._dedupe_preserve_order([value.lower().strip() for value in requested if value])
 
         tasks: List[asyncio.Task] = []
-        labels: List[str] = []
+        labels: List[Tuple[str, str]] = []
         scheduled = set()
 
         for name in requested:
@@ -165,10 +182,12 @@ class AIService:
                 for label, model in OPENROUTER_VARIANTS:
                     if os.getenv("OPENROUTER_API_KEY") and label not in scheduled:
                         scheduled.add(label)
-                        labels.append(label)
+                        labels.append((label, model))
                         tasks.append(
                             asyncio.create_task(
-                                self._call_openrouter(prompt, system_prompt, model=model)
+                                self._call_with_metrics(
+                                    self._call_openrouter(prompt, system_prompt, model=model)
+                                )
                             )
                         )
                 continue
@@ -176,10 +195,12 @@ class AIService:
             if name in {"venice", "aisa", "gemini"}:
                 if name not in scheduled:
                     scheduled.add(name)
-                    labels.append(name)
+                    labels.append((name, name))
                     tasks.append(
                         asyncio.create_task(
-                            self._fetch_from_provider(name, prompt, system_prompt)
+                            self._call_with_metrics(
+                                self._fetch_from_provider(name, prompt, system_prompt)
+                            )
                         )
                     )
                 continue
@@ -191,31 +212,67 @@ class AIService:
                     and label not in scheduled
                 ):
                     scheduled.add(label)
-                    labels.append(label)
+                    labels.append((label, model))
                     tasks.append(
                         asyncio.create_task(
-                            self._call_openrouter(prompt, system_prompt, model=model)
+                            self._call_with_metrics(
+                                self._call_openrouter(prompt, system_prompt, model=model)
+                            )
                         )
                     )
 
         if not tasks:
-            return {}
+            return []
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        provider_responses: Dict[str, str] = {}
+        provider_results: List[Dict[str, Any]] = []
 
-        for label, value in zip(labels, results):
+        for (label, model_id), value in zip(labels, results):
             if isinstance(value, Exception):
                 print(f"Provider {label} failed in parallel batch: {value}")
+                provider_results.append(
+                    {
+                        "provider": label,
+                        "model_id": model_id,
+                        "status": "error",
+                        "error": str(value),
+                        "response": "",
+                        "latency_ms": 0.0,
+                    }
+                )
                 continue
-            if not value:
-                continue
-            normalized = str(value).strip()
-            if not normalized:
-                continue
-            provider_responses[label] = normalized
 
-        return provider_responses
+            if isinstance(value, tuple):
+                response_value, latency_ms, error_message = value
+            else:
+                response_value, latency_ms, error_message = ("", 0.0, "Unknown execution error")
+
+            normalized = str(response_value).strip() if response_value else ""
+            if error_message or not normalized:
+                provider_results.append(
+                    {
+                        "provider": label,
+                        "model_id": model_id,
+                        "status": "error",
+                        "error": error_message or "Empty response",
+                        "response": normalized,
+                        "latency_ms": round(float(latency_ms), 2),
+                    }
+                )
+                continue
+
+            provider_results.append(
+                {
+                    "provider": label,
+                    "model_id": model_id,
+                    "status": "ok",
+                    "error": None,
+                    "response": normalized,
+                    "latency_ms": round(float(latency_ms), 2),
+                }
+            )
+
+        return provider_results
 
     async def get_consensus_response(
         self,
@@ -233,19 +290,38 @@ class AIService:
         """
         Produces a consensus report plus verifiability metadata payload.
         """
-        responses = await self.get_parallel_responses(prompt, system_prompt)
+        provider_results = await self.get_parallel_provider_results(prompt, system_prompt)
+        responses = {
+            item["provider"]: item["response"]
+            for item in provider_results
+            if item.get("status") == "ok" and isinstance(item.get("response"), str)
+        }
+        provider_errors = [
+            {
+                "provider": item.get("provider"),
+                "model_id": item.get("model_id"),
+                "error": item.get("error", "Unknown error"),
+                "latency_ms": item.get("latency_ms", 0.0),
+            }
+            for item in provider_results
+            if item.get("status") != "ok"
+        ]
         generated_at = datetime.now(timezone.utc).isoformat()
 
         if not responses:
             fallback = await self.get_response(prompt, system_prompt, provider="auto")
+            warnings = ["No parallel providers available. Used single fallback synthesizer."]
             return {
                 "consensus_report": fallback,
                 "providers": [],
                 "provider_outputs": [],
+                "provider_errors": provider_errors,
                 "agreement_score": 0.0,
                 "main_divergence": "No parallel providers available.",
                 "pillars": [],
                 "anomalies": [],
+                "warnings": warnings,
+                "diversity_level": "low",
                 "synthesis_model": "single-provider-fallback",
                 "attestation": await self._build_attestation_payload(
                     prompt=prompt,
@@ -254,19 +330,24 @@ class AIService:
                     generated_at=generated_at,
                     agreement_score=0.0,
                     main_divergence="No parallel providers available.",
+                    warnings=warnings,
                 ),
             }
 
         if len(responses) == 1:
             provider, output = next(iter(responses.items()))
+            warnings = ["Low diversity consensus: only one provider was available."]
             return {
                 "consensus_report": output,
                 "providers": [provider],
-                "provider_outputs": [self._provider_output(provider, output)],
+                "provider_outputs": [self._provider_output(provider, output, provider_results)],
+                "provider_errors": provider_errors,
                 "agreement_score": 1.0,
                 "main_divergence": "Only one provider was available.",
                 "pillars": [],
                 "anomalies": [],
+                "warnings": warnings,
+                "diversity_level": "low",
                 "synthesis_model": "single-provider",
                 "attestation": await self._build_attestation_payload(
                     prompt=prompt,
@@ -275,10 +356,12 @@ class AIService:
                     generated_at=generated_at,
                     agreement_score=1.0,
                     main_divergence="Only one provider was available.",
+                    warnings=warnings,
                 ),
             }
 
-        synthesis_prompt = self._build_synthesis_prompt(prompt, responses)
+        agreement_score_hint = self._calculate_agreement_score(list(responses.values()))
+        synthesis_prompt = self._build_synthesis_prompt(prompt, responses, agreement_score_hint)
         synthesized = await self.get_response(
             synthesis_prompt,
             system_prompt=(
@@ -313,18 +396,27 @@ class AIService:
 
         providers = list(responses.keys())
         provider_outputs = [
-            self._provider_output(provider, response)
+            self._provider_output(provider, response, provider_results)
             for provider, response in responses.items()
         ]
+        warnings = self._build_consensus_warnings(
+            provider_count=len(providers),
+            agreement_score=agreement_score,
+            provider_errors=provider_errors,
+        )
+        diversity_level = self._calculate_diversity_level(len(providers), agreement_score)
 
         return {
             "consensus_report": consensus_report,
             "providers": providers,
             "provider_outputs": provider_outputs,
+            "provider_errors": provider_errors,
             "agreement_score": agreement_score,
             "main_divergence": main_divergence,
             "pillars": pillars,
             "anomalies": anomalies,
+            "warnings": warnings,
+            "diversity_level": diversity_level,
             "synthesis_model": "meta-consensus",
             "attestation": await self._build_attestation_payload(
                 prompt=prompt,
@@ -333,20 +425,32 @@ class AIService:
                 generated_at=generated_at,
                 agreement_score=agreement_score,
                 main_divergence=main_divergence,
+                warnings=warnings,
             ),
         }
 
-    def _provider_output(self, provider: str, text: str) -> Dict[str, object]:
+    def _provider_output(
+        self,
+        provider: str,
+        text: str,
+        provider_results: List[Dict[str, Any]],
+    ) -> Dict[str, object]:
+        telemetry = next((item for item in provider_results if item.get("provider") == provider), {})
         return {
             "provider": provider,
+            "model_id": telemetry.get("model_id", provider),
+            "status": telemetry.get("status", "ok"),
+            "latency_ms": telemetry.get("latency_ms", 0.0),
+            "error": telemetry.get("error"),
             "response_excerpt": text[:MAX_EXCERPT_CHARS],
             "char_count": len(text),
         }
 
-    def _build_synthesis_prompt(self, prompt: str, responses: Dict[str, str]) -> str:
+    def _build_synthesis_prompt(self, prompt: str, responses: Dict[str, str], agreement_hint: float) -> str:
         prompt_parts = [
             "You are an Institutional Truth Oracle for the Monad economy.",
             f"You have responses from {len(responses)} independent model paths.",
+            f"LEXICAL AGREEMENT HINT: {round(agreement_hint, 2)} (0.0 = total divergence, 1.0 = identical wording). Use this as a guide for your final agreement_score.",
             "",
             f"ORIGINAL TOPIC: {prompt}",
             "",
@@ -385,7 +489,7 @@ Return ONLY strict JSON (no markdown fence):
             return None
 
         # Prefer fenced JSON blocks first.
-        fenced = re.findall(r"```(?:json)?\\s*(\{.*?\})\\s*```", text, flags=re.DOTALL)
+        fenced = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, flags=re.DOTALL)
         candidates = fenced or [text[text.find("{"): text.rfind("}") + 1] if "{" in text and "}" in text else ""]
 
         for candidate in candidates:
@@ -461,6 +565,7 @@ Return ONLY strict JSON (no markdown fence):
         generated_at: str,
         agreement_score: float,
         main_divergence: str,
+        warnings: List[str],
     ) -> Dict[str, object]:
         payload = {
             "prompt": prompt,
@@ -470,8 +575,22 @@ Return ONLY strict JSON (no markdown fence):
             "provider_count": len(providers),
             "agreement_score": round(agreement_score, 4),
             "main_divergence": main_divergence,
+            "warnings": warnings,
         }
         return await attestation_service.attest(payload)
+
+    async def _call_with_metrics(
+        self,
+        operation: Awaitable[Optional[str]],
+    ) -> Tuple[Optional[str], float, Optional[str]]:
+        started = time.perf_counter()
+        try:
+            result = await operation
+            latency_ms = (time.perf_counter() - started) * 1000
+            return result, latency_ms, None
+        except Exception as exc:
+            latency_ms = (time.perf_counter() - started) * 1000
+            return None, latency_ms, str(exc)
 
     def _dedupe_preserve_order(self, values: Sequence[str]) -> List[str]:
         seen = set()
@@ -482,6 +601,28 @@ Return ONLY strict JSON (no markdown fence):
             seen.add(value)
             output.append(value)
         return output
+
+    def _calculate_diversity_level(self, provider_count: int, agreement_score: float) -> str:
+        if provider_count <= 1:
+            return "low"
+        if provider_count >= 3 and agreement_score >= 0.6:
+            return "high"
+        return "medium"
+
+    def _build_consensus_warnings(
+        self,
+        provider_count: int,
+        agreement_score: float,
+        provider_errors: List[Dict[str, Any]],
+    ) -> List[str]:
+        warnings: List[str] = []
+        if provider_count <= 1:
+            warnings.append("Low diversity consensus: fewer than 2 provider outputs.")
+        if agreement_score < 0.45:
+            warnings.append("Low agreement detected across provider outputs.")
+        if provider_errors:
+            warnings.append(f"{len(provider_errors)} provider path(s) failed during consensus.")
+        return warnings
 
 
 ai_service = AIService()

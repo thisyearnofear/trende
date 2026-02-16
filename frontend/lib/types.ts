@@ -55,11 +55,24 @@ export interface TrendSummary {
   memePageData?: Record<string, unknown>;
   consensusData?: {
     providers?: string[];
+    provider_errors?: Array<{
+      provider: string;
+      model_id: string;
+      error: string;
+      latency_ms: number;
+    }>;
+    warnings?: string[];
+    diversity_level?: 'low' | 'medium' | 'high';
     agreement_score?: number;
     main_divergence?: string;
     provider_outputs?: Array<{
       provider: string;
+      model_id?: string;
+      status?: 'ok' | 'error';
+      latency_ms?: number;
+      error?: string | null;
       response_excerpt: string;
+      char_count?: number;
     }>;
     pillars?: string[];
     anomalies?: string[];
@@ -118,6 +131,16 @@ export interface ResultsResponse {
   query: Query;
   results: TrendResult[];
   summary?: TrendSummary;
+  telemetry?: {
+    runId: string;
+    providerCount: number;
+    agreementScore: number;
+    diversityLevel: 'low' | 'medium' | 'high';
+    attestationStatus: string;
+    warnings: string[];
+    logs: string[];
+    updatedAt: string;
+  };
 }
 
 export interface StreamEvent {

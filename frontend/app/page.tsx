@@ -242,6 +242,33 @@ export default function Home() {
               </div>
             </div>
 
+            {data.telemetry && (
+              <div className="rounded-2xl border border-slate-700 bg-slate-900/75 p-4">
+                <div className="flex items-center justify-between mb-3 gap-3">
+                  <p className="text-sm font-medium text-slate-200">Mission Timeline</p>
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span>Providers: {data.telemetry.providerCount}</span>
+                    <span>Agreement: {Math.round(data.telemetry.agreementScore * 100)}%</span>
+                    <span>Diversity: {data.telemetry.diversityLevel}</span>
+                  </div>
+                </div>
+                {data.telemetry.warnings.length > 0 && (
+                  <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5">
+                    {data.telemetry.warnings.map((warning, index) => (
+                      <p key={index} className="text-xs text-amber-200">- {warning}</p>
+                    ))}
+                  </div>
+                )}
+                <div className="space-y-2 max-h-44 overflow-auto pr-1">
+                  {(data.telemetry.logs || []).map((line, idx) => (
+                    <div key={idx} className="text-xs text-slate-400 rounded-md border border-slate-800 bg-slate-950/50 px-2 py-1.5">
+                      {line}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
               <div className="lg:col-span-1 space-y-4">
                 <TrendSummary summary={data.summary} />
