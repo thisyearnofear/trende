@@ -5,6 +5,7 @@ import { ToastProvider } from '@/components/Toast';
 import { KeyboardShortcutsProvider, KeyboardShortcutsHint } from '@/components/KeyboardShortcuts';
 import { WalletProvider } from '@/components/WalletProvider';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { ScrollProgress } from '@/components/ScrollProgress';
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -30,6 +31,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} min-h-screen antialiased`}>
         <ThemeProvider>
+          <ScrollProgress />
           <WalletProvider>
             <ToastProvider>
               <KeyboardShortcutsProvider>

@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect } from 'react';
 import { useTrendData } from '@/hooks/useTrendData';
 import { ForgeViewer } from '@/components/ForgeViewer';
 import { Zap, ArrowLeft, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
@@ -13,6 +13,12 @@ export default function MemePage({ params }: { params: Promise<{ queryId: string
   const viewMode = (searchParams.get('view') as 'meme' | 'news') || 'meme';
 
   const { data, isProcessing, status } = useTrendData(queryId);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && queryId) {
+      window.localStorage.setItem('trende:last_query_id', queryId);
+    }
+  }, [queryId]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">

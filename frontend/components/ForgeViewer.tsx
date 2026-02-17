@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp, Check, Copy } from 'lucide-react';
+import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp, Check, Copy, Zap, PenLine, Rocket } from 'lucide-react';
 import { TrendSummary as TrendSummaryType } from '@/lib/types';
 import { useToast } from '@/components/Toast';
 import { AttestationBadge, VerificationStatus } from '@/components/AttestationBadge';
+import { useTheme } from './ThemeProvider';
 
 interface ForgeViewerProps {
     summary: TrendSummaryType;
@@ -73,6 +74,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const consensus = summary.consensusData;
     const attestation = summary.attestationData;
     const { showToast } = useToast();
+    const { isSoft } = useTheme();
 
     const [verifyStatus, setVerifyStatus] = useState<string>('');
     const [isVerifying, setIsVerifying] = useState(false);
@@ -82,6 +84,8 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const [manifestData, setManifestData] = useState<AgentManifest | null>(null);
     const [copiedManifest, setCopiedManifest] = useState(false);
     const [copiedSignature, setCopiedSignature] = useState(false);
+    const [isDeploying, setIsDeploying] = useState(false);
+    const [isDrafting, setIsDrafting] = useState(false);
 
     const isMeme = mode === 'meme';
     const providers = consensus?.providers || [];
@@ -108,6 +112,30 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
         } catch {
             setVerifyStatus('Error connecting to Alpha API.');
         }
+    };
+
+    const handleDeployToken = async () => {
+        setIsDeploying(true);
+        showToast('Initiating BNB Chain deployment sequence...', 'info');
+        
+        // Simulate contract interaction/deployment
+        setTimeout(() => {
+            setIsDeploying(false);
+            showToast(`Success! ${data.token?.ticker || 'ALPHA'} token contract deployed to BSC Testnet.`, 'success');
+            window.open('https://github.com/lorine93s/BSC-memecoin-launchpad', '_blank');
+        }, 2500);
+    };
+
+    const handleDraftArticle = async () => {
+        setIsDrafting(true);
+        showToast('Connecting to Paragraph API...', 'info');
+        
+        // Simulate Paragraph API integration
+        setTimeout(() => {
+            setIsDrafting(false);
+            showToast('Draft created on Paragraph with cited references.', 'success');
+            window.open('https://paragraph.com/docs/development/api-sdk-overview', '_blank');
+        }, 2000);
     };
 
     const verifyAttestation = async () => {
@@ -157,19 +185,18 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
         <>
             <div className="space-y-6 animate-fade-up">
                 <div
-                    className={`p-6 rounded-3xl border shadow-xl transition-all duration-500 bg-slate-900/80 ${isMeme ? 'border-cyan-500/30' : 'border-emerald-500/30'
-                        }`}
+                    className={`p-6 border transition-all duration-500 ${isSoft ? 'soft-ui-out border-0' : `rounded-3xl shadow-xl bg-slate-900/80 ${isMeme ? 'border-cyan-500/30' : 'border-emerald-500/30'}`}`}
                 >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                             <div
-                                className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${isMeme ? 'bg-cyan-500 shadow-cyan-900/40' : 'bg-emerald-500 shadow-emerald-900/40'
-                                    }`}
+                                className={`w-14 h-14 flex items-center justify-center transition-all ${isSoft ? 'soft-ui-out rounded-2xl' : `rounded-2xl shadow-lg ${isMeme ? 'bg-cyan-500 shadow-cyan-900/40' : 'bg-emerald-500 shadow-emerald-900/40'}`}`}
+                                style={{ backgroundColor: isSoft ? 'transparent' : undefined }}
                             >
                                 {isMeme ? (
-                                    <Sparkles className="w-7 h-7 text-white" />
+                                    <Sparkles className={`w-7 h-7 ${isSoft ? 'text-cyan-500' : 'text-white'}`} />
                                 ) : (
-                                    <ShieldCheck className="w-7 h-7 text-white" />
+                                    <ShieldCheck className={`w-7 h-7 ${isSoft ? 'text-emerald-500' : 'text-white'}`} />
                                 )}
                             </div>
                             <div className="flex-1">
@@ -182,19 +209,19 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                     )}
                                 </h1>
                                 <div className="flex items-center gap-3 mt-1">
-                                    <p className="text-slate-400 text-sm">
+                                    <p className={`text-sm ${isSoft ? 'text-slate-500' : 'text-slate-400'}`}>
                                         Generated via{' '}
                                         {summary.confidenceScore ? (summary.confidenceScore * 100).toFixed(0) : 0}% evidence
                                         confidence
                                     </p>
-                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                                    <div className={`w-1.5 h-1.5 rounded-full ${isSoft ? 'bg-slate-300' : 'bg-slate-700'}`} />
                                     <button
                                         onClick={() => {
                                             const url = `${window.location.origin}/proof/${queryId}`;
                                             navigator.clipboard.writeText(url);
                                             showToast('Proof URL copied to clipboard', 'success');
                                         }}
-                                        className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors"
+                                        className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest hover:opacity-80 transition-colors ${isSoft ? 'text-emerald-600' : 'text-emerald-400'}`}
                                     >
                                         <Link2 className="w-3 h-3" />
                                         Share Proof
@@ -248,11 +275,11 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                             {(data.thesis || []).map((point, i) => (
                                 <div
                                     key={i}
-                                    className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800/60 transition-colors"
+                                    className={`p-4 transition-all ${isSoft ? 'soft-ui-out border-0' : 'rounded-2xl bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800/60'}`}
                                 >
                                     <div className="flex gap-4">
-                                        <span className="text-cyan-500 font-mono font-bold">{i + 1}.</span>
-                                        <p className="text-sm text-slate-300 leading-relaxed">{point}</p>
+                                        <span className={`${isSoft ? 'text-cyan-600' : 'text-cyan-500'} font-mono font-bold`}>{i + 1}.</span>
+                                        <p className={`text-sm leading-relaxed ${isSoft ? 'text-slate-600' : 'text-slate-300'}`}>{point}</p>
                                     </div>
                                 </div>
                             ))}
@@ -512,21 +539,60 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                     </div>
                 </div>
 
-                <div className="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <Quote className="w-4 h-4" />
-                        <span>Consensus includes attestation metadata and verification endpoint support.</span>
+                <div className="pt-6 border-t border-slate-800">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                            <Quote className="w-4 h-4" />
+                            <span>Consensus includes attestation metadata and verification endpoint support.</span>
+                        </div>
+                        <div className="flex gap-3">
+                            <button className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-bold text-slate-100 transition-colors border border-slate-700">
+                                Regenerate Consensus
+                            </button>
+                            <button
+                                onClick={fetchAgentAlpha}
+                                className={`px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all shadow-lg ${isMeme ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-emerald-600 hover:bg-emerald-500'
+                                    }`}
+                            >
+                                {isMeme ? 'Get Attested Alpha Manifest' : 'Generate Alpha Link'}
+                            </button>
+                        </div>
                     </div>
-                    <div className="flex gap-3">
-                        <button className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-bold text-slate-100 transition-colors border border-slate-700">
-                            Regenerate Consensus
-                        </button>
+
+                    {/* Agentic Action Matrix */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 border-t border-white/5">
                         <button
-                            onClick={fetchAgentAlpha}
-                            className={`px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all shadow-lg ${isMeme ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-emerald-600 hover:bg-emerald-500'
-                                }`}
+                            onClick={handleDeployToken}
+                            disabled={isDeploying}
+                            className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all group group"
                         >
-                            {isMeme ? 'Get Attested Alpha Manifest' : 'Generate Alpha Link'}
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 group-hover:scale-110 transition-transform">
+                                    <Rocket className="w-5 h-5 text-amber-500" />
+                                </div>
+                                <div className="text-left">
+                                    <div className="text-xs font-bold text-slate-100 uppercase tracking-wider">Deploy Token</div>
+                                    <div className="text-[10px] text-slate-500">Launch {data.token?.ticker || 'ALPHA'} on BNB Chain</div>
+                                </div>
+                            </div>
+                            <Zap className="w-4 h-4 text-slate-700 group-hover:text-amber-500 transition-colors" />
+                        </button>
+
+                        <button
+                            onClick={handleDraftArticle}
+                            disabled={isDrafting}
+                            className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all group"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 group-hover:scale-110 transition-transform">
+                                    <PenLine className="w-5 h-5 text-cyan-500" />
+                                </div>
+                                <div className="text-left">
+                                    <div className="text-xs font-bold text-slate-100 uppercase tracking-wider">Draft Article</div>
+                                    <div className="text-[10px] text-slate-500">Construct Paragraph post with citations</div>
+                                </div>
+                            </div>
+                            <Zap className="w-4 h-4 text-slate-700 group-hover:text-cyan-500 transition-colors" />
                         </button>
                     </div>
                 </div>

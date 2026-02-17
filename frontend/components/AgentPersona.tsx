@@ -76,6 +76,7 @@ export function AgentPersona({
   const messageRef = useRef<HTMLParagraphElement>(null);
   const [displayMessage, setDisplayMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const lastTargetMessageRef = useRef('');
 
   // Animate avatar based on status
@@ -131,19 +132,32 @@ export function AgentPersona({
 
     setIsTyping(true);
     let currentIndex = 0;
-    setDisplayMessage('');
-
-    const typeInterval = setInterval(() => {
-      if (currentIndex < targetMessage.length) {
-        setDisplayMessage(targetMessage.slice(0, currentIndex + 1));
-        currentIndex++;
-      } else {
-        clearInterval(typeInterval);
-        setIsTyping(false);
-      }
-    }, 30);
-
-    return () => clearInterval(typeInterval);
+    
+    // Smooth transition between messages if not empty
+    if (displayMessage && displayMessage.length > 0) {
+      // Faster typing for transitions
+      const typeInterval = setInterval(() => {
+        if (currentIndex < targetMessage.length) {
+          setDisplayMessage(targetMessage.slice(0, currentIndex + 1));
+          currentIndex++;
+        } else {
+          clearInterval(typeInterval);
+          setIsTyping(false);
+        }
+      }, 20);
+      return () => clearInterval(typeInterval);
+    } else {
+      const typeInterval = setInterval(() => {
+        if (currentIndex < targetMessage.length) {
+          setDisplayMessage(targetMessage.slice(0, currentIndex + 1));
+          currentIndex++;
+        } else {
+          clearInterval(typeInterval);
+          setIsTyping(false);
+        }
+      }, 30);
+      return () => clearInterval(typeInterval);
+    }
   }, [status, progress, message]);
 
   // Status indicator config
@@ -160,7 +174,16 @@ export function AgentPersona({
   const StatusIcon = config.icon;
 
   return (
-    <div ref={containerRef} className="flex flex-col items-center sm:flex-row sm:items-start gap-4 p-4 sm:p-6 bg-[var(--bg-secondary)] border-2 border-[var(--border-color)]" style={{ boxShadow: '4px 4px 0px 0px var(--shadow-color)' }}>
+    <div 
+      ref={containerRef} 
+      className="flex flex-col items-center sm:flex-row sm:items-start gap-4 p-4 sm:p-6 bg-[var(--bg-secondary)] border-2 border-[var(--border-color)] transition-all duration-300" 
+      style={{ 
+        boxShadow: isHovered ? '8px 8px 0px 0px var(--accent-cyan)' : '4px 4px 0px 0px var(--shadow-color)',
+        transform: isHovered ? 'translate(-2px, -2px)' : 'none'
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {/* Avatar Container */}
       <div className="relative shrink-0">
         <div 

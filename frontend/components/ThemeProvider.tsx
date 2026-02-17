@@ -2,12 +2,13 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-type Theme = 'dark' | 'light';
+type Theme = 'dark' | 'light' | 'soft';
 
 interface ThemeContextValue {
   theme: Theme;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
+  isSoft: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -53,19 +54,25 @@ export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProvider
     if (!mounted) return;
     
     const root = document.documentElement;
-    root.classList.remove('dark', 'light');
+    root.classList.remove('dark', 'light', 'soft');
     root.classList.add(theme);
     
     localStorage.setItem('trende-theme', theme);
   }, [theme, mounted]);
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'))
+    setThemeState((prev) => {
+      if (prev === 'dark') return 'light';
+      if (prev === 'light') return 'soft';
+      return 'dark';
+    });
   };
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
   };
+
+  const isSoft = theme === 'soft';
 
   // Prevent flash of wrong theme
   if (!mounted) {
@@ -73,7 +80,7 @@ export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProvider
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, isSoft }}>
       {children}
     </ThemeContext.Provider>
   );

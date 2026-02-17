@@ -17,8 +17,6 @@ import {
   Clock3,
   Copy,
   ExternalLink,
-  Eye,
-  EyeOff,
   RefreshCw,
   History,
   Zap,
@@ -27,14 +25,18 @@ import {
   Fingerprint,
   Layers3,
   Share2,
+
   Megaphone,
   ListTree,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Card, Stat, Button, IconButton } from "@/components/DesignSystem";
+import { Card, Button, IconButton } from "@/components/DesignSystem";
 import { Onboarding } from "@/components/Onboarding";
 import { useWallet } from "@/components/WalletProvider";
+import { useTheme } from "@/components/ThemeProvider";
+import { ParagraphConnectModal } from "@/components/integrations/ParagraphConnectModal";
 
 const STATUS_ETAS: Record<
   string,
@@ -51,6 +53,7 @@ const STATUS_ETAS: Record<
 const LAST_QUERY_STORAGE_KEY = "trende:last_query_id";
 
 export default function Home() {
+  const { isSoft } = useTheme();
   const [queryId, setQueryId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return window.localStorage.getItem(LAST_QUERY_STORAGE_KEY);
@@ -60,13 +63,10 @@ export default function Home() {
   const [lastQuery, setLastQuery] = useState<QueryRequest | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showForgeInline, setShowForgeInline] = useState(false);
-  const [focusMode, setFocusMode] = useState<"compact" | "full">("compact");
-  const [showFullOverview, setShowFullOverview] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(true);
   const [showCommons, setShowCommons] = useState(false);
   const [commonsSearch, setCommonsSearch] = useState("");
   const [commonsVisibleCount, setCommonsVisibleCount] = useState(6);
-  const [isSavingPrivate, setIsSavingPrivate] = useState(false);
-  const [isSavingPublic, setIsSavingPublic] = useState(false);
   const { showToast } = useToast();
   const { isConnected } = useWallet();
 
@@ -112,15 +112,6 @@ export default function Home() {
     setLastQuery(null);
   };
 
-  const handleClear = () => {
-    setQueryId(null);
-    setShowHistory(false);
-    setShowForgeInline(false);
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(LAST_QUERY_STORAGE_KEY);
-    }
-  };
-
   const handleLoadCommonsItem = useCallback(
     (id: string) => {
       setQueryId(id);
@@ -131,39 +122,6 @@ export default function Home() {
       showToast("Loaded commons run into current workspace.", "success");
     },
     [showToast],
-  );
-
-  const handleSaveResult = useCallback(
-    async (visibility: "private" | "public") => {
-      if (!activeQueryId) return;
-      if (!isConnected) {
-        showToast("Connect wallet to save this research.", "error");
-        return;
-      }
-      const setLoading = visibility === "public" ? setIsSavingPublic : setIsSavingPrivate;
-      setLoading(true);
-      try {
-        const response = await api.saveResearch(activeQueryId, {
-          visibility,
-          pinToIpfs: visibility === "public",
-        });
-        const uri = response.saved.ipfsUri || response.archive.uri;
-        showToast(
-          visibility === "public"
-            ? `Published. Archive: ${uri}`
-            : "Saved privately to your wallet workspace.",
-          "success",
-        );
-        refresh();
-        refreshSaved();
-      } catch (error) {
-        console.error("Save failed:", error);
-        showToast("Failed to save research run.", "error");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [activeQueryId, isConnected, showToast, refresh, refreshSaved],
   );
 
   const stats = useMemo(() => {
@@ -278,14 +236,6 @@ export default function Home() {
     return Math.round(total);
   }, [confidenceDrivers]);
 
-  const confidenceTone = weightedConfidence >= 75 ? "emerald" : weightedConfidence >= 55 ? "amber" : "rose";
-  const confidenceLabel =
-    weightedConfidence >= 75
-      ? "High confidence, still validate key assumptions."
-      : weightedConfidence >= 55
-        ? "Medium confidence, check supporting evidence before action."
-        : "Low confidence, treat as directional only.";
-
   const shareCardText = useMemo(() => {
     const title = data?.query?.idea || "Trend Analysis";
     const summary = data?.summary?.overview || "No summary available.";
@@ -378,11 +328,6 @@ export default function Home() {
     showToast("Proof link copied.", "success");
   }, [activeQueryId, showToast]);
 
-  const handleCopyShareCard = useCallback(async () => {
-    await navigator.clipboard.writeText(shareCardText);
-    showToast("Share card copied.", "success");
-  }, [shareCardText, showToast]);
-
   const handleCopySocialPost = useCallback(async () => {
     const post = [
       `Conviction snapshot: ${weightedConfidence}% confidence on "${data?.query?.idea || "trend thesis"}".`,
@@ -398,6 +343,71 @@ export default function Home() {
     showToast("Social post copied.", "success");
   }, [weightedConfidence, data, activeQueryId, showToast]);
 
+  const handleDownloadReport = useCallback(async () => {
+    if (!activeQueryId) return;
+
+    try {
+      showToast("Generating report image...", "info");
+      const imageUrl = `/api/report/${activeQueryId}/image`;
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `trende-report-${activeQueryId.slice(0, 8)}.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast("Report downloaded successfully.", "success");
+    } catch (error) {
+      console.error("Download failed:", error);
+      showToast("Failed to download report.", "error");
+    }
+
+  }, [activeQueryId, showToast]);
+
+  const [isParagraphModalOpen, setIsParagraphModalOpen] = useState(false);
+  const [isPublishingToParagraph, setIsPublishingToParagraph] = useState(false);
+
+  const handlePublishToParagraph = useCallback(async (key: string | null = null) => {
+    if (!activeQueryId) return;
+
+    let apiKey = key;
+    if (!apiKey && typeof window !== "undefined") {
+      apiKey = window.localStorage.getItem('trende:paragraph_api_key');
+    }
+
+    if (!apiKey) {
+      setIsParagraphModalOpen(true);
+      return;
+    }
+
+    setIsPublishingToParagraph(true);
+    try {
+      const result = await api.publishToParagraph(activeQueryId, apiKey);
+      if (result.success && result.url) {
+        showToast("Draft published to Paragraph! 📝", "success");
+        window.open(result.url, '_blank');
+      } else {
+        throw new Error("Failed to get draft URL");
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to publish draft. Check API Key.", "error");
+    } finally {
+      setIsPublishingToParagraph(false);
+    }
+  }, [activeQueryId, showToast]);
+
+  const onParagraphConnect = useCallback((key: string) => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem('trende:paragraph_api_key', key);
+    }
+    handlePublishToParagraph(key);
+  }, [handlePublishToParagraph]);
+
+
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] pb-10 transition-colors duration-200">
       <Onboarding />
@@ -408,13 +418,12 @@ export default function Home() {
             <Link
               href="/"
               className="flex items-center gap-2 sm:gap-3"
-              onClick={handleClear}
             >
               <div
-                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shrink-0"
+                className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shrink-0 ${isSoft ? 'rounded-full' : ''}`}
                 style={{
                   backgroundColor: "var(--accent-cyan)",
-                  boxShadow: "2px 2px 0px 0px var(--shadow-color)",
+                  boxShadow: isSoft ? "var(--soft-shadow-out)" : "2px 2px 0px 0px var(--shadow-color)",
                 }}
               >
                 <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--bg-primary)]" />
@@ -439,11 +448,17 @@ export default function Home() {
               />
               <button
                 onClick={() => setShowHistory(!showHistory)}
-                className={`p-2.5 min-h-[44px] min-w-[44px] border-2 transition-colors flex items-center justify-center ${showHistory
-                    ? "bg-[var(--text-primary)] text-[var(--bg-primary)]"
-                    : "bg-[var(--bg-primary)] text-[var(--text-primary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)]"
-                  }`}
-                style={{ boxShadow: "2px 2px 0px 0px var(--shadow-color)" }}
+                className={`p-2.5 min-h-[44px] min-w-[44px] border-2 transition-all flex items-center justify-center ${showHistory
+                  ? "bg-[var(--text-primary)] text-[var(--bg-primary)]"
+                  : "bg-[var(--bg-primary)] text-[var(--text-primary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)]"
+                  } ${isSoft ? 'soft-ui-button border-0 rounded-xl' : ''}`}
+                style={{
+                  boxShadow: isSoft
+                    ? (showHistory ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
+                    : "2px 2px 0px 0px var(--shadow-color)",
+                  backgroundColor: isSoft ? 'var(--soft-bg)' : undefined,
+                  color: isSoft ? 'var(--text-primary)' : undefined
+                }}
                 aria-label="History"
               >
                 <History className="w-5 h-5" />
@@ -452,6 +467,12 @@ export default function Home() {
           </div>
         </div>
       </header>
+
+      <ParagraphConnectModal
+        isOpen={isParagraphModalOpen}
+        onClose={() => setIsParagraphModalOpen(false)}
+        onConnect={onParagraphConnect}
+      />
 
       {/* History Panel */}
       {showHistory && (
@@ -568,10 +589,10 @@ export default function Home() {
                       <div className="flex items-center gap-2 mt-2">
                         <span
                           className={`text-xs px-2 py-0.5 font-mono ${item.status === "completed"
-                              ? "bg-[var(--accent-emerald)] text-[var(--bg-primary)]"
-                              : item.status === "processing"
-                                ? "bg-[var(--accent-amber)] text-[var(--bg-primary)]"
-                                : "bg-[var(--text-muted)] text-[var(--text-primary)]"
+                            ? "bg-[var(--accent-emerald)] text-[var(--bg-primary)]"
+                            : item.status === "processing"
+                              ? "bg-[var(--accent-amber)] text-[var(--bg-primary)]"
+                              : "bg-[var(--text-muted)] text-[var(--text-primary)]"
                             }`}
                         >
                           {item.status.toUpperCase()}
@@ -820,17 +841,17 @@ export default function Home() {
               queryData={
                 lastQuery
                   ? {
-                      topic: lastQuery.idea,
-                      platforms: lastQuery.platforms,
-                      models: lastQuery.models,
-                      threshold: lastQuery.relevanceThreshold,
-                    }
+                    topic: lastQuery.idea,
+                    platforms: lastQuery.platforms,
+                    models: lastQuery.models,
+                    threshold: lastQuery.relevanceThreshold,
+                  }
                   : data?.query
                     ? {
-                        topic: data.query.idea,
-                        platforms: data.query.platforms,
-                        threshold: data.query.relevanceThreshold,
-                      }
+                      topic: data.query.idea,
+                      platforms: data.query.platforms,
+                      threshold: data.query.relevanceThreshold,
+                    }
                     : undefined
               }
             />
@@ -838,365 +859,215 @@ export default function Home() {
         )}
 
         {/* Results */}
-        {data && data.results && data.results.length > 0 && !isProcessing && (
-          <div className="space-y-6">
-            {/* Reliability Strip + Density Controls */}
-            <Card accent={confidenceTone} className="p-3 sm:p-4" id="snapshot">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono w-full">
-                  <div className="border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-2">
-                    <span className="uppercase text-[var(--text-muted)]">Reliability</span>
-                    <p className="font-black mt-1">{reliabilityFlags.length > 0 ? "Caution" : "Stable"}</p>
-                  </div>
-                  <div className="border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-2">
-                    <span className="uppercase text-[var(--text-muted)]">Freshness</span>
-                    <p className="font-black mt-1">{freshness.label}</p>
-                  </div>
-                  <div className="border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-2">
-                    <span className="uppercase text-[var(--text-muted)]">Coverage</span>
-                    <p className="font-black mt-1">{sourceCount} sources / {stats.platforms} platforms</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    variant={focusMode === "compact" ? "primary" : "secondary"}
-                    size="sm"
-                    onClick={() => setFocusMode("compact")}
-                  >
-                    <Eye className="w-3.5 h-3.5 mr-1 inline-block" />
-                    Compact
-                  </Button>
-                  <Button
-                    variant={focusMode === "full" ? "primary" : "secondary"}
-                    size="sm"
-                    onClick={() => setFocusMode("full")}
-                  >
-                    <EyeOff className="w-3.5 h-3.5 mr-1 inline-block" />
-                    Full
-                  </Button>
-                </div>
-              </div>
-            </Card>
 
-            <Card accent="emerald" className="p-3 sm:p-4">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-wider">Persistence</h3>
-                  <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
-                    {isConnected
-                      ? "Claim this run to your wallet. Optionally publish + archive."
-                      : "Connect wallet to save and revisit this run from any device."}
-                  </p>
-                  {data?.query?.isSaved && (
-                    <p className="text-xs font-mono text-[var(--accent-emerald)] mt-2">
-                      Saved as {data.query.visibility?.toUpperCase() || "PRIVATE"}
-                      {data.query.ipfsUri ? ` • ${data.query.ipfsUri}` : ""}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleSaveResult("private")}
-                    disabled={!isConnected || isSavingPrivate}
-                  >
-                    {isSavingPrivate ? "Saving..." : "Save Privately"}
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleSaveResult("public")}
-                    disabled={!isConnected || isSavingPublic}
-                  >
-                    {isSavingPublic ? "Publishing..." : "Publish + Archive"}
-                  </Button>
-                </div>
-              </div>
-            </Card>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              <Stat
-                value={`${weightedConfidence}%`}
-                label="Confidence"
-                accent="cyan"
-              />
-              <Stat value={stats.platforms} label="Sources" accent="emerald" />
-              <Stat value={stats.itemCount} label="Signals" accent="amber" />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-              <aside className="hidden lg:block lg:col-span-1">
-                <Card accent="white" className="p-3 sticky top-24">
-                  <div className="flex items-center gap-2 mb-3">
-                    <ListTree className="w-4 h-4 text-[var(--accent-cyan)]" />
-                    <span className="text-xs font-black uppercase tracking-wider">Jump To</span>
-                  </div>
-                  <div className="space-y-2 text-xs font-mono">
-                    <a href="#snapshot" className="block border-2 border-[var(--border-color)] p-2 hover:border-[var(--accent-cyan)]">Snapshot</a>
-                    <a href="#brief" className="block border-2 border-[var(--border-color)] p-2 hover:border-[var(--accent-cyan)]">Brief</a>
-                    <a href="#drivers" className="block border-2 border-[var(--border-color)] p-2 hover:border-[var(--accent-cyan)]">Drivers</a>
-                    <a href="#risks" className="block border-2 border-[var(--border-color)] p-2 hover:border-[var(--accent-cyan)]">Risks</a>
-                    <a href="#feed" className="block border-2 border-[var(--border-color)] p-2 hover:border-[var(--accent-cyan)]">Signal Feed</a>
-                    <a href="#forge" className="block border-2 border-[var(--border-color)] p-2 hover:border-[var(--accent-cyan)]">Forge</a>
-                  </div>
-                </Card>
-              </aside>
-
-              <div className="lg:col-span-3 space-y-6">
-            {/* Snapshot + Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <Card accent="cyan" className="lg:col-span-2 p-5">
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div>
-                    <h3 className="text-sm font-black uppercase tracking-wider">
-                      Decision Snapshot
-                    </h3>
-                    <p className="text-xs text-[var(--text-muted)] font-mono mt-1">
-                      TL;DR with explicit limitations and evidence context.
-                    </p>
-                  </div>
-                  <span className="text-xs px-2 py-1 border-2 border-[var(--border-color)] font-black uppercase">
-                    {data.summary?.sentiment || "neutral"}
+        {/* Results View */}
+        {activeQueryId && !isProcessing && status === "completed" && data?.results && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            {/* Mission Header */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight mb-2">
+                  {data.query?.idea || "Mission Debrief"}
+                </h2>
+                <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-[var(--text-muted)]">
+                  <span className="bg-[var(--bg-secondary)] px-2 py-0.5 border border-[var(--border-color)]">
+                    ID: {activeQueryId.slice(0, 8)}
+                  </span>
+                  <span>
+                    Started: {new Date(data.query?.createdAt || "").toLocaleString()}
                   </span>
                 </div>
-                <p className={`text-sm leading-relaxed text-[var(--text-secondary)] mb-2 ${showFullOverview ? "" : "line-clamp-4"}`}>
-                  {data.summary?.overview || "No summary available yet."}
-                </p>
-                {(data.summary?.overview?.length || 0) > 280 && (
-                  <button
-                    className="text-xs font-mono underline underline-offset-2 mb-3"
-                    onClick={() => setShowFullOverview((prev) => !prev)}
-                  >
-                    {showFullOverview ? "Show less" : "Show more"}
-                  </button>
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                  <div className="p-3 border-2 border-[var(--border-color)] bg-[var(--bg-primary)]">
-                    <p className="text-[10px] uppercase text-[var(--text-muted)]">Freshness</p>
-                    <p className="font-black">{freshness.label}</p>
-                  </div>
-                  <div className="p-3 border-2 border-[var(--border-color)] bg-[var(--bg-primary)]">
-                    <p className="text-[10px] uppercase text-[var(--text-muted)]">Coverage</p>
-                    <p className="font-black">{sourceCount} total sources</p>
-                  </div>
-                  <div className="p-3 border-2 border-[var(--border-color)] bg-[var(--bg-primary)]">
-                    <p className="text-[10px] uppercase text-[var(--text-muted)]">Known Gaps</p>
-                    <p className="font-black">{reliabilityFlags.length > 0 ? `${reliabilityFlags.length} flags` : "None detected"}</p>
-                  </div>
-                </div>
-              </Card>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => handlePublishToParagraph()}
+                  disabled={isPublishingToParagraph}
+                  className="bg-stone-900 border-stone-700 text-stone-100 hover:bg-stone-800"
+                >
+                  {isPublishingToParagraph ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <span className="mr-1">✍️</span>
+                  )}
+                  {isPublishingToParagraph ? "Publishing..." : "Draft on Paragraph"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleDownloadReport}
+                >
+                  <Copy className="w-4 h-4 mr-1" />
+                  Download Report
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleCopyBrief}
+                >
+                  <Copy className="w-4 h-4 mr-1" />
+                  Copy Brief
+                </Button>
 
-              <Card accent="emerald" className="p-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Share2 className="w-4 h-4 text-[var(--accent-emerald)]" />
-                  <h3 className="text-sm font-black uppercase tracking-wider">Next Actions</h3>
+                <div className="flex gap-1">
+                  <IconButton
+                    icon={<Share2 className="w-4 h-4" />}
+                    onClick={handleCopyShareLink}
+                    ariaLabel="Share Link"
+                  />
+                  <IconButton
+                    icon={<Megaphone className="w-4 h-4" />}
+                    onClick={handleCopySocialPost}
+                    ariaLabel="Share Social"
+                  />
                 </div>
-                <div className="space-y-2">
-                  <Button variant="secondary" className="w-full" onClick={() => handleCopyBrief()}>
-                    <Copy className="w-4 h-4 mr-2 inline-block" />
-                    Copy Brief
-                  </Button>
-                  <Button variant="secondary" className="w-full" onClick={() => handleCopyShareLink()}>
-                    <ExternalLink className="w-4 h-4 mr-2 inline-block" />
-                    Copy Share Link
-                  </Button>
-                  <Button variant="secondary" className="w-full" onClick={() => handleCopyShareCard()}>
-                    <Copy className="w-4 h-4 mr-2 inline-block" />
-                    Copy Share Card
-                  </Button>
-                  <Button variant="secondary" className="w-full" onClick={() => handleCopySocialPost()}>
-                    <Megaphone className="w-4 h-4 mr-2 inline-block" />
-                    Copy Social Post
-                  </Button>
-                  <Link href={activeQueryId ? `/proof/${activeQueryId}` : "#"}>
-                    <Button variant="primary" className="w-full">
-                      Open Proof Page
-                    </Button>
-                  </Link>
-                  <button
-                    onClick={() => setShowForgeInline((prev) => !prev)}
-                    className="w-full border-2 border-[var(--border-color)] bg-[var(--bg-primary)] min-h-[44px] font-black uppercase tracking-wider text-xs"
-                  >
-                    {showForgeInline ? "Hide Inline Forge" : "Show Inline Forge"}
-                  </button>
-                </div>
-              </Card>
+              </div>
             </div>
 
-            <Card accent={confidenceTone} className="p-4 sm:p-5">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <p className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
-                  Confidence Narrative
-                </p>
-                <span className="text-sm font-black">{weightedConfidence}% weighted</span>
-              </div>
-              <p className="text-sm text-[var(--text-secondary)] mb-3">{confidenceLabel}</p>
-              <pre className="whitespace-pre-wrap text-xs font-mono bg-[var(--bg-primary)] border-2 border-[var(--border-color)] p-3">
-                {shareCardText}
-              </pre>
-            </Card>
-
-            {/* Progressive Disclosure Panels */}
-            <div className="space-y-4">
-              <details open={focusMode === "compact"} className="group" id="brief">
-                <summary className="list-none cursor-pointer">
-                  <Card accent="white" className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Sparkles className="w-4 h-4 text-[var(--accent-cyan)]" />
-                        <div className="min-w-0">
-                          <span className="text-sm font-black uppercase tracking-wider block">
-                            Conviction Brief
-                          </span>
-                          <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
-                            {panelSummaries.brief}
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
-                    </div>
-                  </Card>
-                </summary>
-                <div className="mt-3">
-                  <TrendSummary summary={data.summary} />
-                </div>
-              </details>
-
-              <details open={focusMode === "full"} className="group" id="drivers">
-                <summary className="list-none cursor-pointer">
-                  <Card accent="amber" className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Layers3 className="w-4 h-4 text-[var(--accent-amber)]" />
-                        <div className="min-w-0">
-                          <span className="text-sm font-black uppercase tracking-wider block">
-                            Confidence Drivers
-                          </span>
-                          <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
-                            {panelSummaries.drivers}
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
-                    </div>
-                  </Card>
-                </summary>
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {confidenceDrivers.map((driver) => (
-                    <Card key={driver.label} accent={driver.accent} className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs uppercase font-black text-[var(--text-muted)]">
-                          {driver.label}
-                        </p>
-                        <p className="font-black">{driver.value}%</p>
-                      </div>
-                      <p className="text-[10px] uppercase font-mono text-[var(--text-muted)] mb-2">
-                        Weight {Math.round(driver.weight * 100)}%
-                      </p>
-                      <div className="h-2 bg-[var(--bg-primary)] border-2 border-[var(--border-color)]">
-                        <div
-                          className="h-full"
-                          aria-label={`${driver.label} ${driver.value}%`}
-                          style={{
-                            width: `${driver.value}%`,
-                            backgroundColor:
-                              driver.accent === "emerald"
-                                ? "var(--accent-emerald)"
-                                : driver.accent === "amber"
-                                  ? "var(--accent-amber)"
-                                  : driver.accent === "rose"
-                                    ? "var(--accent-rose)"
-                                    : "var(--accent-cyan)",
-                          }}
-                        />
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </details>
-
-              <details open={focusMode === "full"} className="group" id="risks">
-                <summary className="list-none cursor-pointer">
-                  <Card accent="rose" className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <AlertTriangle className="w-4 h-4 text-[var(--accent-rose)]" />
-                        <div className="min-w-0">
-                          <span className="text-sm font-black uppercase tracking-wider block">
-                            Reliability & Gaps
-                          </span>
-                          <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
-                            {panelSummaries.risks}
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
-                    </div>
-                  </Card>
-                </summary>
-                <div className="mt-3 space-y-2">
-                  {reliabilityFlags.length === 0 ? (
-                    <Card accent="emerald" className="p-3 text-sm font-mono">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-[var(--accent-emerald)]" />
-                        No critical reliability gaps detected for this run.
-                      </div>
-                    </Card>
-                  ) : (
-                    reliabilityFlags.map((flag, index) => (
-                      <Card key={`${flag}-${index}`} accent="rose" className="p-3 text-sm font-mono">
-                        {flag}
-                      </Card>
-                    ))
-                  )}
-                  <Card accent="amber" className="p-4">
-                    <p className="text-xs uppercase font-black text-[var(--text-muted)] mb-2">
-                      Free Source Expansion Queue
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
-                      <a className="underline underline-offset-2" href="https://api.gdeltproject.org/api/v2/doc/doc" target="_blank" rel="noreferrer">GDELT DOC 2.0</a>
-                      <a className="underline underline-offset-2" href="https://stream.wikimedia.org/" target="_blank" rel="noreferrer">Wikimedia EventStreams</a>
-                      <a className="underline underline-offset-2" href="https://github.com/HackerNews/API" target="_blank" rel="noreferrer">Hacker News API</a>
-                      <a className="underline underline-offset-2" href="https://api.stackexchange.com/docs" target="_blank" rel="noreferrer">Stack Exchange API</a>
-                    </div>
-                  </Card>
-                </div>
-              </details>
-
-              <details open className="group" id="feed">
-                <summary className="list-none cursor-pointer">
-                  <Card accent="cyan" className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0">
-                        <span className="text-sm font-black uppercase tracking-wider block">
-                          Signal Feed
-                        </span>
-                        <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
-                          {panelSummaries.feed}
-                        </span>
-                      </div>
-                      <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
-                    </div>
-                  </Card>
-                </summary>
-                <div className="mt-3">
-                  <PlatformTabs results={data.results} />
-                </div>
-              </details>
-
-              {showForgeInline && data.summary && activeQueryId && (
-                <details open className="group" id="forge">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="md:col-span-2">
+                <details open={briefOpen} onToggle={(e) => setBriefOpen(e.currentTarget.open)} className="group" id="brief">
                   <summary className="list-none cursor-pointer">
-                    <Card accent="emerald" className="p-3 sm:p-4">
+                    <Card accent="white" className="p-3 sm:p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Sparkles className="w-4 h-4 text-[var(--accent-cyan)]" />
+                          <div className="min-w-0">
+                            <span className="text-sm font-black uppercase tracking-wider block">
+                              Conviction Brief
+                            </span>
+                            <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
+                              {panelSummaries.brief}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                      </div>
+                    </Card>
+                  </summary>
+                  <div className="mt-3">
+                    <TrendSummary summary={data.summary} />
+                  </div>
+                </details>
+              </div>
+
+              <div className="md:col-span-1">
+                <details className="group" id="drivers">
+                  <summary className="list-none cursor-pointer">
+                    <Card accent="amber" className="p-3 sm:p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Layers3 className="w-4 h-4 text-[var(--accent-amber)]" />
+                          <div className="min-w-0">
+                            <span className="text-sm font-black uppercase tracking-wider block">
+                              Confidence Drivers
+                            </span>
+                            <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
+                              {panelSummaries.drivers}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                      </div>
+                    </Card>
+                  </summary>
+                  <div className="mt-3 space-y-3">
+                    {confidenceDrivers.map((driver) => (
+                      <Card key={driver.label} accent={driver.accent} className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs uppercase font-black text-[var(--text-muted)]">
+                            {driver.label}
+                          </p>
+                          <p className="font-black">{driver.value}%</p>
+                        </div>
+                        <p className="text-[10px] uppercase font-mono text-[var(--text-muted)] mb-2">
+                          Weight {Math.round(driver.weight * 100)}%
+                        </p>
+                        <div className="h-2 bg-[var(--bg-primary)] border-2 border-[var(--border-color)]">
+                          <div
+                            className="h-full"
+                            aria-label={`${driver.label} ${driver.value}%`}
+                            style={{
+                              width: `${driver.value}%`,
+                              backgroundColor:
+                                driver.accent === "emerald"
+                                  ? "var(--accent-emerald)"
+                                  : driver.accent === "amber"
+                                    ? "var(--accent-amber)"
+                                    : driver.accent === "rose"
+                                      ? "var(--accent-rose)"
+                                      : "var(--accent-cyan)",
+                            }}
+                          />
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </details>
+              </div>
+
+              <div className="md:col-span-1">
+                <details className="group" id="risks">
+                  <summary className="list-none cursor-pointer">
+                    <Card accent="rose" className="p-3 sm:p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <AlertTriangle className="w-4 h-4 text-[var(--accent-rose)]" />
+                          <div className="min-w-0">
+                            <span className="text-sm font-black uppercase tracking-wider block">
+                              Reliability & Gaps
+                            </span>
+                            <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
+                              {panelSummaries.risks}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                      </div>
+                    </Card>
+                  </summary>
+                  <div className="mt-3 space-y-2">
+                    {reliabilityFlags.length === 0 ? (
+                      <Card accent="emerald" className="p-3 text-sm font-mono">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-[var(--accent-emerald)]" />
+                          No critical reliability gaps detected for this run.
+                        </div>
+                      </Card>
+                    ) : (
+                      reliabilityFlags.map((flag, index) => (
+                        <Card key={`${flag}-${index}`} accent="rose" className="p-3 text-sm font-mono">
+                          {flag}
+                        </Card>
+                      ))
+                    )}
+                    <Card accent="amber" className="p-4">
+                      <p className="text-xs uppercase font-black text-[var(--text-muted)] mb-2">
+                        Free Source Expansion Queue
+                      </p>
+                      <div className="grid grid-cols-1 gap-2 text-xs font-mono">
+                        <a className="underline underline-offset-2" href="https://api.gdeltproject.org/api/v2/doc/doc" target="_blank" rel="noreferrer">GDELT DOC 2.0</a>
+                        <a className="underline underline-offset-2" href="https://stream.wikimedia.org/" target="_blank" rel="noreferrer">Wikimedia EventStreams</a>
+                        <a className="underline underline-offset-2" href="https://github.com/HackerNews/API" target="_blank" rel="noreferrer">Hacker News API</a>
+                        <a className="underline underline-offset-2" href="https://api.stackexchange.com/docs" target="_blank" rel="noreferrer">Stack Exchange API</a>
+                      </div>
+                    </Card>
+                  </div>
+                </details>
+              </div>
+
+              <div className="md:col-span-2">
+                <details open className="group" id="feed">
+                  <summary className="list-none cursor-pointer">
+                    <Card accent="cyan" className="p-3 sm:p-4">
                       <div className="flex items-center justify-between">
                         <div className="min-w-0">
                           <span className="text-sm font-black uppercase tracking-wider block">
-                            Inline Forge Workspace
+                            Signal Feed
                           </span>
                           <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
-                            {panelSummaries.forge}
+                            {panelSummaries.feed}
                           </span>
                         </div>
                         <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
@@ -1204,15 +1075,39 @@ export default function Home() {
                     </Card>
                   </summary>
                   <div className="mt-3">
-                    <ForgeViewer summary={data.summary} mode="news" queryId={activeQueryId} />
+                    <PlatformTabs results={data.results} />
                   </div>
                 </details>
+              </div>
+
+              {showForgeInline && data.summary && activeQueryId && (
+                <div className="md:col-span-2">
+                  <details open className="group" id="forge">
+                    <summary className="list-none cursor-pointer">
+                      <Card accent="emerald" className="p-3 sm:p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0">
+                            <span className="text-sm font-black uppercase tracking-wider block">
+                              Inline Forge Workspace
+                            </span>
+                            <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
+                              {panelSummaries.forge}
+                            </span>
+                          </div>
+                          <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                        </div>
+                      </Card>
+                    </summary>
+                    <div className="mt-3">
+                      <ForgeViewer summary={data.summary} mode="news" queryId={activeQueryId} />
+                    </div>
+                  </details>
+                </div>
               )}
-            </div>
-            </div>
             </div>
           </div>
         )}
+
 
         {/* Empty State */}
         {!queryId && !isProcessing && (

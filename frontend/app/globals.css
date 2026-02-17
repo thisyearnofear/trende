@@ -52,6 +52,11 @@
   --status-warning: #ffaa00;
   --status-error: #ff4444;
   --status-info: #00ffff;
+  
+  /* Neumorphism / Soft UI */
+  --soft-shadow-out: 6px 6px 12px #050505, -6px -6px 12px #0f0f0f;
+  --soft-shadow-in: inset 6px 6px 12px #050505, inset -6px -6px 12px #0f0f0f;
+  --soft-bg: #0a0a0a;
 }
 
 /* ----------------------------------------
@@ -86,6 +91,50 @@
   --status-warning: #cc7700;
   --status-error: #cc0000;
   --status-info: #0066cc;
+
+  /* Neumorphism / Soft UI */
+  --soft-shadow-out: 6px 6px 12px #d9d9d9, -6px -6px 12px #ffffff;
+  --soft-shadow-in: inset 6px 6px 12px #d9d9d9, inset -6px -6px 12px #ffffff;
+  --soft-bg: #fafafa;
+}
+
+/* ----------------------------------------
+   NEUMORPHIC THEME
+   ---------------------------------------- */
+.soft {
+  /* Backgrounds */
+  --bg-primary: #e0e0e0;
+  --bg-secondary: #e0e0e0;
+  --bg-tertiary: #d1d1d1;
+
+  /* Text */
+  --text-primary: #444444;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+
+  /* Borders & Shadows */
+  --border-color: transparent;
+  --border-width: 0px;
+  --shadow-color: rgba(0,0,0,0.1);
+  --shadow-offset: 0px;
+
+  /* Accents - Softer colors */
+  --accent-cyan: #4db6ac;
+  --accent-emerald: #81c784;
+  --accent-amber: #ffb74d;
+  --accent-rose: #e57373;
+  --accent-violet: #9575cd;
+
+  /* Status */
+  --status-success: #81c784;
+  --status-warning: #ffb74d;
+  --status-error: #e57373;
+  --status-info: #4db6ac;
+
+  /* Neumorphism / Soft UI */
+  --soft-shadow-out: 8px 8px 16px #bebebe, -8px -8px 16px #ffffff;
+  --soft-shadow-in: inset 8px 8px 16px #bebebe, inset -8px -8px 16px #ffffff;
+  --soft-bg: #e0e0e0;
 }
 
 /* ============================================
@@ -221,6 +270,33 @@ body {
 
 .animate-fade-in {
   animation: fadeInUp 300ms ease-out both;
+}
+
+/* ============================================
+   NEUMORPHISM CLASSES
+   ============================================ */
+.soft-ui-out {
+  background: var(--soft-bg);
+  box-shadow: var(--soft-shadow-out);
+  border-radius: 20px;
+}
+
+.soft-ui-in {
+  background: var(--soft-bg);
+  box-shadow: var(--soft-shadow-in);
+  border-radius: 20px;
+}
+
+.soft-ui-button {
+  background: var(--soft-bg);
+  box-shadow: var(--soft-shadow-out);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.soft-ui-button:active {
+  box-shadow: var(--soft-shadow-in);
+  transform: scale(0.98);
 }
 
 /* ============================================

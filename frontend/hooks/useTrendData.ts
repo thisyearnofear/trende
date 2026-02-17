@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import useSWR from 'swr';
 import { api, ApiError } from '@/lib/api';
+import { useTheme } from '@/components/ThemeProvider';
 import { 
   QueryRequest, 
   QueryResponse, 
@@ -53,6 +54,7 @@ export function useTrendData(
   options: UseTrendDataOptions = {}
 ): UseTrendDataReturn {
   const { sse = true } = options;
+  const { isSoft } = useTheme();
   
   const [optimisticStatus, setOptimisticStatus] = useState<QueryStatus | null>(null);
   const [progress, setProgress] = useState(0);

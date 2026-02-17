@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from './ThemeProvider';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Sparkles } from 'lucide-react';
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
@@ -9,22 +9,26 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="
+      className={`
         relative p-2.5 min-h-[44px] min-w-[44px] 
         border-2 transition-all duration-200
         flex items-center justify-center
-        dark:border-white dark:bg-[#0a0a0a] dark:text-white dark:hover:bg-white dark:hover:text-black
-        light:border-black light:bg-white light:text-black light:hover:bg-black light:hover:text-white
-      "
+        ${theme === 'dark' ? 'border-white bg-[#0a0a0a] text-white hover:bg-white hover:text-black' : 
+          theme === 'light' ? 'border-black bg-white text-black hover:bg-black hover:text-white' :
+          'soft-ui-button border-transparent text-[#444]'}
+      `}
       style={{ 
-        boxShadow: theme === 'dark' ? '2px 2px 0px 0px #fff' : '2px 2px 0px 0px #000',
+        boxShadow: theme === 'dark' ? '2px 2px 0px 0px #fff' : 
+                   theme === 'light' ? '2px 2px 0px 0px #000' : 'var(--soft-shadow-out)',
       }}
-      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : theme === 'light' ? 'Switch to soft mode' : 'Switch to dark mode'}
     >
       {theme === 'dark' ? (
         <Sun className="w-5 h-5" />
-      ) : (
+      ) : theme === 'light' ? (
         <Moon className="w-5 h-5" />
+      ) : (
+        <Sparkles className="w-5 h-5" />
       )}
     </button>
   );
@@ -37,22 +41,26 @@ export function ThemeToggleCompact() {
   return (
     <button
       onClick={toggleTheme}
-      className="
+      className={`
         relative p-2 min-h-[40px] min-w-[40px]
         border-2 transition-all duration-200
         flex items-center justify-center
-        dark:border-white dark:bg-[#0a0a0a] dark:text-white
-        light:border-black light:bg-white light:text-black
-      "
+        ${theme === 'dark' ? 'border-white bg-[#0a0a0a] text-white' : 
+          theme === 'light' ? 'border-black bg-white text-black' :
+          'soft-ui-button border-transparent text-[#444]'}
+      `}
       style={{ 
-        boxShadow: theme === 'dark' ? '2px 2px 0px 0px #fff' : '2px 2px 0px 0px #000',
+        boxShadow: theme === 'dark' ? '2px 2px 0px 0px #fff' : 
+                   theme === 'light' ? '2px 2px 0px 0px #000' : 'var(--soft-shadow-out)',
       }}
-      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : theme === 'light' ? 'Switch to soft mode' : 'Switch to dark mode'}
     >
       {theme === 'dark' ? (
         <Sun className="w-4 h-4" />
-      ) : (
+      ) : theme === 'light' ? (
         <Moon className="w-4 h-4" />
+      ) : (
+        <Sparkles className="w-4 h-4" />
       )}
     </button>
   );

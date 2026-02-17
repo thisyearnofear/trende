@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect } from 'react';
 import { useTrendData } from '@/hooks/useTrendData';
 import { ForgeViewer } from '@/components/ForgeViewer';
 import { AttestationBadge } from '@/components/AttestationBadge';
@@ -12,6 +12,33 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
     const { queryId } = use(params);
     const { data, isProcessing, status } = useTrendData(queryId);
     const { showToast } = useToast();
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && queryId) {
+            window.localStorage.setItem('trende:last_query_id', queryId);
+        }
+    }, [queryId]);
+
+    const handleDownloadReport = async () => {
+        try {
+            showToast('Generating report image...', 'success');
+            const imageUrl = `/api/report/${queryId}/image`;
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `trende-report-${queryId.slice(0, 8)}.png`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            showToast('Report downloaded successfully.', 'success');
+        } catch (error) {
+            console.error('Download failed:', error);
+            showToast('Failed to download report.', 'error');
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#020617] text-slate-100 font-sans selection:bg-emerald-500/30">
@@ -40,6 +67,13 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                         </div>
 
                         <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleDownloadReport}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                            >
+                                <Fingerprint className="w-3.5 h-3.5" />
+                                Download Report
+                            </button>
                             <AttestationBadge
                                 attestation={data?.summary?.attestationData}
                                 size="md"

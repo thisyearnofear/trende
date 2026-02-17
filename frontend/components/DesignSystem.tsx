@@ -18,7 +18,9 @@
  */
 
 import { ReactNode, useState, CSSProperties } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useTheme } from './ThemeProvider';
 
 // ============================================
 // DESIGN TOKENS (CSS Variables)
@@ -47,6 +49,7 @@ export function Card({
   style,
 }: CardProps) {
   const [isPressed, setIsPressed] = useState(false);
+  const { isSoft } = useTheme();
   
   const accentBorder = {
     cyan: 'border-[var(--accent-cyan)]',
@@ -65,26 +68,33 @@ export function Card({
   };
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
       className={cn(
         'bg-[var(--bg-secondary)] border-2 transition-all duration-100',
-        accentBorder[accent],
+        !isSoft && accentBorder[accent],
+        isSoft ? 'soft-ui-out border-0' : 'rounded-none',
         interactive && 'cursor-pointer',
         className
       )}
       style={{
-        boxShadow: isPressed && interactive 
-          ? 'none' 
-          : `${shadowSize[shadow]} ${shadowSize[shadow]} 0px 0px var(--shadow-color)`,
-        transform: isPressed && interactive ? `translate(${shadowSize[shadow]}, ${shadowSize[shadow]})` : undefined,
+        boxShadow: isSoft 
+          ? (isPressed && interactive ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
+          : (isPressed && interactive 
+              ? 'none' 
+              : `${shadowSize[shadow]} ${shadowSize[shadow]} 0px 0px var(--shadow-color)`),
+        transform: !isSoft && isPressed && interactive ? `translate(${shadowSize[shadow]}, ${shadowSize[shadow]})` : undefined,
         ...style,
       }}
       onMouseDown={() => interactive && setIsPressed(true)}
       onMouseUp={() => setIsPressed(false)}
       onMouseLeave={() => setIsPressed(false)}
+      whileHover={interactive ? { scale: 1.01 } : undefined}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
@@ -111,6 +121,7 @@ export function Button({
   type = 'button',
 }: ButtonProps) {
   const [isPressed, setIsPressed] = useState(false);
+  const { isSoft } = useTheme();
   
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-xs',
@@ -127,29 +138,37 @@ export function Button({
   };
 
   return (
-    <button
+    <motion.button
       type={type}
       onClick={onClick}
       disabled={disabled}
       className={cn(
         'border-2 font-black uppercase tracking-wider transition-all duration-100',
         'disabled:opacity-50 disabled:cursor-not-allowed',
-        'hover:-translate-x-0.5 hover:-translate-y-0.5',
+        !isSoft && 'hover:-translate-x-0.5 hover:-translate-y-0.5',
+        isSoft ? 'soft-ui-button border-0' : 'rounded-none',
         'min-h-[44px]',
         sizeClasses[size],
-        variantClasses[variant],
+        !isSoft && variantClasses[variant],
+        isSoft && variant === 'ghost' && 'bg-transparent shadow-none border-0',
         className
       )}
       style={{
-        boxShadow: isPressed ? 'none' : '4px 4px 0px 0px var(--shadow-color)',
-        transform: isPressed ? 'translate(4px, 4px)' : undefined,
+        boxShadow: isSoft 
+          ? (isPressed ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
+          : (isPressed ? 'none' : '4px 4px 0px 0px var(--shadow-color)'),
+        transform: !isSoft && isPressed ? 'translate(4px, 4px)' : undefined,
+        backgroundColor: isSoft && variant !== 'ghost' ? 'var(--soft-bg)' : undefined,
+        color: isSoft ? 'var(--text-primary)' : undefined,
       }}
       onMouseDown={() => setIsPressed(true)}
       onMouseUp={() => setIsPressed(false)}
       onMouseLeave={() => setIsPressed(false)}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
     >
       {children}
-    </button>
+    </motion.button>
   );
 }
 
@@ -176,6 +195,7 @@ export function Input({
   label,
 }: InputProps) {
   const InputComponent = rows > 1 ? 'textarea' : 'input';
+  const { isSoft } = useTheme();
   
   return (
     <div className={className}>
@@ -193,11 +213,12 @@ export function Input({
         className={cn(
           'w-full bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-muted)]',
           'border-2 border-[var(--border-color)] p-4 font-mono text-sm',
-          'focus:outline-none focus:border-[var(--accent-cyan)]',
+          !isSoft && 'focus:border-[var(--accent-cyan)]',
+          isSoft ? 'soft-ui-in border-0' : 'rounded-none focus:outline-none',
           'disabled:opacity-50',
           'min-h-[44px]'
         )}
-        style={{ boxShadow: '4px 4px 0px 0px var(--shadow-color)' }}
+        style={{ boxShadow: isSoft ? 'var(--soft-shadow-in)' : '4px 4px 0px 0px var(--shadow-color)' }}
       />
     </div>
   );
@@ -213,6 +234,7 @@ interface BadgeProps {
 }
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
+  const { isSoft } = useTheme();
   const variantClasses = {
     cyan: 'bg-[var(--accent-cyan)] text-[var(--bg-primary)]',
     emerald: 'bg-[var(--accent-emerald)] text-[var(--bg-primary)]',
@@ -223,16 +245,20 @@ export function Badge({ children, variant = 'default', className }: BadgeProps) 
   };
   
   return (
-    <span
+    <motion.span
+      initial={{ scale: 0.9, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
       className={cn(
-        'inline-flex items-center px-2 py-1 text-xs font-black uppercase tracking-wider border-2 border-[var(--border-color)]',
+        'inline-flex items-center px-2 py-1 text-xs font-black uppercase tracking-wider border-2',
+        !isSoft && 'border-[var(--border-color)]',
+        isSoft ? 'soft-ui-out border-0 rounded-lg' : 'rounded-none',
         variantClasses[variant],
         className
       )}
-      style={{ boxShadow: '2px 2px 0px 0px var(--shadow-color)' }}
+      style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '2px 2px 0px 0px var(--shadow-color)' }}
     >
       {children}
-    </span>
+    </motion.span>
   );
 }
 
@@ -276,6 +302,7 @@ interface ProgressProps {
 
 export function Progress({ value, max = 100, accent = 'cyan', className }: ProgressProps) {
   const percentage = Math.min((value / max) * 100, 100);
+  const { isSoft } = useTheme();
   
   const accentColor = {
     cyan: 'var(--accent-cyan)',
@@ -287,11 +314,20 @@ export function Progress({ value, max = 100, accent = 'cyan', className }: Progr
 
   return (
     <div
-      className={cn('w-full h-6 bg-[var(--bg-primary)] border-2 border-[var(--border-color)]', className)}
-      style={{ boxShadow: '2px 2px 0px 0px var(--shadow-color)' }}
+      className={cn(
+        'w-full h-6 bg-[var(--bg-primary)] border-2',
+        !isSoft && 'border-[var(--border-color)]',
+        isSoft ? 'soft-ui-in border-0 rounded-full' : 'rounded-none',
+        className
+      )}
+      style={{ boxShadow: isSoft ? 'var(--soft-shadow-in)' : '2px 2px 0px 0px var(--shadow-color)' }}
     >
       <div
-        className="h-full border-r-2 border-[var(--border-color)] transition-all duration-300"
+        className={cn(
+          'h-full transition-all duration-300',
+          !isSoft && 'border-r-2 border-[var(--border-color)]',
+          isSoft ? 'rounded-full' : ''
+        )}
         style={{ width: `${percentage}%`, backgroundColor: accentColor }}
       />
     </div>
@@ -356,6 +392,7 @@ export function IconButton({
   ariaLabel 
 }: IconButtonProps) {
   const [isPressed, setIsPressed] = useState(false);
+  const { isSoft } = useTheme();
   
   return (
     <button
@@ -363,15 +400,20 @@ export function IconButton({
       disabled={disabled}
       aria-label={ariaLabel}
       className={cn(
-        'flex items-center gap-2 p-2.5 min-h-[44px] min-w-[44px]',
-        'border-2 border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-primary)]',
-        'hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)]',
-        'transition-colors disabled:opacity-30',
+        'flex items-center gap-2 p-2.5 min-h-[44px] min-w-[44px] transition-all',
+        !isSoft && 'border-2 border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-primary)]',
+        !isSoft && 'hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)]',
+        isSoft ? 'soft-ui-button border-0 rounded-xl' : 'rounded-none',
+        'disabled:opacity-30',
         label && 'px-4'
       )}
       style={{
-        boxShadow: isPressed ? 'none' : '2px 2px 0px 0px var(--shadow-color)',
-        transform: isPressed ? 'translate(2px, 2px)' : undefined,
+        boxShadow: isSoft 
+          ? (isPressed ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
+          : (isPressed ? 'none' : '2px 2px 0px 0px var(--shadow-color)'),
+        transform: !isSoft && isPressed ? 'translate(2px, 2px)' : undefined,
+        backgroundColor: isSoft ? 'var(--soft-bg)' : undefined,
+        color: isSoft ? 'var(--text-primary)' : undefined,
       }}
       onMouseDown={() => setIsPressed(true)}
       onMouseUp={() => setIsPressed(false)}
@@ -395,20 +437,31 @@ interface ToggleProps {
 }
 
 export function Toggle({ checked, onChange, label }: ToggleProps) {
+  const { isSoft } = useTheme();
   return (
     <button
       onClick={() => onChange(!checked)}
       className="flex items-center gap-3 group"
     >
       <div
-        className="relative w-14 h-7 border-2 border-[var(--border-color)] transition-colors duration-200 bg-[var(--bg-primary)]"
-        style={{ boxShadow: '2px 2px 0px 0px var(--shadow-color)' }}
+        className={cn(
+          "relative w-14 h-7 transition-all duration-200 bg-[var(--bg-primary)]",
+          !isSoft && "border-2 border-[var(--border-color)]",
+          isSoft ? "soft-ui-in border-0 rounded-full" : "rounded-none"
+        )}
+        style={{ boxShadow: isSoft ? "var(--soft-shadow-in)" : "2px 2px 0px 0px var(--shadow-color)" }}
       >
         <div
           className={cn(
-            'absolute top-0.5 w-5 h-5 border-2 border-[var(--border-color)] bg-[var(--bg-secondary)] transition-all duration-200',
-            checked ? 'left-7 bg-[var(--accent-cyan)]' : 'left-0.5'
+            'absolute top-0.5 w-5 h-5 transition-all duration-200',
+            !isSoft && 'border-2 border-[var(--border-color)] bg-[var(--bg-secondary)]',
+            isSoft ? 'rounded-full' : 'rounded-none',
+            checked ? (isSoft ? 'left-8 bg-[var(--accent-cyan)]' : 'left-7 bg-[var(--accent-cyan)]') : 'left-0.5'
           )}
+          style={{ 
+            boxShadow: isSoft && !checked ? 'var(--soft-shadow-out)' : undefined,
+            backgroundColor: isSoft && !checked ? 'var(--soft-bg)' : undefined
+          }}
         />
       </div>
       {label && (

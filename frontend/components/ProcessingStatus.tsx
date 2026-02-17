@@ -16,6 +16,7 @@ import {
 import { TerminalLog } from "./TypewriterText";
 import { AgentPersona } from "./AgentPersona";
 import { Card, Progress, Badge } from "./DesignSystem";
+import { useTheme } from "./ThemeProvider";
 
 interface ProcessingStatusProps {
   status: QueryStatus | null;
@@ -88,6 +89,7 @@ export function ProcessingStatus({
   isProcessing,
   queryData,
 }: ProcessingStatusProps) {
+  const { isSoft } = useTheme();
   const currentStageIndex = Math.min(
     Math.floor((progress / 100) * STAGES.length),
     STAGES.length - 1,
@@ -102,12 +104,11 @@ export function ProcessingStatus({
     const interval = setInterval(() => {
       setActiveHash(
         "0x" +
-          Array.from({ length: 4 }, () =>
+          Array.from({ length: 12 }, () =>
             Math.floor(Math.random() * 16).toString(16),
-          ).join("") +
-          "...",
+          ).join("")
       );
-    }, 120);
+    }, 80);
     return () => clearInterval(interval);
   }, [isProcessing]);
 
@@ -394,21 +395,24 @@ export function ProcessingStatus({
                   key={stage.id}
                   className={`p-3 border-2 min-h-[80px] transition-all duration-300 ${isActive ? "scale-105 z-10 shadow-lg" : "opacity-80"}`}
                   style={{
-                    borderColor: isComplete
+                    borderColor: isSoft ? 'transparent' : (isComplete
                       ? "var(--accent-emerald)"
                       : isActive
                         ? "var(--accent-cyan)"
-                        : "var(--text-muted)",
+                        : "var(--text-muted)"),
                     backgroundColor: isComplete
                       ? "rgba(0, 255, 136, 0.1)"
                       : isActive
                         ? "rgba(0, 255, 255, 0.1)"
                         : "var(--bg-primary)",
-                    boxShadow: isComplete
-                      ? "2px 2px 0px 0px var(--accent-emerald)"
-                      : isActive
-                        ? "0px 0px 15px var(--accent-cyan)"
-                        : "none",
+                    boxShadow: isSoft
+                      ? (isActive ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
+                      : (isComplete
+                        ? "2px 2px 0px 0px var(--accent-emerald)"
+                        : isActive
+                          ? "0px 0px 15px var(--accent-cyan)"
+                          : "none"),
+                    borderRadius: isSoft ? '16px' : '0'
                   }}
                 >
                   <div className="flex items-center gap-2 mb-1">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Terminal, Bot, Shield, Zap } from 'lucide-react';
 import { Card, Button } from './DesignSystem';
+import { useTheme } from './ThemeProvider';
 
 const BOOT_SEQUENCE = [
   "INITIALIZING SECURE ENCLAVE...",
@@ -10,10 +11,12 @@ const BOOT_SEQUENCE = [
   "VERIFYING EIGENCOMPUTE SIGNATURES...",
   "LOADING CONSENSUS MODELS [VENICE, AISA, OPENROUTER]...",
   "SYNCING MONAD TESTNET RPC...",
+  "ENHANCING USER DELIGHT...",
   "TRENDE AGENT ONLINE."
 ];
 
 export function Onboarding() {
+  const { isSoft } = useTheme();
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window === 'undefined') return false;
     const visited = window.localStorage.getItem('trende_onboarding_complete');
@@ -28,7 +31,7 @@ export function Onboarding() {
     if (bootStep < BOOT_SEQUENCE.length) {
       const timeout = setTimeout(() => {
         setBootStep(prev => prev + 1);
-      }, 600); // Fast boot
+      }, 400); // Faster boot sequence
       return () => clearTimeout(timeout);
     } else {
       setTimeout(() => setShowContent(true), 500);
@@ -74,8 +77,11 @@ export function Onboarding() {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center">
                 <div
-                  className="w-16 h-16 mx-auto mb-4 flex items-center justify-center animate-bounce"
-                  style={{ backgroundColor: 'var(--accent-cyan)', boxShadow: '4px 4px 0px 0px var(--shadow-color)' }}
+                  className={`w-16 h-16 mx-auto mb-4 flex items-center justify-center ${isSoft ? 'rounded-full' : ''}`}
+                  style={{ 
+                    backgroundColor: 'var(--accent-cyan)', 
+                    boxShadow: isSoft ? 'var(--soft-shadow-out)' : '4px 4px 0px 0px var(--shadow-color)' 
+                  }}
                 >
                   <Bot className="w-8 h-8 text-[var(--bg-primary)]" />
                 </div>
@@ -86,7 +92,7 @@ export function Onboarding() {
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-start gap-3 p-3 border-2 border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)] transition-colors" style={{ boxShadow: '3px 3px 0px 0px var(--shadow-color)' }}>
+                <div className={`flex items-start gap-3 p-3 border-2 transition-colors ${isSoft ? 'soft-ui-out border-0' : 'border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)]'}`} style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '3px 3px 0px 0px var(--shadow-color)' }}>
                   <div className="mt-1"><Zap className="w-5 h-5 text-[var(--accent-amber)]" /></div>
                   <div>
                     <h4 className="font-black text-sm uppercase tracking-wide">Multi-Model Consensus</h4>
@@ -94,7 +100,7 @@ export function Onboarding() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 border-2 border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)] transition-colors" style={{ boxShadow: '3px 3px 0px 0px var(--shadow-color)' }}>
+                <div className={`flex items-start gap-3 p-3 border-2 transition-colors ${isSoft ? 'soft-ui-out border-0' : 'border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)]'}`} style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '3px 3px 0px 0px var(--shadow-color)' }}>
                   <div className="mt-1"><Shield className="w-5 h-5 text-[var(--accent-emerald)]" /></div>
                   <div>
                     <h4 className="font-black text-sm uppercase tracking-wide">TEE Verification</h4>
@@ -102,7 +108,7 @@ export function Onboarding() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 border-2 border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)] transition-colors" style={{ boxShadow: '3px 3px 0px 0px var(--shadow-color)' }}>
+                <div className={`flex items-start gap-3 p-3 border-2 transition-colors ${isSoft ? 'soft-ui-out border-0' : 'border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)]'}`} style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '3px 3px 0px 0px var(--shadow-color)' }}>
                   <div className="mt-1"><Bot className="w-5 h-5 text-[var(--accent-cyan)]" /></div>
                   <div>
                     <h4 className="font-black text-sm uppercase tracking-wide">Autonomous Agents</h4>

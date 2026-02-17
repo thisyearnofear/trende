@@ -2,10 +2,10 @@
  * API client for communicating with the backend
  */
 
-import { 
-  QueryRequest, 
-  QueryResponse, 
-  ResultsResponse, 
+import {
+  QueryRequest,
+  QueryResponse,
+  ResultsResponse,
   StreamEvent,
   CommonsResponse,
   SaveResearchRequest,
@@ -59,7 +59,7 @@ class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
     this.paymentRequired = status === 402;
-    
+
     // Extract payment headers if 402
     if (status === 402 && response) {
       this.paymentInfo = {
@@ -107,7 +107,7 @@ function getHeaders(): HeadersInit {
 
 async function handleResponse<T>(response: Response): Promise<T> {
   extractRateLimitInfo(response);
-  
+
   if (!response.ok) {
     const error = await response.text().catch(() => 'Unknown error');
     throw new ApiError(response.status, error, response);
@@ -194,7 +194,7 @@ export const api = {
    * Subscribe to SSE stream for real-time updates with automatic reconnection
    */
   subscribeToStream(
-    queryId: string, 
+    queryId: string,
     onEvent: (event: StreamEvent) => void,
     onError?: (error: Error) => void
   ): () => void {
@@ -206,7 +206,7 @@ export const api = {
 
     const connect = () => {
       if (isClosed) return;
-      
+
       eventSource = new EventSource(`${API_BASE}/api/trends/stream/${queryId}`);
 
       eventSource.onmessage = (event) => {
@@ -233,7 +233,7 @@ export const api = {
 
         console.error('SSE connection error:', err);
         eventSource?.close();
-        
+
         if (retryCount < maxRetries) {
           retryCount++;
           const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
@@ -261,6 +261,26 @@ export const api = {
     const response = await fetch(`${API_BASE}/api/platforms`);
     return handleResponse<{ platforms: { type: string; displayName: string; icon: string; color: string }[] }>(response);
   },
+
+  /**
+   * Publish trend report to Paragraph
+   */
+  async publishToParagraph(queryId: string, apiKey: string): Promise<{ success: boolean; url?: string; draft_preview?: string }> {
+    const response = await fetch(`${API_BASE}/api/trends/${queryId}/publish`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ api_key: apiKey }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to publish');
+    }
+    return response.json();
+  },
 };
+
 
 export { ApiError };

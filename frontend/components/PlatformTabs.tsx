@@ -5,6 +5,7 @@ import { TrendResult, TrendItem } from '@/lib/types';
 import { ContentCard } from './ContentCard';
 import { ArrowUpRight } from 'lucide-react';
 import { Card } from './DesignSystem';
+import { useTheme } from './ThemeProvider';
 
 interface PlatformTabsProps {
   results: TrendResult[];
@@ -22,6 +23,7 @@ const PLATFORM_CONFIG: Record<string, { icon: string; color: string; label: stri
 export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
   const [activeTab, setActiveTab] = useState<string>('all');
   const [selectedItem, setSelectedItem] = useState<TrendItem | null>(null);
+  const { isSoft } = useTheme();
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -54,11 +56,8 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
   }, [activeTab, platformData]);
 
   const gridClassName = useMemo(() => {
-    const count = activeItems.length;
-    if (count >= 12) return 'grid gap-4 sm:grid-cols-2 xl:grid-cols-3';
-    if (count >= 6) return 'grid gap-4 sm:grid-cols-2';
-    return 'grid gap-4';
-  }, [activeItems.length]);
+    return 'grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4';
+  }, []);
 
   const stats = useMemo(() => {
     const items = activeItems;
@@ -181,13 +180,20 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
                 tabIndex={isActive ? 0 : -1}
                 className={`px-4 py-2.5 text-sm font-black uppercase whitespace-nowrap transition-all border-2 snap-start min-h-[44px] flex items-center justify-center ${
                   isActive
-                    ? 'text-[var(--bg-primary)] border-transparent'
-                    : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] border-[var(--border-color)]'
+                    ? (isSoft ? 'border-transparent' : 'text-[var(--bg-primary)] border-transparent')
+                    : (isSoft ? 'soft-ui-button border-0 opacity-60' : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] border-[var(--border-color)]')
                 }`}
                 style={
                   isActive
-                    ? { backgroundColor: config?.color || 'var(--accent-cyan)' }
-                    : undefined
+                    ? { 
+                        backgroundColor: isSoft ? 'var(--soft-bg)' : (config?.color || 'var(--accent-cyan)'),
+                        boxShadow: isSoft ? 'var(--soft-shadow-in)' : 'none',
+                        borderRadius: isSoft ? '12px' : '0',
+                        color: isSoft ? (config?.color || 'var(--accent-cyan)') : 'var(--bg-primary)'
+                      }
+                    : {
+                        borderRadius: isSoft ? '12px' : '0'
+                      }
                 }
               >
                 {tab.id === 'all' ? (
