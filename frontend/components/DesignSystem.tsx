@@ -40,8 +40,8 @@ interface CardProps {
   style?: CSSProperties;
 }
 
-export function Card({ 
-  children, 
+export function Card({
+  children,
   className,
   accent = 'white',
   shadow = 'md',
@@ -50,7 +50,7 @@ export function Card({
 }: CardProps) {
   const [isPressed, setIsPressed] = useState(false);
   const { isSoft } = useTheme();
-  
+
   const accentBorder = {
     cyan: 'border-[var(--accent-cyan)]',
     emerald: 'border-[var(--accent-emerald)]',
@@ -59,7 +59,7 @@ export function Card({
     violet: 'border-[var(--accent-violet)]',
     white: 'border-[var(--border-color)]',
   };
-  
+
   const shadowSize = {
     sm: '2px',
     md: '4px',
@@ -80,11 +80,11 @@ export function Card({
         className
       )}
       style={{
-        boxShadow: isSoft 
+        boxShadow: isSoft
           ? (isPressed && interactive ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
-          : (isPressed && interactive 
-              ? 'none' 
-              : `${shadowSize[shadow]} ${shadowSize[shadow]} 0px 0px var(--shadow-color)`),
+          : (isPressed && interactive
+            ? 'none'
+            : `${shadowSize[shadow]} ${shadowSize[shadow]} 0px 0px var(--shadow-color)`),
         transform: !isSoft && isPressed && interactive ? `translate(${shadowSize[shadow]}, ${shadowSize[shadow]})` : undefined,
         ...style,
       }}
@@ -122,13 +122,13 @@ export function Button({
 }: ButtonProps) {
   const [isPressed, setIsPressed] = useState(false);
   const { isSoft } = useTheme();
-  
+
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-xs',
     md: 'px-5 py-2.5 text-sm',
     lg: 'px-7 py-3.5 text-base',
   };
-  
+
   const variantClasses = {
     primary: 'bg-[var(--accent-cyan)] text-[var(--bg-primary)] border-[var(--border-color)]',
     secondary: 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border-[var(--border-color)]',
@@ -154,7 +154,7 @@ export function Button({
         className
       )}
       style={{
-        boxShadow: isSoft 
+        boxShadow: isSoft
           ? (isPressed ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
           : (isPressed ? 'none' : '4px 4px 0px 0px var(--shadow-color)'),
         transform: !isSoft && isPressed ? 'translate(4px, 4px)' : undefined,
@@ -196,7 +196,7 @@ export function Input({
 }: InputProps) {
   const InputComponent = rows > 1 ? 'textarea' : 'input';
   const { isSoft } = useTheme();
-  
+
   return (
     <div className={className}>
       {label && (
@@ -243,7 +243,7 @@ export function Badge({ children, variant = 'default', className }: BadgeProps) 
     violet: 'bg-[var(--accent-violet)] text-[var(--bg-primary)]',
     default: 'bg-[var(--bg-secondary)] text-[var(--text-primary)]',
   };
-  
+
   return (
     <motion.span
       initial={{ scale: 0.9, opacity: 0 }}
@@ -303,7 +303,7 @@ interface ProgressProps {
 export function Progress({ value, max = 100, accent = 'cyan', className }: ProgressProps) {
   const percentage = Math.min((value / max) * 100, 100);
   const { isSoft } = useTheme();
-  
+
   const accentColor = {
     cyan: 'var(--accent-cyan)',
     emerald: 'var(--accent-emerald)',
@@ -345,12 +345,12 @@ interface SectionProps {
   className?: string;
 }
 
-export function Section({ 
-  children, 
-  title, 
+export function Section({
+  children,
+  title,
   subtitle,
   accent = 'cyan',
-  className 
+  className
 }: SectionProps) {
   return (
     <Card accent={accent} shadow="lg" className={className}>
@@ -384,16 +384,16 @@ interface IconButtonProps {
   ariaLabel: string;
 }
 
-export function IconButton({ 
-  icon, 
-  onClick, 
-  disabled, 
+export function IconButton({
+  icon,
+  onClick,
+  disabled,
   label,
-  ariaLabel 
+  ariaLabel
 }: IconButtonProps) {
   const [isPressed, setIsPressed] = useState(false);
   const { isSoft } = useTheme();
-  
+
   return (
     <button
       onClick={onClick}
@@ -408,7 +408,7 @@ export function IconButton({
         label && 'px-4'
       )}
       style={{
-        boxShadow: isSoft 
+        boxShadow: isSoft
           ? (isPressed ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
           : (isPressed ? 'none' : '2px 2px 0px 0px var(--shadow-color)'),
         transform: !isSoft && isPressed ? 'translate(2px, 2px)' : undefined,
@@ -458,7 +458,7 @@ export function Toggle({ checked, onChange, label }: ToggleProps) {
             isSoft ? 'rounded-full' : 'rounded-none',
             checked ? (isSoft ? 'left-8 bg-[var(--accent-cyan)]' : 'left-7 bg-[var(--accent-cyan)]') : 'left-0.5'
           )}
-          style={{ 
+          style={{
             boxShadow: isSoft && !checked ? 'var(--soft-shadow-out)' : undefined,
             backgroundColor: isSoft && !checked ? 'var(--soft-bg)' : undefined
           }}
@@ -489,19 +489,139 @@ export function Alert({ children, variant = 'info', className }: AlertProps) {
     warning: { bg: 'rgba(255, 170, 0, 0.1)', border: 'var(--accent-amber)' },
     error: { bg: 'rgba(255, 68, 68, 0.1)', border: 'var(--accent-rose)' },
   };
-  
+
   const style = variantStyles[variant];
 
   return (
     <div
       className={cn('border-2 p-4 font-mono text-sm', className)}
-      style={{ 
-        backgroundColor: style.bg, 
+      style={{
+        backgroundColor: style.bg,
         borderColor: style.border,
         boxShadow: '4px 4px 0px 0px var(--shadow-color)',
       }}
     >
       {children}
     </div>
+  );
+}
+
+// ============================================
+// TOOLTIP
+// ============================================
+interface TooltipProps {
+  children: ReactNode;
+  content: string | ReactNode;
+  learnMoreUrl?: string;
+  position?: 'top' | 'bottom' | 'left' | 'right';
+  className?: string;
+}
+
+export function Tooltip({
+  children,
+  content,
+  learnMoreUrl,
+  position = 'top',
+  className
+}: TooltipProps) {
+  const [isVisible, setIsVisible] = useState(false);
+  const { isSoft } = useTheme();
+
+  const positionClasses = {
+    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
+    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
+    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
+    right: 'left-full top-1/2 -translate-y-1/2 ml-2',
+  };
+
+  return (
+    <div
+      className="relative inline-flex items-center"
+      onMouseEnter={() => setIsVisible(true)}
+      onMouseLeave={() => setIsVisible(false)}
+      onClick={() => setIsVisible(!isVisible)}
+    >
+      {children}
+
+      <AnimatePresence>
+        {isVisible && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: position === 'top' ? 5 : -5 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className={cn(
+              'absolute z-50 w-64 p-3 text-xs leading-relaxed',
+              'bg-[var(--bg-secondary)] text-[var(--text-primary)]',
+              !isSoft && 'border-2 border-[var(--border-color)]',
+              isSoft ? 'soft-ui-out rounded-xl' : 'rounded-none',
+              positionClasses[position],
+              className
+            )}
+            style={{
+              boxShadow: isSoft
+                ? 'var(--soft-shadow-out)'
+                : '4px 4px 0px 0px var(--shadow-color)',
+            }}
+          >
+            <div className="font-mono">
+              {typeof content === 'string' ? (
+                <p className="text-[var(--text-secondary)]">{content}</p>
+              ) : (
+                content
+              )}
+            </div>
+
+            {learnMoreUrl && (
+              <a
+                href={learnMoreUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 mt-2 text-[var(--accent-cyan)] hover:text-[var(--accent-emerald)] font-black uppercase tracking-wider text-[10px] transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Learn More
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ============================================
+// INFO ICON (Tooltip Trigger)
+// ============================================
+interface InfoIconProps {
+  tooltip: string | ReactNode;
+  learnMoreUrl?: string;
+  size?: 'sm' | 'md' | 'lg';
+}
+
+export function InfoIcon({ tooltip, learnMoreUrl, size = 'sm' }: InfoIconProps) {
+  const sizeClasses = {
+    sm: 'w-3.5 h-3.5',
+    md: 'w-4 h-4',
+    lg: 'w-5 h-5',
+  };
+
+  return (
+    <Tooltip content={tooltip} learnMoreUrl={learnMoreUrl}>
+      <svg
+        className={cn(
+          sizeClasses[size],
+          'text-[var(--text-muted)] hover:text-[var(--accent-cyan)] cursor-help transition-colors'
+        )}
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </Tooltip>
   );
 }

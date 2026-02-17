@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Card, Button, IconButton } from "@/components/DesignSystem";
+import { Card, Button, IconButton, Tooltip, InfoIcon } from "@/components/DesignSystem";
 import { Onboarding } from "@/components/Onboarding";
 import { useWallet } from "@/components/WalletProvider";
 import { useTheme } from "@/components/ThemeProvider";
@@ -433,8 +433,13 @@ export default function Home() {
                 <h1 className="text-sm sm:text-lg font-black uppercase tracking-wider truncate">
                   TRENDE
                 </h1>
-                <p className="text-[10px] font-mono text-[var(--accent-cyan)] truncate">
+                <p className="text-[10px] font-mono text-[var(--accent-cyan)] truncate flex items-center gap-1">
                   TEE-SECURED
+                  <InfoIcon
+                    tooltip="Trusted Execution Environment ensures verifiable, tamper-proof analysis with cryptographic attestation."
+                    learnMoreUrl="https://en.wikipedia.org/wiki/Trusted_execution_environment"
+                    size="sm"
+                  />
                 </p>
               </div>
             </Link>
@@ -881,20 +886,25 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => handlePublishToParagraph()}
-                  disabled={isPublishingToParagraph}
-                  className="bg-stone-900 border-stone-700 text-stone-100 hover:bg-stone-800"
+                <Tooltip
+                  content="Publish this report as a draft on Paragraph.xyz, a decentralized publishing platform."
+                  learnMoreUrl="https://paragraph.xyz"
                 >
-                  {isPublishingToParagraph ? (
-                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                  ) : (
-                    <span className="mr-1">✍️</span>
-                  )}
-                  {isPublishingToParagraph ? "Publishing..." : "Draft on Paragraph"}
-                </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handlePublishToParagraph()}
+                    disabled={isPublishingToParagraph}
+                    className="bg-stone-900 border-stone-700 text-stone-100 hover:bg-stone-800"
+                  >
+                    {isPublishingToParagraph ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <span className="mr-1">✍️</span>
+                    )}
+                    {isPublishingToParagraph ? "Publishing..." : "Draft on Paragraph"}
+                  </Button>
+                </Tooltip>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -962,8 +972,12 @@ export default function Home() {
                         <div className="flex items-center gap-2 min-w-0">
                           <Layers3 className="w-4 h-4 text-[var(--accent-amber)]" />
                           <div className="min-w-0">
-                            <span className="text-sm font-black uppercase tracking-wider block">
+                            <span className="text-sm font-black uppercase tracking-wider block flex items-center gap-1.5">
                               Confidence Drivers
+                              <InfoIcon
+                                tooltip="Agreement level across multiple AI models (Venice, Gemini, etc.) weighted by data quality and recency."
+                                size="sm"
+                              />
                             </span>
                             <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
                               {panelSummaries.drivers}
@@ -1017,8 +1031,12 @@ export default function Home() {
                         <div className="flex items-center gap-2 min-w-0">
                           <AlertTriangle className="w-4 h-4 text-[var(--accent-rose)]" />
                           <div className="min-w-0">
-                            <span className="text-sm font-black uppercase tracking-wider block">
+                            <span className="text-sm font-black uppercase tracking-wider block flex items-center gap-1.5">
                               Reliability & Gaps
+                              <InfoIcon
+                                tooltip="Known gaps or biases in the evidence base, including data recency, source diversity, and coverage limitations."
+                                size="sm"
+                              />
                             </span>
                             <span className="text-[10px] font-mono text-[var(--text-muted)] block truncate">
                               {panelSummaries.risks}
