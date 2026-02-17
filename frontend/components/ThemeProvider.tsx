@@ -26,7 +26,7 @@ interface ThemeProviderProps {
   defaultTheme?: Theme;
 }
 
-export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProviderProps) {
+export function ThemeProvider({ children, defaultTheme = 'soft' }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<Theme>(defaultTheme);
   const [mounted, setMounted] = useState(false);
 
@@ -36,7 +36,7 @@ export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProvider
     requestAnimationFrame(() => {
       setMounted(true);
     });
-    
+
     const stored = localStorage.getItem('trende-theme') as Theme | null;
     if (stored) {
       requestAnimationFrame(() => {
@@ -52,11 +52,12 @@ export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProvider
   // Apply theme class to document
   useEffect(() => {
     if (!mounted) return;
-    
+
     const root = document.documentElement;
     root.classList.remove('dark', 'light', 'soft');
     root.classList.add(theme);
-    
+
+    console.log('[ThemeProvider] Applied theme:', theme);
     localStorage.setItem('trende-theme', theme);
   }, [theme, mounted]);
 

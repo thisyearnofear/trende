@@ -207,6 +207,50 @@ Buyer Agent → Butler (Gateway) → Trende (Provider) → Evaluation → Paymen
 
 ---
 
+## Future Opportunities: Active Execution Flows
+
+Beyond analysis, Trende can offer **Active Execution Flows** that let users act on intelligence immediately:
+
+### 1. Token Launcher (Financialization)
+**Goal**: Capitalize on viral trends by instantly creating a financial vehicle.
+
+**Trigger**: User selects "Launch Token" from the Meme Page view.
+
+**Flow**:
+- Extract `Ticker`, `Name`, `Supply` from meme payload
+- Select verified contract template (ERC-20, anti-bot, reflection mechanics)
+- Deploy to BNB Chain, Base, or Monad
+- Auto-propose liquidity pair on Uniswap/PancakeSwap
+
+**Technical Needs**: `Web3Service`/`EVMConnector`, Launchpad integration
+
+### 2. Knowledge Sites (Curated SPA)
+**Goal**: Create dedicated, SEO-optimized microsites for trends.
+
+**Trigger**: User selects "Build Microsite" or "Track Live".
+
+**Flow**:
+- Generate JSON config for Next.js dynamic route
+- Configure live widgets (TwitterSearch, PriceChart, NewsFeed)
+- Embed `Intelligence Summary` as "About" section
+- Render dynamic page (e.g., `trende.app/explore/AI-Agents-2025`)
+
+**Technical Needs**: Dynamic Dashboard component, GraphState persistence
+
+### 3. Signal Scout (Monitoring & Alerts)
+**Goal**: Turn one-time analysis into ongoing monitoring.
+
+**Trigger**: User selects "Monitor this Trend".
+
+**Flow**:
+- Schedule cron job to run `Research` node every 24h
+- Compare new findings with baseline report
+- Send notification if interest spikes >50% or sentiment shifts
+
+**Technical Needs**: `Cron`/`TaskQueue`, `NotificationService`
+
+---
+
 ## Resources
 
 - **ACP Platform**: https://app.virtuals.io
