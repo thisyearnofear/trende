@@ -37,6 +37,7 @@ import { Onboarding } from "@/components/Onboarding";
 import { useWallet } from "@/components/WalletProvider";
 import { useTheme } from "@/components/ThemeProvider";
 import { ParagraphConnectModal } from "@/components/integrations/ParagraphConnectModal";
+import { WalletButton } from "@/components/WalletButton";
 
 const STATUS_ETAS: Record<
   string,
@@ -439,6 +440,7 @@ export default function Home() {
             </Link>
 
             <div className="flex items-center gap-2">
+              <WalletButton compact />
               <ThemeToggle />
               <IconButton
                 icon={<RefreshCw className="w-5 h-5" />}
@@ -532,7 +534,7 @@ export default function Home() {
                   </div>
                 ) : savedResearch.length === 0 ? (
                   <p className="text-[var(--text-muted)] font-mono">
-                    NO SAVED RUNS YET
+                    NO SAVED RUNS YET. SAVE A COMPLETED RUN TO SEE IT HERE.
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -573,7 +575,7 @@ export default function Home() {
                 </div>
               ) : history.length === 0 ? (
                 <p className="text-[var(--text-muted)] font-mono">
-                  NO MISSIONS ON RECORD
+                  NO MISSIONS ON RECORD. THIS LIST SHOWS SERVER-STORED RUNS.
                 </p>
               ) : (
                 <div className="space-y-2">
