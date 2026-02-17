@@ -157,6 +157,7 @@ class Repository:
                 "attestation_data": state.get("attestation_data"),
                 "run_telemetry": state.get("run_telemetry"),
                 "raw_findings": self._serialize_findings(state.get("raw_findings", [])),
+                "editorial_data": state.get("editorial_data"),
             }
             task.result = result_data
             try:

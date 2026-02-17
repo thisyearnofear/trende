@@ -268,10 +268,8 @@ export const api = {
   async publishToParagraph(queryId: string, apiKey: string): Promise<{ success: boolean; url?: string; draft_preview?: string }> {
     const response = await fetch(`${API_BASE}/api/trends/${queryId}/publish`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ api_key: apiKey }),
+      headers: getHeaders(),
+      body: JSON.stringify({ platform: 'paragraph', api_key: apiKey }),
     });
 
     if (!response.ok) {

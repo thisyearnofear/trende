@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button, Input } from '@/components/DesignSystem';
-import { CheckCircle2, ExternalLink, Loader2, X, Zap } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Loader2, X } from 'lucide-react';
 
 interface ParagraphConnectModalProps {
   isOpen: boolean;
@@ -79,7 +79,7 @@ export function ParagraphConnectModal({ isOpen, onClose, onConnect }: ParagraphC
         </div>
 
         <div className="mb-6 text-sm text-stone-400 font-mono">
-          Link your Paragraph account to publish trend reports directly as drafts.
+          Link your Paragraph account to publish trend reports directly as drafts. Your key is kept in this browser session only.
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

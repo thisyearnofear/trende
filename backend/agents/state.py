@@ -6,6 +6,7 @@ class GraphState(TypedDict):
     topic: str
     platforms: List[str]
     models: List[str]
+    paragraph_api_key: Optional[str]  # New field for API key
     
     # Internal State
     query_id: str
@@ -29,4 +30,10 @@ class GraphState(TypedDict):
     meme_page_data: Optional[Dict[str, Any]]
     consensus_data: Optional[Dict[str, Any]]
     attestation_data: Optional[Dict[str, Any]]
+    
+    # Editorial / Publishing (New fields)
+    editorial_draft: Optional[str]
+    publish_status: Optional[str]
+    published_url: Optional[str]
+    
     error: Optional[str]

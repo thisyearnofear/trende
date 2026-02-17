@@ -1,7 +1,8 @@
 import asyncio
 import json
 import datetime
-from typing import Any
+import uuid
+from typing import Any, Optional
 
 from langgraph.graph import END, StateGraph
 
@@ -422,6 +423,65 @@ async def run_trend_analysis(
     final_state = initial_state
     async for output in workflow.astream(initial_state):
         for node_name, state_update in output.items():
+            final_state.update(state_update)
+            
+
+def create_editorial_workflow() -> Any:
+    from backend.agents.nodes.editorial import editorial_node, publish_node
+    
+    workflow = StateGraph(GraphState)
+    
+    workflow.add_node("editorial", editorial_node)
+    workflow.add_node("publisher", publish_node)
+    
+    workflow.set_entry_point("editorial")
+    workflow.add_edge("editorial", "publisher")
+    workflow.add_edge("publisher", END)
+    
+    return workflow.compile()
+
+async def run_editorial_task(
+    topic: str,
+    report_md: str,
+    api_key: Optional[str] = None,
+) -> dict[str, Any]:
+    """
+    Run the editorial workflow to draft and optionally publish an article.
+    """
+    workflow = create_editorial_workflow()
+    
+    initial_state = {
+        "topic": topic,
+        "final_report_md": report_md,
+        "paragraph_api_key": api_key,
+        "logs": ["Starting Editorial Agent..."],
+        "editorial_draft": None,
+        "publish_status": "PENDING",
+        "published_url": None,
+        # Initialize other required keys with dummy/empty values
+        "platforms": [],
+        "models": [],
+        "query_id": f"editorial_{uuid.uuid4()}",
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "status": QueryStatus.ANALYZING,
+        "search_queries": [],
+        "raw_findings": [],
+        "filtered_findings": [],
+        "plan": None,
+        "summary": None,
+        "relevance_score": 0.0,
+        "impact_score": 0.0,
+        "confidence_score": 0.0,
+        "validation_results": [],
+        "meme_page_data": None,
+        "consensus_data": None,
+        "attestation_data": None,
+        "error": None,
+    }
+    
+    final_state = initial_state
+    async for output in workflow.astream(initial_state):
+        for _, state_update in output.items():
             final_state.update(state_update)
             
     return final_state

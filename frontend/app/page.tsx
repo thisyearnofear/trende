@@ -81,7 +81,7 @@ export default function Home() {
   } = useTrendData(queryId);
   const activeQueryId = data?.query?.id || queryId;
   const { queries: history, isLoading: historyLoading } = useTrendHistory();
-  const { saved: savedResearch, isLoading: savedLoading, refresh: refreshSaved } = useSavedResearch(isConnected);
+  const { saved: savedResearch, isLoading: savedLoading } = useSavedResearch(isConnected);
   const { research: commonsResearch, isLoading: commonsLoading } = useCommons();
 
   const handleSubmit = useCallback(
@@ -375,7 +375,7 @@ export default function Home() {
 
     let apiKey = key;
     if (!apiKey && typeof window !== "undefined") {
-      apiKey = window.localStorage.getItem('trende:paragraph_api_key');
+      apiKey = window.sessionStorage.getItem('trende:paragraph_api_key');
     }
 
     if (!apiKey) {
@@ -402,7 +402,7 @@ export default function Home() {
 
   const onParagraphConnect = useCallback((key: string) => {
     if (typeof window !== "undefined") {
-      window.localStorage.setItem('trende:paragraph_api_key', key);
+      window.sessionStorage.setItem('trende:paragraph_api_key', key);
     }
     handlePublishToParagraph(key);
   }, [handlePublishToParagraph]);

@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
-from backend.agents.workflow import create_workflow
+from backend.agents.workflow import create_workflow, run_editorial_task
 from backend.api.routes import acp as acp_routes
 from backend.services.acp_service import acp_service
 from backend.database.repository import Repository, init_db
@@ -737,6 +737,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
     summary_text = ""
     final_report_md = ""
     run_telemetry = {}
+    editorial_data = None
 
     if isinstance(res_node, dict):
         confidence_score = res_node.get("confidence_score", task.get("confidence_score", 0.0))
@@ -747,6 +748,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
         summary_text = res_node.get("summary", task.get("summary", ""))
         final_report_md = res_node.get("final_report_md", task.get("final_report_md", ""))
         run_telemetry = res_node.get("run_telemetry", task.get("run_telemetry", {}))
+        editorial_data = res_node.get("editorial_data", task.get("editorial_data"))
 
     # Construct response matching ResultsResponse in frontend/lib/types.ts
     return {
@@ -802,6 +804,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
                 "updated_at", task.get("updated_at", task.get("created_at", ""))
             ),
         },
+        "editorial": editorial_data,
     }
 
 
@@ -947,8 +950,93 @@ async def stream_status(task_id: str) -> StreamingResponse:
         }
     )
 
+class PublishRequest(BaseModel):
+    platform: str = "paragraph"
+    api_key: str
+
+    @model_validator(mode="after")
+    def validate_publish_request(self) -> "PublishRequest":
+        self.platform = (self.platform or "paragraph").strip().lower()
+        if self.platform != "paragraph":
+            raise ValueError("Only paragraph publishing is supported.")
+        self.api_key = (self.api_key or "").strip()
+        if len(self.api_key) < 16:
+            raise ValueError("Invalid Paragraph API key.")
+        return self
+
+@app.post("/api/trends/{task_id}/publish", response_model=None)
+async def publish_trend(
+    task_id: str, 
+    request: PublishRequest,
+    x_wallet_address: str | None = Header(None, alias="X-Wallet-Address")
+) -> Any:
+    """
+    Triggers the editorial agent to draft and publish the trend report.
+    """
+    if not x_wallet_address:
+        return JSONResponse(status_code=401, content={"error": "Connect wallet before publishing."})
+
+    if request.platform.strip().lower() != "paragraph":
+        return JSONResponse(status_code=400, content={"error": "Unsupported publish platform."})
+
+    # 1. Retrieve the completed task
+    task = tasks.get(task_id) or repo.get_task(task_id)
+    if not task:
+        return JSONResponse(status_code=404, content={"error": "Task not found"})
+
+    owner_address = (
+        (task.get("owner_address") or task.get("sponsor_address") or "")
+        .strip()
+        .lower()
+    )
+    requester = x_wallet_address.strip().lower()
+    if owner_address and owner_address != requester:
+        return JSONResponse(status_code=403, content={"error": "Task owned by a different wallet."})
+        
+    if task.get("status") != QueryStatus.COMPLETED:
+        return JSONResponse(status_code=400, content={"error": "Analysis not complete. Cannot publish."})
+
+    # Retrieve report from result node or top level
+    res_node = task.get("result") if isinstance(task.get("result"), dict) else task
+    report_md = res_node.get("final_report_md")
+    
+    if not report_md:
+         return JSONResponse(status_code=400, content={"error": "No trend report found to publish."})
+
+    # 2. Run Editorial Workflow
+    try:
+        editorial_result = await run_editorial_task(
+            topic=task.get("topic", "Trend Analysis"),
+            report_md=report_md,
+            api_key=request.api_key.strip(),
+        )
+        
+        # 3. Update Task with Editorial Data (Optional, or just return it)
+        # We might want to store that this was published
+        editorial_data = {
+            "draft": editorial_result.get("editorial_draft"),
+            "published_url": editorial_result.get("published_url"),
+            "status": editorial_result.get("publish_status"),
+            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
+        task["editorial_data"] = editorial_data
+        task["owner_address"] = owner_address or requester
+        if task_id in tasks:
+            tasks[task_id] = task
+        repo.save_task(task_id, task)
+
+        draft = editorial_result.get("editorial_draft") or ""
+        
+        return {
+            "success": editorial_result.get("publish_status") == "SUCCESS",
+            "url": editorial_result.get("published_url"),
+            "status": editorial_result.get("publish_status"),
+            "draft_preview": (str(draft)[:200] + "...") if draft else "",
+        }
+        
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": "Publishing workflow failed."})
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
