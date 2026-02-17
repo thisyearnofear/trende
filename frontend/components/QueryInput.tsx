@@ -19,15 +19,15 @@ const MODEL_OPTIONS = [
 ];
 
 const PLATFORM_OPTIONS = [
-  { id: 'twitter', label: 'X / Twitter', hint: 'Fast social momentum' },
-  { id: 'linkedin', label: 'LinkedIn', hint: 'Professional conviction' },
-  { id: 'newsapi', label: 'News', hint: 'Media narrative context' },
-  { id: 'web', label: 'Web', hint: 'Long-tail signal capture' },
-  { id: 'gdelt', label: 'GDELT', hint: 'Global event/news graph' },
-  { id: 'wikimedia', label: 'Wikimedia', hint: 'Live public knowledge edits' },
-  { id: 'hackernews', label: 'Hacker News', hint: 'Builder/tech pulse' },
-  { id: 'stackexchange', label: 'StackExchange', hint: 'Technical problem signals' },
-  { id: 'coingecko', label: 'CoinGecko', hint: 'Crypto market snapshots' },
+  { id: 'twitter', label: 'X / Twitter', hint: 'Fast social momentum', enabled: false, reason: 'API reliability in progress' },
+  { id: 'linkedin', label: 'LinkedIn', hint: 'Professional conviction', enabled: false, reason: 'Connector stability in progress' },
+  { id: 'newsapi', label: 'News', hint: 'Media narrative context', enabled: true },
+  { id: 'web', label: 'Web', hint: 'Long-tail signal capture', enabled: false, reason: 'Tabstack timeout issues' },
+  { id: 'gdelt', label: 'GDELT', hint: 'Global event/news graph', enabled: false, reason: 'Connector reliability in progress' },
+  { id: 'wikimedia', label: 'Wikimedia', hint: 'Live public knowledge edits', enabled: false, reason: 'Connector reliability in progress' },
+  { id: 'hackernews', label: 'Hacker News', hint: 'Builder/tech pulse', enabled: true },
+  { id: 'stackexchange', label: 'StackExchange', hint: 'Technical problem signals', enabled: true },
+  { id: 'coingecko', label: 'CoinGecko', hint: 'Crypto market snapshots', enabled: true },
 ];
 
 const SUGGESTIONS = [
@@ -39,7 +39,7 @@ const SUGGESTIONS = [
 
 export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [idea, setIdea] = useState('');
-  const [platforms, setPlatforms] = useState<string[]>(['twitter', 'linkedin', 'newsapi', 'web']);
+  const [platforms, setPlatforms] = useState<string[]>(['newsapi', 'hackernews', 'stackexchange']);
   const [models, setModels] = useState<string[]>(['venice', 'aisa', 'openrouter']);
   const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
 
@@ -52,7 +52,8 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
     onSubmit({ idea: idea.trim(), platforms, models, relevanceThreshold });
   }, [idea, platforms, models, relevanceThreshold, onSubmit, isLoading, disabled, hasPlatforms, hasModels]);
 
-  const togglePlatform = (platform: string) => {
+  const togglePlatform = (platform: string, isEnabled: boolean) => {
+    if (!isEnabled) return;
     setPlatforms((prev) =>
       prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
     );
@@ -136,23 +137,37 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {PLATFORM_OPTIONS.map((platform) => {
               const active = platforms.includes(platform.id);
+              const unavailable = !platform.enabled;
               return (
                 <button
                   key={platform.id}
                   type="button"
-                  onClick={() => togglePlatform(platform.id)}
-                  disabled={disabled}
-                  className="text-left p-4 min-h-[80px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-50"
+                  onClick={() => togglePlatform(platform.id, platform.enabled)}
+                  disabled={disabled || unavailable}
+                  className="text-left p-4 min-h-[80px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
-                    borderColor: active ? 'var(--accent-cyan)' : 'var(--text-muted)',
-                    boxShadow: active ? '4px 4px 0px 0px var(--accent-cyan)' : '4px 4px 0px 0px var(--text-muted)',
+                    borderColor: unavailable
+                      ? 'var(--accent-amber)'
+                      : active
+                        ? 'var(--accent-cyan)'
+                        : 'var(--text-muted)',
+                    boxShadow: unavailable
+                      ? '4px 4px 0px 0px var(--accent-amber)'
+                      : active
+                        ? '4px 4px 0px 0px var(--accent-cyan)'
+                        : '4px 4px 0px 0px var(--text-muted)',
                   }}
+                  title={unavailable ? platform.reason : platform.hint}
                 >
-                  <p className="text-sm font-black uppercase" style={{ color: active ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
+                  <p className="text-sm font-black uppercase" style={{ color: unavailable ? 'var(--accent-amber)' : active ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
                     {platform.label}
                   </p>
                   <p className="text-xs text-[var(--text-muted)] mt-1">{platform.hint}</p>
-                  {active && <Badge variant="cyan" className="mt-2">ACTIVE</Badge>}
+                  {unavailable ? (
+                    <Badge variant="amber" className="mt-2">COMING SOON</Badge>
+                  ) : active ? (
+                    <Badge variant="cyan" className="mt-2">ACTIVE</Badge>
+                  ) : null}
                 </button>
               );
             })}
