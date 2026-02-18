@@ -265,7 +265,10 @@ export const api = {
   /**
    * Publish trend report to Paragraph
    */
-  async publishToParagraph(queryId: string, apiKey: string): Promise<{ success: boolean; url?: string; draft_preview?: string }> {
+  async publishToParagraph(
+    queryId: string,
+    apiKey: string,
+  ): Promise<{ success: boolean; url?: string; draft_preview?: string; status?: string }> {
     const response = await fetch(`${API_BASE}/api/trends/${queryId}/publish`, {
       method: 'POST',
       headers: getHeaders(),
