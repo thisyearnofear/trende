@@ -81,9 +81,11 @@ export default function Home() {
     refresh,
   } = useTrendData(queryId);
   const activeQueryId = data?.query?.id || queryId;
-  const { queries: history, isLoading: historyLoading } = useTrendHistory();
-  const { saved: savedResearch, isLoading: savedLoading } = useSavedResearch(isConnected);
-  const { research: commonsResearch, isLoading: commonsLoading } = useCommons();
+  const { queries: history, isLoading: historyLoading, refresh: refreshHistory } = useTrendHistory();
+  const { saved: savedResearch, isLoading: savedLoading, refresh: refreshSaved } = useSavedResearch(isConnected);
+  const { research: commonsResearch, isLoading: commonsLoading, refresh: refreshCommons } = useCommons();
+  const [saveVisibility, setSaveVisibility] = useState<"private" | "unlisted" | "public">("private");
+  const [isSavingResearch, setIsSavingResearch] = useState(false);
 
   const handleSubmit = useCallback(
     async (request: QueryRequest) => {
@@ -389,6 +391,41 @@ export default function Home() {
   const [isParagraphModalOpen, setIsParagraphModalOpen] = useState(false);
   const [isPublishingToParagraph, setIsPublishingToParagraph] = useState(false);
 
+  const handleSaveResearch = useCallback(async () => {
+    if (!activeQueryId) return;
+    if (!isConnected) {
+      showToast("Connect wallet before saving research.", "error");
+      return;
+    }
+
+    setIsSavingResearch(true);
+    try {
+      await api.saveResearch(activeQueryId, {
+        visibility: saveVisibility,
+        pinToIpfs: saveVisibility !== "private",
+        saveLabel: data?.query?.idea,
+      });
+      showToast(`Run saved as ${saveVisibility.toUpperCase()}.`, "success");
+      refreshHistory();
+      refreshSaved();
+      refreshCommons();
+    } catch (error) {
+      console.error(error);
+      showToast("Failed to save run.", "error");
+    } finally {
+      setIsSavingResearch(false);
+    }
+  }, [
+    activeQueryId,
+    isConnected,
+    saveVisibility,
+    data?.query?.idea,
+    showToast,
+    refreshHistory,
+    refreshSaved,
+    refreshCommons,
+  ]);
+
   const handlePublishToParagraph = useCallback(async (key: string | null = null) => {
     if (!activeQueryId) return;
 
@@ -468,30 +505,40 @@ export default function Home() {
 
             <div className="flex items-center gap-2">
               <WalletButton compact />
-              <ThemeToggle />
-              <IconButton
-                icon={<RefreshCw className="w-5 h-5" />}
-                onClick={() => refresh()}
-                disabled={!queryId}
-                ariaLabel="Refresh"
-              />
-              <button
-                onClick={() => setShowHistory(!showHistory)}
-                className={`p-2.5 min-h-[44px] min-w-[44px] border-2 transition-all flex items-center justify-center ${showHistory
-                  ? "bg-[var(--text-primary)] text-[var(--bg-primary)]"
-                  : "bg-[var(--bg-primary)] text-[var(--text-primary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)]"
-                  } ${isSoft ? 'soft-ui-button border-0 rounded-xl' : ''}`}
-                style={{
-                  boxShadow: isSoft
-                    ? (showHistory ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
-                    : "2px 2px 0px 0px var(--shadow-color)",
-                  backgroundColor: isSoft ? 'var(--soft-bg)' : undefined,
-                  color: isSoft ? 'var(--text-primary)' : undefined
-                }}
-                aria-label="History"
-              >
-                <History className="w-5 h-5" />
-              </button>
+              <Tooltip content="Switch between visual themes.">
+                <div>
+                  <ThemeToggle />
+                </div>
+              </Tooltip>
+              <Tooltip content="Refresh current mission state from backend.">
+                <div>
+                  <IconButton
+                    icon={<RefreshCw className="w-5 h-5" />}
+                    onClick={() => refresh()}
+                    disabled={!queryId}
+                    ariaLabel="Refresh"
+                  />
+                </div>
+              </Tooltip>
+              <Tooltip content="Open Mission History (recent + saved runs).">
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className={`p-2.5 min-h-[44px] min-w-[44px] border-2 transition-all flex items-center justify-center ${showHistory
+                    ? "bg-[var(--text-primary)] text-[var(--bg-primary)]"
+                    : "bg-[var(--bg-primary)] text-[var(--text-primary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)]"
+                    } ${isSoft ? 'soft-ui-button border-0 rounded-xl' : ''}`}
+                  style={{
+                    boxShadow: isSoft
+                      ? (showHistory ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
+                      : "2px 2px 0px 0px var(--shadow-color)",
+                    backgroundColor: isSoft ? 'var(--soft-bg)' : undefined,
+                    color: isSoft ? 'var(--text-primary)' : undefined
+                  }}
+                  aria-label="History"
+                >
+                  <History className="w-5 h-5" />
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -908,6 +955,36 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
+                <div className="flex items-center gap-2 border-2 border-[var(--border-color)] bg-[var(--bg-secondary)] px-2 py-1 min-h-[44px]">
+                  <Tooltip content="Choose who can discover this run in Community Commons when you save it.">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)] inline-flex items-center gap-1">
+                      Visibility
+                      <InfoIcon size="sm" tooltip="Private: only wallet owner. Unlisted/Public: appears in commons feed." />
+                    </span>
+                  </Tooltip>
+                  <select
+                    value={saveVisibility}
+                    onChange={(event) => setSaveVisibility(event.target.value as "private" | "unlisted" | "public")}
+                    className="bg-[var(--bg-primary)] border-2 border-[var(--border-color)] px-2 py-1 text-xs font-mono uppercase"
+                  >
+                    <option value="private">Private</option>
+                    <option value="unlisted">Unlisted</option>
+                    <option value="public">Public</option>
+                  </select>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleSaveResearch}
+                    disabled={isSavingResearch || !activeQueryId}
+                  >
+                    {isSavingResearch ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                    )}
+                    {isSavingResearch ? "Saving..." : "Save Run"}
+                  </Button>
+                </div>
                 <Tooltip
                   content="Publish this report as a draft on Paragraph.xyz, a decentralized publishing platform."
                   learnMoreUrl="https://paragraph.xyz"
