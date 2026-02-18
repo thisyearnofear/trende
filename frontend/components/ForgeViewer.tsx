@@ -88,6 +88,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const [isDeploying, setIsDeploying] = useState(false);
     const [isDrafting, setIsDrafting] = useState(false);
     const [actions, setActions] = useState<AgentAction[]>([]);
+    const [selectedActionPayload, setSelectedActionPayload] = useState<AgentAction | null>(null);
 
     const isMeme = mode === 'meme';
     const providers = consensus?.providers || [];
@@ -679,7 +680,35 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                                 <p className="text-[11px] text-rose-300 mt-1">{action.error}</p>
                                             )}
                                             {hasResult && (
-                                                <p className="text-[11px] text-emerald-300 mt-1">Result payload ready.</p>
+                                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                    {(() => {
+                                                        const payload = action.result_payload as Record<string, unknown>;
+                                                        const directProof = typeof payload?.proof_url === 'string' ? payload.proof_url : null;
+                                                        const manifest = payload?.manifest as Record<string, unknown> | undefined;
+                                                        const manifestWebsite =
+                                                            manifest && typeof manifest.website === 'string'
+                                                                ? manifest.website
+                                                                : null;
+                                                        const proofHref = directProof || manifestWebsite;
+                                                        return proofHref ? (
+                                                            <a
+                                                                href={proofHref}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="text-[11px] px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+                                                            >
+                                                                Open Proof
+                                                            </a>
+                                                        ) : null;
+                                                    })()}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSelectedActionPayload(action)}
+                                                        className="text-[11px] px-2 py-1 rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30"
+                                                    >
+                                                        View Payload
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     );
@@ -815,6 +844,38 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                 )}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {selectedActionPayload && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+                    onClick={() => setSelectedActionPayload(null)}
+                    role="presentation"
+                >
+                    <div
+                        className="w-full max-w-2xl rounded-2xl border border-slate-700 bg-slate-900 p-5"
+                        onClick={(event) => event.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Action payload details"
+                    >
+                        <div className="flex items-start justify-between mb-3">
+                            <div>
+                                <h3 className="text-lg font-semibold text-slate-100">Action Payload</h3>
+                                <p className="text-xs text-slate-500 font-mono mt-1">{selectedActionPayload.action_id}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedActionPayload(null)}
+                                className="text-slate-400 hover:text-slate-100"
+                            >
+                                Close
+                            </button>
+                        </div>
+                        <pre className="text-xs text-slate-300 overflow-auto max-h-[60vh] rounded-xl border border-slate-700 bg-slate-950/70 p-3">
+                            {JSON.stringify(selectedActionPayload.result_payload || {}, null, 2)}
+                        </pre>
                     </div>
                 </div>
             )}
