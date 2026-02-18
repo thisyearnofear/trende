@@ -22,7 +22,7 @@ const PLATFORM_OPTIONS = [
   { id: 'twitter', label: 'X / Twitter', hint: 'Fast social momentum', enabled: false, reason: 'API reliability in progress' },
   { id: 'linkedin', label: 'LinkedIn', hint: 'Professional conviction', enabled: false, reason: 'Connector stability in progress' },
   { id: 'newsapi', label: 'News', hint: 'Media narrative context', enabled: true },
-  { id: 'web', label: 'Web', hint: 'Long-tail signal capture', enabled: false, reason: 'Tabstack timeout issues' },
+  { id: 'web', label: 'Web', hint: 'Long-tail signal capture (beta)', enabled: true },
   { id: 'gdelt', label: 'GDELT', hint: 'Global event/news graph', enabled: false, reason: 'Connector reliability in progress' },
   { id: 'wikimedia', label: 'Wikimedia', hint: 'Live public knowledge edits', enabled: false, reason: 'Connector reliability in progress' },
   { id: 'hackernews', label: 'Hacker News', hint: 'Builder/tech pulse', enabled: true },
