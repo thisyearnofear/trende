@@ -187,9 +187,14 @@ export function ProcessingStatus({
   const getModelLabel = (id: string) => {
     const labels: Record<string, string> = {
       venice: "Venice AI",
-      aisa: "AIsA API",
-      openrouter: "OpenRouter",
-      tabstack: "Tabstack",
+      aisa: "AIsA (LLM Route)",
+      openrouter: "OpenRouter (Aggregate)",
+      openrouter_auto: "OR Auto",
+      openrouter_free: "OR Free",
+      openrouter_hermes: "OR Hermes",
+      openrouter_llama_70b: "OR Llama 70B",
+      openrouter_stepfun: "OR Stepfun",
+      openrouter_aurora: "OR Aurora",
     };
     return labels[id] || id;
   };
@@ -266,7 +271,7 @@ export function ProcessingStatus({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {(queryData.models || ["venice", "aisa", "openrouter"]).map(
+                  {(queryData.models || ["venice", "openrouter_llama_70b", "openrouter_hermes"]).map(
                     (m) => (
                       <Badge
                         key={m}

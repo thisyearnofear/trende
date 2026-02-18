@@ -12,10 +12,13 @@ interface QueryInputProps {
 }
 
 const MODEL_OPTIONS = [
-  { id: 'venice', label: 'Venice AI', hint: 'Privacy-focused, unbiased Llama 3', quality: 95, cost: 0.002 },
-  { id: 'aisa', label: 'AIsA API', hint: 'High-reasoning, filtered responses', quality: 90, cost: 0.0015 },
-  { id: 'tabstack', label: 'Tabstack', hint: 'Real-time web verification', quality: 85, cost: 0.001 },
-  { id: 'openrouter', label: 'OpenRouter', hint: 'Multi-model fallback aggregator', quality: 80, cost: 0.0005 },
+  { id: 'venice', label: 'Venice AI', hint: 'Primary privacy-first consensus lane', quality: 95, cost: 0.002 },
+  { id: 'openrouter_llama_70b', label: 'OR Llama 70B', hint: 'Strong baseline reasoning and coverage', quality: 90, cost: 0.0006 },
+  { id: 'openrouter_hermes', label: 'OR Hermes', hint: 'Detailed synthesis and long-context handling', quality: 88, cost: 0.0006 },
+  { id: 'openrouter_stepfun', label: 'OR Stepfun', hint: 'Fast contrastive perspective for divergence', quality: 84, cost: 0.0005 },
+  { id: 'openrouter_aurora', label: 'OR Aurora', hint: 'Experimental route for edge-case framing', quality: 80, cost: 0.0005 },
+  { id: 'openrouter_auto', label: 'OR Auto', hint: 'Router-managed fallback path', quality: 78, cost: 0.0004 },
+  { id: 'aisa', label: 'AIsA (LLM Route)', hint: 'Separate from data connectors; adds provider diversity', quality: 89, cost: 0.0015 },
 ];
 
 const PLATFORM_OPTIONS = [
@@ -31,16 +34,16 @@ const PLATFORM_OPTIONS = [
 ];
 
 const SUGGESTIONS = [
-  'AI agent infra opportunities bridging social and on-chain liquidity',
-  'Emerging fintech narratives with high retail engagement potential',
-  'Top catalyst sectors likely to spawn meme-driven token communities',
-  'Where professional sentiment and social hype align this quarter',
+  'Which Monad ecosystem narratives show simultaneous pickup across news, Hacker News, and CoinGecko this week?',
+  'Identify AI-agent infra projects where technical discussion is rising before mainstream media coverage.',
+  'Where does social hype diverge from fundamentals in DePIN + AI compute markets right now?',
+  'Find opportunities where TEE attestation and verifiable consensus create a defensible product moat.',
 ];
 
 export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [idea, setIdea] = useState('');
-  const [platforms, setPlatforms] = useState<string[]>(['newsapi', 'hackernews', 'stackexchange']);
-  const [models, setModels] = useState<string[]>(['venice', 'aisa', 'openrouter']);
+  const [platforms, setPlatforms] = useState<string[]>(['newsapi', 'web', 'hackernews', 'stackexchange']);
+  const [models, setModels] = useState<string[]>(['venice', 'openrouter_llama_70b', 'openrouter_hermes']);
   const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
 
   const hasPlatforms = platforms.length > 0;
@@ -147,24 +150,24 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   className="text-left p-4 min-h-[80px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
                     borderColor: unavailable
-                      ? 'var(--accent-amber)'
+                      ? 'var(--text-muted)'
                       : active
                         ? 'var(--accent-cyan)'
                         : 'var(--text-muted)',
                     boxShadow: unavailable
-                      ? '4px 4px 0px 0px var(--accent-amber)'
+                      ? '2px 2px 0px 0px var(--text-muted)'
                       : active
                         ? '4px 4px 0px 0px var(--accent-cyan)'
                         : '4px 4px 0px 0px var(--text-muted)',
                   }}
                   title={unavailable ? platform.reason : platform.hint}
                 >
-                  <p className="text-sm font-black uppercase" style={{ color: unavailable ? 'var(--accent-amber)' : active ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
+                  <p className="text-sm font-black uppercase" style={{ color: unavailable ? 'var(--text-muted)' : active ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
                     {platform.label}
                   </p>
                   <p className="text-xs text-[var(--text-muted)] mt-1">{platform.hint}</p>
                   {unavailable ? (
-                    <Badge variant="amber" className="mt-2">COMING SOON</Badge>
+                    <Badge variant="default" className="mt-2">COMING SOON</Badge>
                   ) : active ? (
                     <Badge variant="cyan" className="mt-2">ACTIVE</Badge>
                   ) : null}
@@ -183,7 +186,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[var(--accent-amber)]" />
-              <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Consensus Models</span>
+              <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Consensus LLM Routes</span>
             </div>
             <div className="flex items-center gap-3">
                <div className="flex flex-col items-end">
