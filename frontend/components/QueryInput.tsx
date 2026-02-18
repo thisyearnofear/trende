@@ -74,12 +74,12 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
     ? models.reduce((sum, m) => sum + (MODEL_OPTIONS.find(opt => opt.id === m)?.quality || 0), 0) / models.length
     : 0;
   const estimatedSeconds = Math.max(
-    20,
+    45,
     Math.round(
-      12 +
-      platforms.length * 9 +
-      models.length * 11 +
-      (relevanceThreshold > 0.75 ? 10 : 0),
+      (24 +
+      platforms.length * 18 +
+      models.length * 24 +
+      (relevanceThreshold > 0.75 ? 25 : 0)) * 1.6,
     ),
   );
 

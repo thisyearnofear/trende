@@ -998,10 +998,32 @@ async def publish_trend(
 
     # Retrieve report from result node or top level
     res_node = task.get("result") if isinstance(task.get("result"), dict) else task
-    report_md = res_node.get("final_report_md")
-    
+    report_md = (res_node.get("final_report_md") or "").strip()
     if not report_md:
-         return JSONResponse(status_code=400, content={"error": "No trend report found to publish."})
+        # Fallback: synthesize a markdown draft from summary + findings.
+        summary = (res_node.get("summary") or task.get("summary") or "").strip()
+        findings = res_node.get("raw_findings") or task.get("raw_findings") or []
+        lines = [f"# {task.get('topic', 'Trend Analysis')}"]
+        if summary:
+            lines.extend(["", "## Executive Summary", summary])
+        if findings:
+            lines.extend(["", "## Key Evidence"])
+            for idx, item in enumerate(findings[:8], start=1):
+                normalized = item.model_dump() if hasattr(item, "model_dump") else item
+                if not isinstance(normalized, dict):
+                    continue
+                title = normalized.get("title") or "Untitled Source"
+                url = normalized.get("url") or ""
+                content = str(normalized.get("content") or "").strip()[:280]
+                bullet = f"- **S{idx}: {title}**"
+                if url:
+                    bullet += f" ([link]({url}))"
+                if content:
+                    bullet += f": {content}"
+                lines.append(bullet)
+        report_md = "\n".join(lines).strip()
+        if not report_md:
+            return JSONResponse(status_code=400, content={"error": "No trend report found to draft."})
 
     # 2. Run Editorial Workflow
     try:
@@ -1028,7 +1050,7 @@ async def publish_trend(
         draft = editorial_result.get("editorial_draft") or ""
         
         return {
-            "success": editorial_result.get("publish_status") == "SUCCESS",
+            "success": editorial_result.get("publish_status") in {"SUCCESS", "DRAFT_ONLY"},
             "url": editorial_result.get("published_url"),
             "status": editorial_result.get("publish_status"),
             "draft_preview": (str(draft)[:200] + "...") if draft else "",

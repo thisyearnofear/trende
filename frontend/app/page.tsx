@@ -142,6 +142,24 @@ export default function Home() {
     [data],
   );
 
+  const sourceIndexById = useMemo(() => {
+    const map: Record<string, number> = {};
+    allItems.forEach((item, idx) => {
+      if (item?.id && map[item.id] === undefined) {
+        map[item.id] = idx + 1;
+      }
+    });
+    return map;
+  }, [allItems]);
+
+  const sourceLabelByOrdinal = useMemo(() => {
+    const map: Record<number, string> = {};
+    allItems.forEach((item, idx) => {
+      map[idx] = `S${idx + 1}`;
+    });
+    return map;
+  }, [allItems]);
+
   const sourceCount = allItems.length;
   const latestSourceTimestamp = useMemo(() => {
     if (allItems.length === 0) return null;
@@ -387,11 +405,15 @@ export default function Home() {
     setIsPublishingToParagraph(true);
     try {
       const result = await api.publishToParagraph(activeQueryId, apiKey);
-      if (result.success && result.url) {
-        showToast("Draft published to Paragraph! 📝", "success");
-        window.open(result.url, '_blank');
+      if (result.success) {
+        if (result.url) {
+          showToast("Draft published to Paragraph! 📝", "success");
+          window.open(result.url, '_blank');
+        } else {
+          showToast("Draft generated successfully. Paragraph returned no direct URL.", "success");
+        }
       } else {
-        throw new Error("Failed to get draft URL");
+        throw new Error(result.status || "Draft generation failed");
       }
     } catch (e) {
       console.error(e);
@@ -959,7 +981,7 @@ export default function Home() {
                     </Card>
                   </summary>
                   <div className="mt-3">
-                    <TrendSummary summary={data.summary} />
+                    <TrendSummary summary={data.summary} sourceLabelByOrdinal={sourceLabelByOrdinal} />
                   </div>
                 </details>
               </div>
@@ -1095,7 +1117,7 @@ export default function Home() {
                     </Card>
                   </summary>
                   <div className="mt-3">
-                    <PlatformTabs results={data.results} />
+                    <PlatformTabs results={data.results} sourceIndexById={sourceIndexById} />
                   </div>
                 </details>
               </div>

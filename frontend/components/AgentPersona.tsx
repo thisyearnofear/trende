@@ -36,13 +36,21 @@ const personaMessages = {
   ],
   processing: [
     "Trusted Execution Environment (TEE) is isolating this workflow from host tampering.",
+    "EigenCompute enclave policy checks are validating deterministic execution boundaries.",
     "Connectors are harvesting source data and normalizing it into comparable signal objects.",
+    "Tabstack web research is extracting long-form evidence for deeper source grounding.",
     "Rate-limiter and source checks are reducing spam/noise before scoring begins.",
+    "Venice route is generating an independent thesis to reduce single-model bias.",
+    "OpenRouter lanes are running model diversity sweeps for disagreement detection.",
+    "AIsA route is adding an alternate inference path to strengthen consensus breadth.",
     "Cross-model consensus is running to compare independent model outputs for overlap.",
     "Divergence analysis is identifying where models disagree and why confidence may drop.",
+    "Claim-level triangulation is ranking evidence by recency, specificity, and corroboration.",
     "Evidence weighting is combining freshness, breadth, and agreement into confidence.",
+    "Attestation payload assembly is binding output hashes to model-provider metadata.",
     "Architect stage is structuring a shareable brief + forge payload from validated findings.",
     "Attestation is signing the result so provenance can be verified later.",
+    "Wallet-bound persistence layer is preparing save-ready research records.",
     "Pipeline finalization complete. Persisting telemetry and preparing UI payload.",
   ],
   complete: [
@@ -77,7 +85,14 @@ export function AgentPersona({
   const [displayMessage, setDisplayMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [messageTick, setMessageTick] = useState(0);
   const lastTargetMessageRef = useRef('');
+
+  useEffect(() => {
+    if (status !== 'processing') return;
+    const interval = setInterval(() => setMessageTick((n) => n + 1), 2200);
+    return () => clearInterval(interval);
+  }, [status]);
 
   // Animate avatar based on status
   useEffect(() => {
@@ -122,7 +137,10 @@ export function AgentPersona({
     const targetMessage =
       message ||
       (status === 'processing'
-        ? getProcessingMessage(progress)
+        ? personaMessages.processing[
+            (Math.floor((progress / 100) * personaMessages.processing.length) + messageTick) %
+              personaMessages.processing.length
+          ] || getProcessingMessage(progress)
         : personaMessages[status][
             Math.floor(Math.random() * personaMessages[status].length)
           ]);
@@ -158,7 +176,7 @@ export function AgentPersona({
       }, 30);
       return () => clearInterval(typeInterval);
     }
-  }, [status, progress, message]);
+  }, [status, progress, message, messageTick]);
 
   // Status indicator config
   const statusConfig = {

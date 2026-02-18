@@ -55,9 +55,12 @@ const SIMULATED_LOGS: Record<string, string[]> = {
     "CONNECTING TO TWITTER API (RAPIDAPI)...",
     "SCRAPING NEWSAPI ENDPOINTS...",
     "QUERYING TABSTACK WEB SOURCE...",
+    "EXTRACTING LONG-FORM CONTEXT VIA TABSTACK MARKDOWN...",
+    "SCANNING HACKER NEWS + STACKEXCHANGE FOR EARLY TECH SIGNALS...",
     "PARSING UNSTRUCTURED DATA...",
     "DETECTING VIRAL SIGNALS...",
     "FILTERING PLATFORM NOISE...",
+    "NORMALIZING CROSS-PLATFORM SOURCE METADATA...",
   ],
   validator: [
     "CROSS-REFERENCING SOURCES...",
@@ -69,13 +72,17 @@ const SIMULATED_LOGS: Record<string, string[]> = {
   consensus: [
     "INITIALIZING CONSENSUS FORGE...",
     "CONSULTING VENICE AI (PRIVACY-FIRST)...",
-    "CONSULTING GPT-4O...",
-    "CONSULTING LLAMA 3.3...",
+    "CONSULTING AISA ROUTE...",
+    "CONSULTING OPENROUTER LLAMA 70B...",
+    "CONSULTING OPENROUTER HERMES...",
+    "CONSULTING OPENROUTER STEPFUN...",
     "AGGREGATING MULTI-MODEL OUTPUTS...",
     "RESOLVING DIVERGENT SIGNALS...",
+    "RANKING CLAIMS BY CROSS-MODEL AGREEMENT...",
   ],
   architect: [
     "SYNTHESIZING SOVEREIGN REPORT...",
+    "BINDING EVIDENCE HASHES TO FINAL MANIFEST...",
     "GENERATING EIGEN PROOF...",
     "SIGNING ATTESTATION PAYLOAD...",
     "ESTABLISHING PROOF OF COMPUTE...",
@@ -122,7 +129,7 @@ export function ProcessingStatus({
     const interval = setInterval(() => {
       const randomLog = logs[Math.floor(Math.random() * logs.length)];
       setSimulatedLog(`[SYSTEM] ${randomLog}`);
-    }, 2500);
+    }, 1200);
 
     return () => {
       clearInterval(interval);
@@ -230,7 +237,7 @@ export function ProcessingStatus({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Layers className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
+                    <span className={`text-[10px] font-black uppercase tracking-wider ${isSoft ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>
                       World Selectors
                     </span>
                   </div>
@@ -249,7 +256,7 @@ export function ProcessingStatus({
                     <Badge
                       key={p}
                       variant="cyan"
-                      className="text-[8px] py-0 px-1"
+                      className={`text-[8px] py-0 px-1 ${isSoft ? '!bg-[var(--text-primary)] !text-[var(--bg-primary)]' : ''}`}
                     >
                       {getPlatformLabel(p).toUpperCase()}
                     </Badge>
@@ -259,7 +266,7 @@ export function ProcessingStatus({
                 <div className="flex items-center justify-between pt-1">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
+                    <span className={`text-[10px] font-black uppercase tracking-wider ${isSoft ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>
                       Consensus Engine
                     </span>
                   </div>
@@ -279,7 +286,7 @@ export function ProcessingStatus({
                       <Badge
                         key={m}
                         variant="amber"
-                        className="text-[8px] py-0 px-1"
+                        className={`text-[8px] py-0 px-1 ${isSoft ? '!bg-[var(--text-primary)] !text-[var(--bg-primary)]' : ''}`}
                       >
                         {getModelLabel(m).toUpperCase()}
                       </Badge>
@@ -469,15 +476,15 @@ export function ProcessingStatus({
           <div className="p-4">
             <div
               className="border-2 bg-[var(--bg-primary)]"
-              style={{ borderColor: "var(--text-muted)" }}
+              style={{ borderColor: isSoft ? "var(--border-color)" : "var(--text-muted)" }}
             >
               <div
                 className="flex items-center justify-between px-3 py-2 border-b-2 bg-[var(--bg-secondary)]"
-                style={{ borderColor: "var(--text-muted)" }}
+                style={{ borderColor: isSoft ? "var(--border-color)" : "var(--text-muted)" }}
               >
                 <div className="flex items-center gap-2">
-                  <Terminal className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                  <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                  <Terminal className={`w-3.5 h-3.5 ${isSoft ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`} />
+                  <span className={`text-[10px] font-mono ${isSoft ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>
                     TEE_TELEMETRY.LOG
                   </span>
                 </div>

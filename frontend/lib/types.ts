@@ -33,6 +33,7 @@ export interface Query {
 export interface TrendItem {
   id: string;
   platform: string;
+  sourceIndex?: number;
   title: string;
   content: string;
   author: string;

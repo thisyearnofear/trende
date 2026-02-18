@@ -4,13 +4,16 @@ import { TrendSummary as TrendSummaryType } from '@/lib/types';
 import { TrendingUp, TrendingDown, Minus, Lightbulb, Clock, ShieldCheck, Flame, Sparkles } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, Badge, Progress, Alert } from './DesignSystem';
+import { useTheme } from './ThemeProvider';
 
 interface TrendSummaryProps {
   summary?: TrendSummaryType;
+  sourceLabelByOrdinal?: Record<number, string>;
   isLoading?: boolean;
 }
 
-export function TrendSummary({ summary, isLoading }: TrendSummaryProps) {
+export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading }: TrendSummaryProps) {
+  const { isSoft } = useTheme();
   if (isLoading) {
     return (
       <Card accent="cyan" className="p-6 animate-pulse">
@@ -48,6 +51,13 @@ export function TrendSummary({ summary, isLoading }: TrendSummaryProps) {
 
   const confidence = Math.round((summary.confidenceScore || 0) * 100);
   const consensus = summary.consensusData;
+  const renderedValidationNotes = (summary.validationResults || []).slice(0, 4).map((log) =>
+    log.replace(/source\s+(\d+)/i, (_, rawIndex) => {
+      const idx = Number(rawIndex);
+      const label = sourceLabelByOrdinal[idx] || `S${idx + 1}`;
+      return `Source ${label}`;
+    }),
+  );
 
   return (
     <Card accent="white" shadow="md" className="p-5 sm:p-6">
@@ -110,8 +120,8 @@ export function TrendSummary({ summary, isLoading }: TrendSummaryProps) {
           <Progress value={confidence} accent={confidence > 70 ? 'emerald' : confidence > 40 ? 'amber' : 'rose'} className="mb-3" />
           {summary.validationResults && summary.validationResults.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">Validation Notes</p>
-              {summary.validationResults.slice(0, 4).map((log, i) => (
+              <p className={`text-[10px] font-black uppercase tracking-wider ${isSoft ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>Validation Notes</p>
+              {renderedValidationNotes.map((log, i) => (
                 <div key={i} className="text-xs flex gap-2 text-[var(--text-secondary)]">
                   <Flame className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: 'var(--accent-cyan)' }} />
                   {log}
@@ -150,7 +160,7 @@ export function TrendSummary({ summary, isLoading }: TrendSummaryProps) {
               <p className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">Consensus Providers</p>
               <div className="flex flex-wrap gap-1.5">
                 {consensus.providers.map((p) => (
-                  <Badge key={p} variant="amber">{p}</Badge>
+                  <Badge key={p} variant={isSoft ? "default" : "amber"} className={isSoft ? '!bg-[var(--text-primary)] !text-[var(--bg-primary)]' : ''}>{p}</Badge>
                 ))}
               </div>
             </div>

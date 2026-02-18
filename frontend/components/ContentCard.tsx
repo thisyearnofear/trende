@@ -9,6 +9,7 @@ import { Card } from './DesignSystem';
 
 interface ContentCardProps {
   item: TrendItem;
+  sourceIndex?: number;
   onClick?: () => void;
   animationDelayMs?: number;
 }
@@ -21,7 +22,7 @@ const PLATFORM_CONFIG: Record<string, { color: string; icon: string; label: stri
   web: { color: '#6366F1', icon: '🌐', label: 'Web' },
 };
 
-export function ContentCard({ item, onClick, animationDelayMs = 0 }: ContentCardProps) {
+export function ContentCard({ item, sourceIndex, onClick, animationDelayMs = 0 }: ContentCardProps) {
   const config = PLATFORM_CONFIG[item.platform] || { color: '#6366F1', icon: '🌐', label: 'Web' };
   const { isSoft } = useTheme();
 
@@ -67,6 +68,21 @@ export function ContentCard({ item, onClick, animationDelayMs = 0 }: ContentCard
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               <h4 className="font-black uppercase tracking-wider text-[var(--text-primary)] truncate">{item.author}</h4>
+              {sourceIndex !== undefined && (
+                <span
+                  className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 border-2"
+                  style={{
+                    color: 'var(--accent-cyan)',
+                    borderColor: isSoft ? 'transparent' : 'var(--accent-cyan)',
+                    backgroundColor: isSoft ? 'var(--soft-bg)' : 'rgba(0, 255, 255, 0.08)',
+                    boxShadow: isSoft ? 'var(--soft-shadow-out)' : 'none',
+                    borderRadius: isSoft ? '4px' : '0',
+                  }}
+                  title={`Validation reference S${sourceIndex}`}
+                >
+                  S{sourceIndex}
+                </span>
+              )}
               <span
                 className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 border-2"
                 style={{ 

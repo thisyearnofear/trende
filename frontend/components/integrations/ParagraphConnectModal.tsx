@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Button, Input } from '@/components/DesignSystem';
-import { CheckCircle2, ExternalLink, Loader2, X } from 'lucide-react';
+import { Button } from '@/components/DesignSystem';
+import { CheckCircle2, ExternalLink, Eye, EyeOff, Loader2, X } from 'lucide-react';
 
 interface ParagraphConnectModalProps {
   isOpen: boolean;
@@ -12,12 +12,14 @@ export function ParagraphConnectModal({ isOpen, onClose, onConnect }: ParagraphC
   const [apiKey, setApiKey] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // Reset state when opening
   useEffect(() => {
     if (isOpen) {
       setApiKey('');
       setError(null);
+      setShowApiKey(false);
     }
   }, [isOpen]);
 
@@ -95,12 +97,26 @@ export function ParagraphConnectModal({ isOpen, onClose, onConnect }: ParagraphC
 
             <div className="space-y-2">
               <label htmlFor="apiKey" className="text-xs font-black uppercase tracking-wider text-stone-500">API Key</label>
-              <Input
-                value={apiKey}
-                onChange={(val) => setApiKey(val)}
-                placeholder="para_..."
-                className="font-mono"
-              />
+              <div className="relative">
+                <input
+                  id="apiKey"
+                  type={showApiKey ? "text" : "password"}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="para_..."
+                  className="w-full bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-muted)] border-2 border-[var(--border-color)] p-4 pr-11 font-mono text-sm rounded-none focus:outline-none"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-white p-1"
+                  aria-label={showApiKey ? "Hide API key" : "Show API key"}
+                >
+                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               {error && <p className="text-red-400 text-xs font-mono mt-1">{error}</p>}
             </div>
           </div>

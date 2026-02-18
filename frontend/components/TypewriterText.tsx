@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTheme } from './ThemeProvider';
 
 interface TypewriterTextProps {
   text: string;
@@ -140,6 +141,7 @@ const eventPrefixes = {
 
 export function TerminalLog({ events, maxHeight = '200px', className = '' }: TerminalLogProps) {
   const [typedEvents, setTypedEvents] = useState<Set<string>>(new Set());
+  const { isSoft } = useTheme();
 
   const handleComplete = useCallback((id: string) => {
     setTypedEvents((prev) => new Set(prev).add(id));
@@ -158,7 +160,7 @@ export function TerminalLog({ events, maxHeight = '200px', className = '' }: Ter
         return (
           <div
             key={event.id}
-            className={`flex items-start gap-2 ${eventStyles[event.type || 'info']}`}
+            className={`flex items-start gap-2 ${isSoft && (event.type || 'info') === 'info' ? 'text-[var(--text-primary)]' : eventStyles[event.type || 'info']}`}
           >
             <span className="select-none opacity-60 shrink-0">
               {eventPrefixes[event.type || 'info']}

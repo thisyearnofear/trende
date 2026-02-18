@@ -10,6 +10,7 @@ import { useTheme } from './ThemeProvider';
 interface PlatformTabsProps {
   results: TrendResult[];
   isLoading?: boolean;
+  sourceIndexById?: Record<string, number>;
 }
 
 const PLATFORM_CONFIG: Record<string, { icon: string; color: string; label: string }> = {
@@ -20,7 +21,7 @@ const PLATFORM_CONFIG: Record<string, { icon: string; color: string; label: stri
   web: { icon: '🌐', color: '#6366F1', label: 'Web' },
 };
 
-export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
+export function PlatformTabs({ results, isLoading, sourceIndexById = {} }: PlatformTabsProps) {
   const [activeTab, setActiveTab] = useState<string>('all');
   const [selectedItem, setSelectedItem] = useState<TrendItem | null>(null);
   const { isSoft } = useTheme();
@@ -226,6 +227,7 @@ export function PlatformTabs({ results, isLoading }: PlatformTabsProps) {
             <ContentCard
               key={item.id}
               item={item}
+              sourceIndex={sourceIndexById[item.id]}
               onClick={() => setSelectedItem(item)}
               animationDelayMs={index * 35}
             />
