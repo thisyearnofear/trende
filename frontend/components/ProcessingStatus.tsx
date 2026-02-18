@@ -195,6 +195,9 @@ export function ProcessingStatus({
       openrouter_llama_70b: "OR Llama 70B",
       openrouter_stepfun: "OR Stepfun",
       openrouter_aurora: "OR Aurora",
+      gemini: "Gemini",
+      kimi: "Kimi",
+      minimax: "MiniMax",
     };
     return labels[id] || id;
   };

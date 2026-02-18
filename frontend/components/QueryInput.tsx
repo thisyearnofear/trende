@@ -12,13 +12,14 @@ interface QueryInputProps {
 }
 
 const MODEL_OPTIONS = [
-  { id: 'venice', label: 'Venice AI', hint: 'Primary privacy-first consensus lane', quality: 95, cost: 0.002 },
-  { id: 'openrouter_llama_70b', label: 'OR Llama 70B', hint: 'Strong baseline reasoning and coverage', quality: 90, cost: 0.0006 },
-  { id: 'openrouter_hermes', label: 'OR Hermes', hint: 'Detailed synthesis and long-context handling', quality: 88, cost: 0.0006 },
-  { id: 'openrouter_stepfun', label: 'OR Stepfun', hint: 'Fast contrastive perspective for divergence', quality: 84, cost: 0.0005 },
-  { id: 'openrouter_aurora', label: 'OR Aurora', hint: 'Experimental route for edge-case framing', quality: 80, cost: 0.0005 },
-  { id: 'openrouter_auto', label: 'OR Auto', hint: 'Router-managed fallback path', quality: 78, cost: 0.0004 },
-  { id: 'aisa', label: 'AIsA (LLM Route)', hint: 'Separate from data connectors; adds provider diversity', quality: 89, cost: 0.0015 },
+  { id: 'venice', label: 'Venice AI', hint: 'Primary privacy-first consensus lane', quality: 95, cost: 0.002, enabled: true },
+  { id: 'openrouter_llama_70b', label: 'OR Llama 70B', hint: 'Strong baseline reasoning and coverage', quality: 90, cost: 0.0006, enabled: true },
+  { id: 'openrouter_hermes', label: 'OR Hermes', hint: 'Detailed synthesis and long-context handling', quality: 88, cost: 0.0006, enabled: true },
+  { id: 'openrouter_stepfun', label: 'OR Stepfun', hint: 'Fast contrastive perspective for divergence', quality: 84, cost: 0.0005, enabled: true },
+  { id: 'aisa', label: 'AIsA (LLM Route)', hint: 'Separate from data connectors; adds provider diversity', quality: 89, cost: 0.0015, enabled: true },
+  { id: 'gemini', label: 'Gemini', hint: 'Google model route integration', quality: 87, cost: 0.0008, enabled: false, reason: 'Consensus route rollout pending' },
+  { id: 'kimi', label: 'Kimi', hint: 'Moonshot route for long-context synthesis', quality: 86, cost: 0.0007, enabled: false, reason: 'Provider integration pending' },
+  { id: 'minimax', label: 'MiniMax', hint: 'Alternative reasoning lane for diversity', quality: 84, cost: 0.0007, enabled: false, reason: 'Provider integration pending' },
 ];
 
 const PLATFORM_OPTIONS = [
@@ -27,7 +28,6 @@ const PLATFORM_OPTIONS = [
   { id: 'newsapi', label: 'News', hint: 'Media narrative context', enabled: true },
   { id: 'web', label: 'Web', hint: 'Long-tail signal capture (beta)', enabled: true },
   { id: 'gdelt', label: 'GDELT', hint: 'Global event/news graph', enabled: false, reason: 'Connector reliability in progress' },
-  { id: 'wikimedia', label: 'Wikimedia', hint: 'Live public knowledge edits', enabled: false, reason: 'Connector reliability in progress' },
   { id: 'hackernews', label: 'Hacker News', hint: 'Builder/tech pulse', enabled: true },
   { id: 'stackexchange', label: 'StackExchange', hint: 'Technical problem signals', enabled: true },
   { id: 'coingecko', label: 'CoinGecko', hint: 'Crypto market snapshots', enabled: true },
@@ -62,7 +62,8 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
     );
   };
 
-  const toggleModel = (modelId: string) => {
+  const toggleModel = (modelId: string, isEnabled: boolean) => {
+    if (!isEnabled) return;
     setModels((prev) =>
       prev.includes(modelId) ? prev.filter((m) => m !== modelId) : [...prev, modelId]
     );
@@ -207,22 +208,38 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {MODEL_OPTIONS.map((model) => {
               const active = models.includes(model.id);
+              const unavailable = model.enabled === false;
               return (
                 <button
                   key={model.id}
                   type="button"
-                  onClick={() => toggleModel(model.id)}
-                  disabled={disabled}
+                  onClick={() => toggleModel(model.id, model.enabled !== false)}
+                  disabled={disabled || unavailable}
                   className="text-left p-3 min-h-[70px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-50"
                   style={{
-                    borderColor: active ? 'var(--accent-amber)' : 'var(--text-muted)',
-                    boxShadow: active ? '4px 4px 0px 0px var(--accent-amber)' : '4px 4px 0px 0px var(--text-muted)',
+                    borderColor: unavailable
+                      ? 'var(--accent-violet)'
+                      : active
+                        ? 'var(--accent-amber)'
+                        : 'var(--text-muted)',
+                    boxShadow: unavailable
+                      ? '2px 2px 0px 0px var(--accent-violet)'
+                      : active
+                        ? '4px 4px 0px 0px var(--accent-amber)'
+                        : '4px 4px 0px 0px var(--text-muted)',
+                    backgroundColor: active ? 'rgba(255, 170, 0, 0.08)' : undefined,
                   }}
+                  title={unavailable ? model.reason : model.hint}
                 >
-                  <p className="text-xs font-black uppercase" style={{ color: active ? 'var(--accent-amber)' : 'var(--text-primary)' }}>
+                  <p className="text-xs font-black uppercase" style={{ color: unavailable ? 'var(--accent-violet)' : active ? 'var(--accent-amber)' : 'var(--text-primary)' }}>
                     {model.label}
                   </p>
                   <p className="text-[10px] text-[var(--text-muted)] mt-1 leading-tight">{model.hint}</p>
+                  {unavailable ? (
+                    <Badge variant="violet" className="mt-2">COMING SOON</Badge>
+                  ) : active ? (
+                    <Badge variant="amber" className="mt-2">ACTIVE</Badge>
+                  ) : null}
                 </button>
               );
             })}

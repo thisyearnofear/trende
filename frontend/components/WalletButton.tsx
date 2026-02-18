@@ -3,6 +3,7 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Wallet, ChevronDown, ExternalLink, Zap } from 'lucide-react';
 import { formatAddress, getExplorerUrl } from '@/lib/wallet';
+import { useTheme } from './ThemeProvider';
 
 interface WalletButtonProps {
   /** Show the user's tier info */
@@ -12,6 +13,8 @@ interface WalletButtonProps {
 }
 
 export function WalletButton({ showTier = false, compact = false }: WalletButtonProps) {
+  const { isSoft } = useTheme();
+
   return (
     <ConnectButton.Custom>
       {({
@@ -46,17 +49,19 @@ export function WalletButton({ showTier = false, compact = false }: WalletButton
                 return (
                   <button
                     onClick={openConnectModal}
-                    className={`
-                      flex items-center gap-2 rounded-xl border border-cyan-500/30 
-                      bg-gradient-to-r from-cyan-500/10 to-emerald-500/10 
-                      px-3 py-2 text-sm font-medium text-cyan-300 
-                      transition-all hover:border-cyan-500/50 hover:bg-cyan-500/20
-                      ${compact ? 'px-2.5 py-1.5 text-xs' : ''}
-                    `}
+                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all ${compact ? 'px-2.5 py-1.5 text-xs' : ''}`}
+                    style={{
+                      borderColor: isSoft ? 'var(--accent-cyan)' : 'rgba(6, 182, 212, 0.35)',
+                      background: isSoft
+                        ? 'linear-gradient(135deg, rgba(0,102,204,0.20), rgba(0,170,68,0.12))'
+                        : 'linear-gradient(90deg, rgba(6,182,212,0.12), rgba(16,185,129,0.10))',
+                      color: isSoft ? 'var(--text-primary)' : 'rgb(165 243 252)',
+                      boxShadow: isSoft ? 'var(--soft-shadow-out)' : undefined,
+                    }}
                   >
                     <Wallet className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
                     <span>Connect</span>
-                    <MonadBadge compact={compact} />
+                    <MonadBadge compact={compact} isSoft={isSoft} />
                   </button>
                 );
               }
@@ -65,7 +70,12 @@ export function WalletButton({ showTier = false, compact = false }: WalletButton
                 return (
                   <button
                     onClick={openChainModal}
-                    className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-300 transition-all hover:bg-red-500/20"
+                    className="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all"
+                    style={{
+                      borderColor: isSoft ? 'var(--accent-rose)' : 'rgba(239, 68, 68, 0.35)',
+                      backgroundColor: isSoft ? 'rgba(255, 76, 76, 0.14)' : 'rgba(239, 68, 68, 0.12)',
+                      color: isSoft ? 'var(--text-primary)' : 'rgb(252 165 165)',
+                    }}
                   >
                     Wrong network
                     <ChevronDown className="w-4 h-4" />
@@ -79,12 +89,13 @@ export function WalletButton({ showTier = false, compact = false }: WalletButton
                   
                   <button
                     onClick={openAccountModal}
-                    className={`
-                      flex items-center gap-2 rounded-xl border border-emerald-500/30 
-                      bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-300 
-                      transition-all hover:border-emerald-500/50 hover:bg-emerald-500/20
-                      ${compact ? 'px-2.5 py-1.5 text-xs' : ''}
-                    `}
+                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all ${compact ? 'px-2.5 py-1.5 text-xs' : ''}`}
+                    style={{
+                      borderColor: isSoft ? 'var(--accent-emerald)' : 'rgba(16, 185, 129, 0.35)',
+                      backgroundColor: isSoft ? 'rgba(0, 170, 68, 0.16)' : 'rgba(16, 185, 129, 0.10)',
+                      color: isSoft ? 'var(--text-primary)' : 'rgb(167 243 208)',
+                      boxShadow: isSoft ? 'var(--soft-shadow-out)' : undefined,
+                    }}
                   >
                     <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="font-mono">{formatAddress(account.address)}</span>
@@ -101,16 +112,22 @@ export function WalletButton({ showTier = false, compact = false }: WalletButton
 }
 
 // Monad badge shown on connect button
-function MonadBadge({ compact = false }: { compact?: boolean }) {
+function MonadBadge({ compact = false, isSoft = false }: { compact?: boolean; isSoft?: boolean }) {
   return (
     <span 
       className={`
         inline-flex items-center gap-1 rounded-full 
-        bg-gradient-to-r from-purple-500/20 to-cyan-500/20 
-        border border-purple-500/30 
+        border
         ${compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-[10px]'}
-        font-bold text-purple-300 uppercase tracking-wider
+        font-bold uppercase tracking-wider
       `}
+      style={{
+        background: isSoft
+          ? 'rgba(255, 255, 255, 0.85)'
+          : 'linear-gradient(90deg, rgba(168,85,247,0.20), rgba(6,182,212,0.20))',
+        borderColor: isSoft ? 'var(--accent-cyan)' : 'rgba(168,85,247,0.35)',
+        color: isSoft ? 'var(--accent-cyan)' : 'rgb(216 180 254)',
+      }}
     >
       <Zap className={compact ? 'w-2 h-2' : 'w-2.5 h-2.5'} />
       Monad
