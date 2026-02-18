@@ -265,35 +265,35 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-slate-400 mb-2 ml-1">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                    <section className={`sm:col-span-2 ${isSoft ? 'soft-ui-out border-0 p-4 sm:p-5 rounded-2xl' : 'rounded-2xl border border-slate-700/50 bg-slate-900/70 p-4 sm:p-5'}`}>
+                        <div className="flex items-center gap-2 text-slate-400 mb-3">
                             <TrendingUp className="w-4 h-4" />
                             <span className="text-xs font-bold uppercase tracking-widest">Key Pillars</span>
                         </div>
-                        <div className="space-y-3">
+                        <div className="grid gap-3 sm:grid-cols-2">
                             {(data.thesis || []).map((point, i) => (
                                 <div
                                     key={i}
-                                    className={`p-4 transition-all ${isSoft ? 'soft-ui-out border-0' : 'rounded-2xl bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800/60'}`}
+                                    className={`p-4 transition-all ${isSoft ? 'soft-ui-out border-0 rounded-xl' : 'rounded-xl bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800/70'}`}
                                 >
-                                    <div className="flex gap-4">
-                                        <span className={`${isSoft ? 'text-cyan-600' : 'text-cyan-500'} font-mono font-bold`}>{i + 1}.</span>
+                                    <div className="flex gap-3">
+                                        <span className={`${isSoft ? 'text-cyan-600' : 'text-cyan-400'} font-mono font-bold`}>{i + 1}.</span>
                                         <p className={`text-sm leading-relaxed ${isSoft ? 'text-slate-600' : 'text-slate-300'}`}>{point}</p>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </section>
 
-                    <div className="space-y-4">
-                        {isMeme ? (
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-slate-400 mb-2 ml-1">
+                    {isMeme ? (
+                        <>
+                            <section className={`${isSoft ? 'soft-ui-out border-0 p-4 rounded-2xl' : 'rounded-2xl border border-slate-700/50 bg-slate-900/70 p-4'}`}>
+                                <div className="flex items-center gap-2 text-slate-400 mb-3">
                                     <Sparkles className="w-4 h-4" />
                                     <span className="text-xs font-bold uppercase tracking-widest">Brand Aesthetic</span>
                                 </div>
-                                <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 flex items-center justify-between">
+                                <div className="p-4 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 flex items-center justify-between">
                                     <div>
                                         <p className="text-sm text-slate-200 font-bold">
                                             {data.brand?.aesthetic || 'Vibrant Agentic'}
@@ -307,8 +307,10 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                         style={{ backgroundColor: data.brand?.primary_color || '#00D1FF' }}
                                     />
                                 </div>
+                            </section>
 
-                                <div className="flex items-center gap-2 text-slate-400 mb-2 ml-1">
+                            <section className={`${isSoft ? 'soft-ui-out border-0 p-4 rounded-2xl' : 'rounded-2xl border border-slate-700/50 bg-slate-900/70 p-4'}`}>
+                                <div className="flex items-center gap-2 text-slate-400 mb-3">
                                     <Info className="w-4 h-4" />
                                     <span className="text-xs font-bold uppercase tracking-widest">Consensus Metrics</span>
                                 </div>
@@ -328,186 +330,177 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                         </p>
                                     </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-slate-400 mb-2 ml-1">
-                                    <ShieldCheck className="w-4 h-4" />
-                                    <span className="text-xs font-bold uppercase tracking-widest">
-                                        Cryptographic Attestation
-                                    </span>
-                                </div>
-
-                                {/* Prominent Attestation Card */}
-                                <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-2 border-emerald-500/30 shadow-lg">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <AttestationBadge attestation={attestation} size="lg" showDetails />
-                                        <button
-                                            onClick={() => {
-                                                if (attestation?.signature) {
-                                                    navigator.clipboard.writeText(attestation.signature);
-                                                    setCopiedSignature(true);
-                                                    showToast('Signature copied to clipboard', 'success');
-                                                    setTimeout(() => setCopiedSignature(false), 2000);
-                                                }
-                                            }}
-                                            className="p-2 rounded-lg hover:bg-emerald-500/10 transition-colors"
-                                            title="Copy signature"
-                                        >
-                                            {copiedSignature ? (
-                                                <Check className="w-4 h-4 text-emerald-400" />
-                                            ) : (
-                                                <Copy className="w-4 h-4 text-slate-400" />
-                                            )}
-                                        </button>
-                                    </div>
-
-                                    <p className="text-sm text-slate-300 leading-relaxed italic mb-4">
-                                        &quot;{summary.overview || 'No consensus overview provided.'}&quot;
-                                    </p>
-
-                                    {/* Attestation Details Grid */}
-                                    <div className="grid grid-cols-2 gap-3 mb-4">
-                                        <div className="p-3 rounded-lg bg-slate-900/50 border border-slate-700/50">
-                                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
-                                                Attestation ID
-                                            </p>
-                                            <p className="text-xs text-emerald-400 font-mono break-all">
-                                                {attestation?.attestation_id || 'n/a'}
-                                            </p>
-                                        </div>
-                                        <div className="p-3 rounded-lg bg-slate-900/50 border border-slate-700/50">
-                                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
-                                                Method
-                                            </p>
-                                            <p className="text-xs text-slate-300 font-mono">
-                                                {attestation?.method || 'n/a'}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Signer Address */}
-                                    <div className="p-3 rounded-lg bg-slate-900/50 border border-emerald-500/20 mb-4">
-                                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
-                                            TEE Signer Address
-                                        </p>
-                                        <a
-                                            href="https://etherscan.io/address/0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-emerald-400 hover:text-emerald-300 font-mono flex items-center gap-2 transition-colors"
-                                        >
-                                            0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-                                            <ExternalLink className="w-3 h-3" />
-                                        </a>
-                                    </div>
-
-                                    {/* Signature Preview */}
-                                    <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-700/50">
-                                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
-                                            Cryptographic Signature
-                                        </p>
-                                        <p className="text-xs text-slate-400 font-mono break-all">
-                                            {attestation?.signature ? `${attestation.signature.slice(0, 66)}...` : 'n/a'}
-                                        </p>
-                                    </div>
-
-                                    {consensus?.pillars && consensus.pillars.length > 0 && (
-                                        <div className="mt-4 pt-4 border-t border-slate-700/50">
-                                            <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mb-2">Consensus Pillars</p>
-                                            <ul className="space-y-1">
-                                                {consensus.pillars.slice(0, 3).map((pillar: string, idx: number) => (
-                                                    <li key={idx} className="text-xs text-slate-400 flex items-start gap-2">
-                                                        <span className="text-emerald-500">•</span> {pillar}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-
-                                    {consensus?.anomalies && consensus.anomalies.length > 0 && (
-                                        <div className="mt-3">
-                                            <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-2">Fringe Anomalies</p>
-                                            <ul className="space-y-1">
-                                                {consensus.anomalies.slice(0, 2).map((anomaly: string, idx: number) => (
-                                                    <li key={idx} className="text-xs text-slate-500 flex items-start gap-2">
-                                                        <span className="text-amber-500">?</span> {anomaly}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-
-                                    {consensusWarnings.length > 0 && (
-                                        <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                                            <p className="text-[10px] text-amber-300 font-bold uppercase tracking-widest mb-1">
-                                                Runtime Warnings
-                                            </p>
-                                            <ul className="space-y-1">
-                                                {consensusWarnings.map((warning, idx) => (
-                                                    <li key={idx} className="text-xs text-amber-100/90">
-                                                        - {warning}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-
-                                    {/* Verification Actions */}
-                                    <div className="mt-4 pt-4 border-t border-slate-700/50">
-                                        <VerificationStatus
-                                            isVerifying={isVerifying}
-                                            verified={verified}
-                                            onVerify={verifyAttestation}
-                                        />
-                                        {verifyStatus && (
-                                            <p className="text-xs text-slate-400 mt-2">{verifyStatus}</p>
+                            </section>
+                        </>
+                    ) : (
+                        <>
+                            <section className={`sm:col-span-2 xl:col-span-2 ${isSoft ? 'soft-ui-out border-0 p-5 rounded-2xl' : 'p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-2 border-emerald-500/30 shadow-lg'}`}>
+                                <div className="flex items-start justify-between mb-4">
+                                    <AttestationBadge attestation={attestation} size="lg" showDetails />
+                                    <button
+                                        onClick={() => {
+                                            if (attestation?.signature) {
+                                                navigator.clipboard.writeText(attestation.signature);
+                                                setCopiedSignature(true);
+                                                showToast('Signature copied to clipboard', 'success');
+                                                setTimeout(() => setCopiedSignature(false), 2000);
+                                            }
+                                        }}
+                                        className="p-2 rounded-lg hover:bg-emerald-500/10 transition-colors"
+                                        title="Copy signature"
+                                    >
+                                        {copiedSignature ? (
+                                            <Check className="w-4 h-4 text-emerald-400" />
+                                        ) : (
+                                            <Copy className="w-4 h-4 text-slate-400" />
                                         )}
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowVerificationDetails(true)}
-                                            className="mt-2 text-xs text-slate-400 hover:text-slate-300 underline"
-                                        >
-                                            View full technical details →
-                                        </button>
+                                    </button>
+                                </div>
+
+                                <p className="text-sm text-slate-300 leading-relaxed italic mb-4">
+                                    &quot;{summary.overview || 'No consensus overview provided.'}&quot;
+                                </p>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                                    <div className="p-3 rounded-lg bg-slate-900/50 border border-slate-700/50">
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
+                                            Attestation ID
+                                        </p>
+                                        <p className="text-xs text-emerald-400 font-mono break-all">
+                                            {attestation?.attestation_id || 'n/a'}
+                                        </p>
+                                    </div>
+                                    <div className="p-3 rounded-lg bg-slate-900/50 border border-slate-700/50">
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
+                                            Method
+                                        </p>
+                                        <p className="text-xs text-slate-300 font-mono">
+                                            {attestation?.method || 'n/a'}
+                                        </p>
                                     </div>
                                 </div>
-                                {providerOutputs.length > 0 && (
-                                    <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
-                                        <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-widest mb-2">
-                                            Provider Provenance
-                                        </p>
-                                        <div className="space-y-2">
-                                            {providerOutputs.map((output, idx) => (
-                                                <div key={`${output.provider}-${idx}`} className="rounded-lg border border-slate-700 bg-slate-800/70 p-2.5">
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <p className="text-xs text-slate-200">
-                                                            {output.provider}
-                                                            {output.model_id ? ` (${output.model_id})` : ''}
-                                                        </p>
-                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${output.status === 'ok' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
-                                                            {output.status || 'ok'}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-[11px] text-slate-400 mt-1">
-                                                        latency: {Math.round(output.latency_ms || 0)}ms
-                                                    </p>
-                                                    {output.error && (
-                                                        <p className="text-[11px] text-rose-300 mt-1 line-clamp-2">{output.error}</p>
-                                                    )}
-                                                </div>
+
+                                <div className="p-3 rounded-lg bg-slate-900/50 border border-emerald-500/20 mb-4">
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
+                                        TEE Signer Address
+                                    </p>
+                                    <a
+                                        href="https://etherscan.io/address/0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-emerald-400 hover:text-emerald-300 font-mono flex items-center gap-2 transition-colors"
+                                    >
+                                        0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+                                        <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                </div>
+
+                                <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-700/50">
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
+                                        Cryptographic Signature
+                                    </p>
+                                    <p className="text-xs text-slate-400 font-mono break-all">
+                                        {attestation?.signature ? `${attestation.signature.slice(0, 66)}...` : 'n/a'}
+                                    </p>
+                                </div>
+
+                                {consensus?.pillars && consensus.pillars.length > 0 && (
+                                    <div className="mt-4 pt-4 border-t border-slate-700/50">
+                                        <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mb-2">Consensus Pillars</p>
+                                        <ul className="space-y-1">
+                                            {consensus.pillars.slice(0, 3).map((pillar: string, idx: number) => (
+                                                <li key={idx} className="text-xs text-slate-400 flex items-start gap-2">
+                                                    <span className="text-emerald-500">•</span> {pillar}
+                                                </li>
                                             ))}
-                                        </div>
+                                        </ul>
                                     </div>
                                 )}
-                            </div>
-                        )}
 
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-slate-400 mb-2 ml-1">
-                                <ExternalLink className="w-4 h-4" />
-                                <span className="text-xs font-bold uppercase tracking-widest">Alpha Citations</span>
-                            </div>
+                                {consensus?.anomalies && consensus.anomalies.length > 0 && (
+                                    <div className="mt-3">
+                                        <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-2">Fringe Anomalies</p>
+                                        <ul className="space-y-1">
+                                            {consensus.anomalies.slice(0, 2).map((anomaly: string, idx: number) => (
+                                                <li key={idx} className="text-xs text-slate-500 flex items-start gap-2">
+                                                    <span className="text-amber-500">?</span> {anomaly}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {consensusWarnings.length > 0 && (
+                                    <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                                        <p className="text-[10px] text-amber-300 font-bold uppercase tracking-widest mb-1">
+                                            Runtime Warnings
+                                        </p>
+                                        <ul className="space-y-1">
+                                            {consensusWarnings.map((warning, idx) => (
+                                                <li key={idx} className="text-xs text-amber-100/90">
+                                                    - {warning}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                <div className="mt-4 pt-4 border-t border-slate-700/50">
+                                    <VerificationStatus
+                                        isVerifying={isVerifying}
+                                        verified={verified}
+                                        onVerify={verifyAttestation}
+                                    />
+                                    {verifyStatus && (
+                                        <p className="text-xs text-slate-400 mt-2">{verifyStatus}</p>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowVerificationDetails(true)}
+                                        className="mt-2 text-xs text-slate-400 hover:text-slate-300 underline"
+                                    >
+                                        View full technical details →
+                                    </button>
+                                </div>
+                            </section>
+
+                            {providerOutputs.length > 0 && (
+                                <section className={`${isSoft ? 'soft-ui-out border-0 p-4 rounded-2xl' : 'rounded-2xl border border-slate-700 bg-slate-900/70 p-4'}`}>
+                                    <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-widest mb-2">
+                                        Provider Provenance
+                                    </p>
+                                    <div className="space-y-2">
+                                        {providerOutputs.map((output, idx) => (
+                                            <div key={`${output.provider}-${idx}`} className="rounded-lg border border-slate-700 bg-slate-800/70 p-2.5">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <p className="text-xs text-slate-200">
+                                                        {output.provider}
+                                                        {output.model_id ? ` (${output.model_id})` : ''}
+                                                    </p>
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${output.status === 'ok' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                                                        {output.status || 'ok'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-400 mt-1">
+                                                    latency: {Math.round(output.latency_ms || 0)}ms
+                                                </p>
+                                                {output.error && (
+                                                    <p className="text-[11px] text-rose-300 mt-1 line-clamp-2">{output.error}</p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+                        </>
+                    )}
+
+                    <section className={`sm:col-span-2 xl:col-span-2 ${isSoft ? 'soft-ui-out border-0 p-4 rounded-2xl' : 'rounded-2xl border border-slate-700/50 bg-slate-900/70 p-4'}`}>
+                        <div className="flex items-center gap-2 text-slate-400 mb-3">
+                            <ExternalLink className="w-4 h-4" />
+                            <span className="text-xs font-bold uppercase tracking-widest">Alpha Citations</span>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
                             {(data.citations || []).map((cite, i) => (
                                 <div
                                     key={i}
@@ -536,7 +529,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </section>
                 </div>
 
                 <div className="pt-6 border-t border-slate-800">

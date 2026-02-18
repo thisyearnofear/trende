@@ -424,7 +424,7 @@ async def run_trend_analysis(
     async for output in workflow.astream(initial_state):
         for node_name, state_update in output.items():
             final_state.update(state_update)
-            
+    return final_state
 
 def create_editorial_workflow() -> Any:
     from backend.agents.nodes.editorial import editorial_node, publish_node

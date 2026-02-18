@@ -72,6 +72,27 @@ class TaskModel(Base):  # type: ignore
     )
 
 
+class ActionModel(Base):  # type: ignore
+    __tablename__ = "actions"
+    action_id = Column(String, primary_key=True)
+    action_type = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="queued")
+    task_id = Column(String, nullable=True)
+    caller_address = Column(String, nullable=True)
+    idempotency_key = Column(String, nullable=True, unique=True)
+    input_payload = Column(JSON, nullable=False, default=dict)
+    result_payload = Column(JSON, nullable=True)
+    error = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(datetime.timezone.utc),
+        onupdate=lambda: datetime.datetime.now(datetime.timezone.utc),
+    )
+
+
 if HAS_SQL:
     engine = create_engine(settings.database_url)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -84,6 +105,7 @@ def init_db() -> None:
     if HAS_SQL and hasattr(Base, "metadata"):
         Base.metadata.create_all(bind=engine)  # type: ignore
         _migrate_task_columns()
+        _migrate_action_columns()
 
 
 def _migrate_task_columns() -> None:
@@ -101,6 +123,30 @@ def _migrate_task_columns() -> None:
             ("ipfs_uri", "ALTER TABLE tasks ADD COLUMN ipfs_uri VARCHAR"),
             ("save_label", "ALTER TABLE tasks ADD COLUMN save_label VARCHAR"),
             ("tags", "ALTER TABLE tasks ADD COLUMN tags JSON"),
+        ]
+        for column_name, ddl in migrations:
+            if column_name not in cols:
+                conn.execute(text(ddl))
+
+
+def _migrate_action_columns() -> None:
+    """Best-effort additive migration for action table."""
+    if not HAS_SQL or engine is None:
+        return
+    with engine.begin() as conn:
+        tables = {t for t in inspect(conn).get_table_names()}
+        if "actions" not in tables:
+            return
+        cols = {col["name"] for col in inspect(conn).get_columns("actions")}
+        migrations = [
+            ("caller_address", "ALTER TABLE actions ADD COLUMN caller_address VARCHAR"),
+            ("idempotency_key", "ALTER TABLE actions ADD COLUMN idempotency_key VARCHAR"),
+            ("input_payload", "ALTER TABLE actions ADD COLUMN input_payload JSON"),
+            ("result_payload", "ALTER TABLE actions ADD COLUMN result_payload JSON"),
+            ("error", "ALTER TABLE actions ADD COLUMN error VARCHAR"),
+            ("started_at", "ALTER TABLE actions ADD COLUMN started_at DATETIME"),
+            ("completed_at", "ALTER TABLE actions ADD COLUMN completed_at DATETIME"),
+            ("updated_at", "ALTER TABLE actions ADD COLUMN updated_at DATETIME"),
         ]
         for column_name, ddl in migrations:
             if column_name not in cols:
@@ -371,3 +417,110 @@ class Repository:
                 }
                 for t in tasks
             ]
+
+    def create_action(
+        self,
+        action_id: str,
+        action_type: str,
+        task_id: str | None = None,
+        caller_address: str | None = None,
+        idempotency_key: str | None = None,
+        input_payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        if not HAS_SQL or not self.Session:
+            return None
+        with self.Session() as session:
+            action = ActionModel(
+                action_id=action_id,
+                action_type=action_type,
+                status="queued",
+                task_id=task_id,
+                caller_address=caller_address.lower() if caller_address else None,
+                idempotency_key=idempotency_key,
+                input_payload=input_payload or {},
+            )
+            session.add(action)
+            session.commit()
+            return self._serialize_action(action)
+
+    def update_action(
+        self,
+        action_id: str,
+        *,
+        status: str | None = None,
+        result_payload: dict[str, Any] | None = None,
+        error: str | None = None,
+        started_at: str | datetime.datetime | None = None,
+        completed_at: str | datetime.datetime | None = None,
+    ) -> dict[str, Any] | None:
+        if not HAS_SQL or not self.Session:
+            return None
+        with self.Session() as session:
+            action = session.query(ActionModel).filter(ActionModel.action_id == action_id).first()
+            if not action:
+                return None
+            if status:
+                action.status = status
+            if result_payload is not None:
+                action.result_payload = result_payload
+            if error is not None:
+                action.error = error
+            if started_at is not None:
+                action.started_at = self._coerce_datetime(started_at)
+            if completed_at is not None:
+                action.completed_at = self._coerce_datetime(completed_at)
+            action.updated_at = datetime.datetime.now(datetime.timezone.utc)
+            session.commit()
+            return self._serialize_action(action)
+
+    def get_action(self, action_id: str) -> dict[str, Any] | None:
+        if not HAS_SQL or not self.Session:
+            return None
+        with self.Session() as session:
+            action = session.query(ActionModel).filter(ActionModel.action_id == action_id).first()
+            if not action:
+                return None
+            return self._serialize_action(action)
+
+    def get_action_by_idempotency_key(self, idempotency_key: str) -> dict[str, Any] | None:
+        if not HAS_SQL or not self.Session:
+            return None
+        with self.Session() as session:
+            action = (
+                session.query(ActionModel)
+                .filter(ActionModel.idempotency_key == idempotency_key)
+                .order_by(ActionModel.created_at.desc())
+                .first()
+            )
+            if not action:
+                return None
+            return self._serialize_action(action)
+
+    def _coerce_datetime(
+        self, value: str | datetime.datetime | None
+    ) -> datetime.datetime | None:
+        if value is None:
+            return None
+        if isinstance(value, datetime.datetime):
+            return value
+        try:
+            return datetime.datetime.fromisoformat(value)
+        except ValueError:
+            return None
+
+    def _serialize_action(self, action: ActionModel) -> dict[str, Any]:
+        return {
+            "action_id": action.action_id,
+            "action_type": action.action_type,
+            "status": action.status,
+            "task_id": action.task_id,
+            "caller_address": action.caller_address,
+            "idempotency_key": action.idempotency_key,
+            "input_payload": action.input_payload or {},
+            "result_payload": action.result_payload,
+            "error": action.error,
+            "created_at": action.created_at.isoformat() if action.created_at else None,
+            "started_at": action.started_at.isoformat() if action.started_at else None,
+            "completed_at": action.completed_at.isoformat() if action.completed_at else None,
+            "updated_at": action.updated_at.isoformat() if action.updated_at else None,
+        }

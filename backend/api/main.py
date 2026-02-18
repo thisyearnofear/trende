@@ -221,6 +221,22 @@ class SaveResearchRequest(BaseModel):
         return self
 
 
+class ActionSubmitRequest(BaseModel):
+    action_type: str
+    task_id: str | None = None
+    input: dict[str, Any] = Field(default_factory=dict)
+    idempotency_key: str | None = None
+
+    @model_validator(mode="after")
+    def validate_action(self) -> "ActionSubmitRequest":
+        self.action_type = (self.action_type or "").strip().lower()
+        if not self.action_type:
+            raise ValueError("action_type is required.")
+        if self.idempotency_key is not None:
+            self.idempotency_key = self.idempotency_key.strip()[:128] or None
+        return self
+
+
 def _configured_consensus_routes() -> dict[str, Any]:
     routes: list[dict[str, str]] = []
 
@@ -499,6 +515,103 @@ async def run_agent_workflow(
         repo.save_task(task_id, tasks[task_id])
 
 
+async def run_agent_action(action_id: str) -> None:
+    now = datetime.datetime.now(datetime.timezone.utc)
+    repo.update_action(
+        action_id,
+        status="running",
+        started_at=now,
+    )
+
+    action = repo.get_action(action_id)
+    if not action:
+        return
+
+    action_type = action.get("action_type")
+    task_id = action.get("task_id")
+    input_payload = action.get("input_payload") or {}
+
+    try:
+        task = tasks.get(task_id) or (repo.get_task(task_id) if task_id else None)
+        if task_id and not task:
+            raise ValueError("Referenced task not found.")
+
+        base_url = os.getenv("FRONTEND_URL", "https://trende.vercel.app")
+
+        if action_type == "generate_alpha_manifest":
+            if not task or task.get("status") != QueryStatus.COMPLETED:
+                raise ValueError("Task must be completed before manifest generation.")
+            data = task.get("meme_page_data", {}) or {}
+            token = data.get("token", {})
+            proof_url = f"{base_url}/meme/{task_id}"
+            result_payload = {
+                "manifest": {
+                    "name": token.get("name"),
+                    "symbol": token.get("ticker"),
+                    "description": token.get("description", ""),
+                    "website": proof_url,
+                    "trende_proof_id": task_id,
+                    "attestation": task.get("attestation_data"),
+                },
+                "status": "ready",
+            }
+        elif action_type == "draft_paragraph":
+            if not task:
+                raise ValueError("draft_paragraph requires task_id.")
+            result_node = task.get("result") if isinstance(task.get("result"), dict) else task
+            final_report = (
+                result_node.get("final_report_md")
+                if isinstance(result_node, dict)
+                else task.get("final_report_md", "")
+            ) or ""
+            title = input_payload.get("title") or f"Trende Brief: {task.get('topic', 'Analysis')}"
+            result_payload = {
+                "draft": {
+                    "title": title,
+                    "body_markdown": final_report[:12000],
+                    "source_task_id": task_id,
+                },
+                "status": "ready",
+            }
+        elif action_type == "export_proof_bundle":
+            if not task:
+                raise ValueError("export_proof_bundle requires task_id.")
+            result_node = task.get("result") if isinstance(task.get("result"), dict) else task
+            attestation = (
+                result_node.get("attestation_data")
+                if isinstance(result_node, dict)
+                else task.get("attestation_data")
+            ) or {}
+            result_payload = {
+                "proof_url": f"{base_url}/proof/{task_id}",
+                "attestation_id": attestation.get("attestation_id"),
+                "signature": attestation.get("signature"),
+                "input_hash": attestation.get("input_hash"),
+                "status": "ready",
+            }
+        else:
+            result_payload = {
+                "status": "accepted",
+                "message": "Action type scaffolded but no executor implemented yet.",
+                "action_type": action_type,
+            }
+
+        repo.update_action(
+            action_id,
+            status="succeeded",
+            result_payload=result_payload,
+            completed_at=datetime.datetime.now(datetime.timezone.utc),
+            error=None,
+        )
+    except Exception as exc:
+        repo.update_action(
+            action_id,
+            status="failed",
+            error=str(exc),
+            completed_at=datetime.datetime.now(datetime.timezone.utc),
+        )
+
+
 @app.get("/api/trends/history")
 async def get_history(saved_only: bool = False) -> dict[str, Any]:
     """Returns a list of all past queries."""
@@ -633,6 +746,41 @@ async def save_research(
         },
         "archive": archive_info,
     }
+
+
+@app.post("/api/actions/submit")
+async def submit_action(
+    request: ActionSubmitRequest,
+    background_tasks: BackgroundTasks,
+    x_wallet_address: str | None = Header(None, alias="X-Wallet-Address"),
+) -> dict[str, Any] | Response:
+    if request.idempotency_key:
+        existing = repo.get_action_by_idempotency_key(request.idempotency_key)
+        if existing:
+            return {"action": existing, "idempotent": True}
+
+    action_id = str(uuid.uuid4())
+    created = repo.create_action(
+        action_id=action_id,
+        action_type=request.action_type,
+        task_id=request.task_id,
+        caller_address=x_wallet_address,
+        idempotency_key=request.idempotency_key,
+        input_payload=request.input,
+    )
+    if not created:
+        return Response(status_code=500, content=json.dumps({"error": "Failed to create action"}))
+
+    background_tasks.add_task(run_agent_action, action_id)
+    return {"action": created, "idempotent": False}
+
+
+@app.get("/api/actions/{action_id}")
+async def get_action_status(action_id: str) -> dict[str, Any] | Response:
+    action = repo.get_action(action_id)
+    if not action:
+        return Response(status_code=404, content=json.dumps({"error": "Action not found"}))
+    return {"action": action}
 
 
 @app.get("/api/commons")
