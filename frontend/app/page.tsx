@@ -1020,7 +1020,6 @@ export default function Home() {
                   <Copy className="w-4 h-4 mr-1" />
                   Copy Brief
                 </Button>
-
                 <div className="flex gap-1">
                   <IconButton
                     icon={<Share2 className="w-4 h-4" />}
@@ -1198,6 +1197,63 @@ export default function Home() {
                   </div>
                 </details>
               </div>
+
+              {data.summary && activeQueryId && (
+                <div className="md:col-span-2">
+                  <Card accent="emerald" className="p-4 sm:p-5">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-black uppercase tracking-wider">
+                            Forge Preview
+                          </span>
+                          {(data.summary.consensusData?.agreement_score || 0) < 0.65 && (
+                            <span className="text-[10px] uppercase font-black px-2 py-0.5 bg-[var(--accent-amber)] text-[var(--bg-primary)]">
+                              Deep Review Recommended
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs font-mono text-[var(--text-muted)] line-clamp-2">
+                          {(data.summary.overview || "No overview available.").slice(0, 220)}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono min-w-[260px]">
+                        <div className="border-2 border-[var(--border-color)] bg-[var(--bg-primary)] px-2 py-1.5">
+                          <p className="text-[10px] text-[var(--text-muted)] uppercase">Agreement</p>
+                          <p className="font-black text-[var(--accent-amber)]">
+                            {Math.round((data.summary.consensusData?.agreement_score || 0) * 100)}%
+                          </p>
+                        </div>
+                        <div className="border-2 border-[var(--border-color)] bg-[var(--bg-primary)] px-2 py-1.5">
+                          <p className="text-[10px] text-[var(--text-muted)] uppercase">Attestation</p>
+                          <p className="font-black text-[var(--accent-emerald)]">
+                            {data.summary.attestationData?.status ? "READY" : "PENDING"}
+                          </p>
+                        </div>
+                        <div className="border-2 border-[var(--border-color)] bg-[var(--bg-primary)] px-2 py-1.5">
+                          <p className="text-[10px] text-[var(--text-muted)] uppercase">Sources</p>
+                          <p className="font-black text-[var(--accent-cyan)]">{sourceCount}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowForgeInline((prev) => !prev)}
+                      >
+                        {showForgeInline ? "Collapse Forge" : "Expand Forge"}
+                      </Button>
+                      <Link href={`/proof/${activeQueryId}`}>
+                        <Button variant="ghost" size="sm">
+                          Open Full Forge
+                          <ExternalLink className="w-3.5 h-3.5 ml-1 inline-block" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </Card>
+                </div>
+              )}
 
               {showForgeInline && data.summary && activeQueryId && (
                 <div className="md:col-span-2">
