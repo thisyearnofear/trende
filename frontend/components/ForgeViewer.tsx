@@ -865,13 +865,48 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                 <h3 className="text-lg font-semibold text-slate-100">Action Payload</h3>
                                 <p className="text-xs text-slate-500 font-mono mt-1">{selectedActionPayload.action_id}</p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => setSelectedActionPayload(null)}
-                                className="text-slate-400 hover:text-slate-100"
-                            >
-                                Close
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(
+                                            JSON.stringify(selectedActionPayload.result_payload || {}, null, 2)
+                                        );
+                                        showToast('Payload JSON copied', 'success');
+                                    }}
+                                    className="text-xs px-2 py-1 rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30"
+                                >
+                                    Copy JSON
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const payload = selectedActionPayload.result_payload as Record<string, unknown> | null | undefined;
+                                        const attestationId =
+                                            (typeof payload?.attestation_id === 'string' && payload.attestation_id) ||
+                                            (payload?.manifest &&
+                                            typeof (payload.manifest as Record<string, unknown>).attestation === 'object'
+                                                ? ((payload.manifest as Record<string, unknown>).attestation as Record<string, unknown>).attestation_id
+                                                : null);
+                                        if (typeof attestationId === 'string' && attestationId) {
+                                            navigator.clipboard.writeText(attestationId);
+                                            showToast('Attestation ID copied', 'success');
+                                        } else {
+                                            showToast('No attestation ID found in payload', 'info');
+                                        }
+                                    }}
+                                    className="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+                                >
+                                    Copy Attestation ID
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedActionPayload(null)}
+                                    className="text-slate-400 hover:text-slate-100"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                         <pre className="text-xs text-slate-300 overflow-auto max-h-[60vh] rounded-xl border border-slate-700 bg-slate-950/70 p-3">
                             {JSON.stringify(selectedActionPayload.result_payload || {}, null, 2)}
