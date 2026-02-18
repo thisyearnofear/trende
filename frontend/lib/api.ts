@@ -11,6 +11,9 @@ import {
   SaveResearchRequest,
   SaveResearchResponse,
   SavedResearchItem,
+  ActionSubmitRequest,
+  ActionSubmitResponse,
+  AgentAction,
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -280,6 +283,28 @@ export const api = {
       throw new Error(err.error || 'Failed to publish');
     }
     return response.json();
+  },
+
+  /**
+   * Submit an agent action for asynchronous execution.
+   */
+  async submitAction(request: ActionSubmitRequest): Promise<ActionSubmitResponse> {
+    const response = await fetch(`${API_BASE}/api/actions/submit`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(request),
+    });
+    return handleResponse<ActionSubmitResponse>(response);
+  },
+
+  /**
+   * Fetch an existing agent action by ID.
+   */
+  async getAction(actionId: string): Promise<{ action: AgentAction }> {
+    const response = await fetch(`${API_BASE}/api/actions/${actionId}`, {
+      headers: getHeaders(),
+    });
+    return handleResponse<{ action: AgentAction }>(response);
   },
 };
 

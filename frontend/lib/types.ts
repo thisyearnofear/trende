@@ -216,3 +216,38 @@ export interface SavedResearchItem {
   tags: string[];
   hasAttestation: boolean;
 }
+
+export type AgentActionStatus =
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'compensated';
+
+export interface AgentAction {
+  action_id: string;
+  action_type: string;
+  status: AgentActionStatus;
+  task_id?: string | null;
+  caller_address?: string | null;
+  idempotency_key?: string | null;
+  input_payload: Record<string, unknown>;
+  result_payload?: Record<string, unknown> | null;
+  error?: string | null;
+  created_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface ActionSubmitRequest {
+  action_type: string;
+  task_id?: string;
+  input?: Record<string, unknown>;
+  idempotency_key?: string;
+}
+
+export interface ActionSubmitResponse {
+  action: AgentAction;
+  idempotent: boolean;
+}

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp, Check, Copy, Zap, PenLine, Rocket } from 'lucide-react';
-import { TrendSummary as TrendSummaryType } from '@/lib/types';
+import { AgentAction, TrendSummary as TrendSummaryType } from '@/lib/types';
 import { useToast } from '@/components/Toast';
 import { AttestationBadge, VerificationStatus } from '@/components/AttestationBadge';
 import { useTheme } from './ThemeProvider';
+import { api } from '@/lib/api';
 
 interface ForgeViewerProps {
     summary: TrendSummaryType;
@@ -86,6 +87,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const [copiedSignature, setCopiedSignature] = useState(false);
     const [isDeploying, setIsDeploying] = useState(false);
     const [isDrafting, setIsDrafting] = useState(false);
+    const [actions, setActions] = useState<AgentAction[]>([]);
 
     const isMeme = mode === 'meme';
     const providers = consensus?.providers || [];
@@ -95,6 +97,47 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const agreement = Math.round(
         (consensus?.agreement_score || data.consensus_metrics?.model_agreement || 0) * 100
     );
+    const activeActions = useMemo(
+        () => actions.filter((a) => !['succeeded', 'failed', 'compensated'].includes(a.status)),
+        [actions]
+    );
+
+    useEffect(() => {
+        if (activeActions.length === 0) return;
+
+        const timer = setInterval(async () => {
+            await Promise.all(
+                activeActions.map(async (existing) => {
+                    try {
+                        const latest = await api.getAction(existing.action_id);
+                        setActions((prev) => {
+                            const idx = prev.findIndex((a) => a.action_id === existing.action_id);
+                            if (idx === -1) return prev;
+                            const copy = [...prev];
+                            copy[idx] = latest.action;
+                            return copy;
+                        });
+                    } catch {
+                        // Keep existing action state on polling failure.
+                    }
+                })
+            );
+        }, 2000);
+
+        return () => clearInterval(timer);
+    }, [activeActions]);
+
+    const addOrUpdateAction = (nextAction: AgentAction) => {
+        setActions((prev) => {
+            const idx = prev.findIndex((a) => a.action_id === nextAction.action_id);
+            if (idx >= 0) {
+                const copy = [...prev];
+                copy[idx] = nextAction;
+                return copy;
+            }
+            return [nextAction, ...prev];
+        });
+    };
 
     const fetchAgentAlpha = async () => {
         try {
@@ -116,26 +159,39 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
 
     const handleDeployToken = async () => {
         setIsDeploying(true);
-        showToast('Initiating BNB Chain deployment sequence...', 'info');
-        
-        // Simulate contract interaction/deployment
-        setTimeout(() => {
+        showToast('Submitting deploy manifest action...', 'info');
+        try {
+            const response = await api.submitAction({
+                action_type: 'generate_alpha_manifest',
+                task_id: queryId,
+            });
+            addOrUpdateAction(response.action);
+            showToast(`Action queued: ${response.action.action_type}`, 'success');
+        } catch {
+            showToast('Failed to queue deploy action.', 'error');
+        } finally {
             setIsDeploying(false);
-            showToast(`Success! ${data.token?.ticker || 'ALPHA'} token contract deployed to BSC Testnet.`, 'success');
-            window.open('https://github.com/lorine93s/BSC-memecoin-launchpad', '_blank');
-        }, 2500);
+        }
     };
 
     const handleDraftArticle = async () => {
         setIsDrafting(true);
-        showToast('Connecting to Paragraph API...', 'info');
-        
-        // Simulate Paragraph API integration
-        setTimeout(() => {
+        showToast('Submitting draft action...', 'info');
+        try {
+            const response = await api.submitAction({
+                action_type: 'draft_paragraph',
+                task_id: queryId,
+                input: {
+                    title: `Trende Brief: ${summary.overview?.slice(0, 60) || 'Research'}`,
+                },
+            });
+            addOrUpdateAction(response.action);
+            showToast(`Action queued: ${response.action.action_type}`, 'success');
+        } catch {
+            showToast('Failed to queue draft action.', 'error');
+        } finally {
             setIsDrafting(false);
-            showToast('Draft created on Paragraph with cited references.', 'success');
-            window.open('https://paragraph.com/docs/development/api-sdk-overview', '_blank');
-        }, 2000);
+        }
     };
 
     const verifyAttestation = async () => {
@@ -587,6 +643,49 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                             </div>
                             <Zap className="w-4 h-4 text-slate-700 group-hover:text-cyan-500 transition-colors" />
                         </button>
+                    </div>
+
+                    <div className="pt-6 border-t border-white/5">
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Agent Actions</p>
+                            <span className="text-[10px] text-slate-500 uppercase tracking-widest">
+                                {actions.length} total
+                            </span>
+                        </div>
+                        {actions.length === 0 ? (
+                            <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 text-xs text-slate-500">
+                                No actions yet. Trigger a Forge action to start the timeline.
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {actions.map((action) => {
+                                    const statusColor =
+                                        action.status === 'succeeded'
+                                            ? 'text-emerald-300 bg-emerald-500/20'
+                                            : action.status === 'failed'
+                                                ? 'text-rose-300 bg-rose-500/20'
+                                                : 'text-amber-300 bg-amber-500/20';
+                                    const hasResult = action.result_payload && Object.keys(action.result_payload).length > 0;
+                                    return (
+                                        <div key={action.action_id} className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <p className="text-xs text-slate-200 font-medium">{action.action_type}</p>
+                                                <span className={`text-[10px] px-2 py-0.5 rounded uppercase tracking-wider font-bold ${statusColor}`}>
+                                                    {action.status}
+                                                </span>
+                                            </div>
+                                            <p className="text-[11px] text-slate-500 mt-1 font-mono">{action.action_id}</p>
+                                            {action.error && (
+                                                <p className="text-[11px] text-rose-300 mt-1">{action.error}</p>
+                                            )}
+                                            {hasResult && (
+                                                <p className="text-[11px] text-emerald-300 mt-1">Result payload ready.</p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
