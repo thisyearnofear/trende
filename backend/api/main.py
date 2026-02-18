@@ -748,7 +748,7 @@ async def save_research(
     }
 
 
-@app.post("/api/actions/submit")
+@app.post("/api/actions/submit", response_model=None)
 async def submit_action(
     request: ActionSubmitRequest,
     background_tasks: BackgroundTasks,
@@ -775,7 +775,7 @@ async def submit_action(
     return {"action": created, "idempotent": False}
 
 
-@app.get("/api/actions/{action_id}")
+@app.get("/api/actions/{action_id}", response_model=None)
 async def get_action_status(action_id: str) -> dict[str, Any] | Response:
     action = repo.get_action(action_id)
     if not action:
