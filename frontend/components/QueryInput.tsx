@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Send, Sparkles, Loader2, Compass, Layers } from 'lucide-react';
 import { QueryRequest } from '@/lib/types';
-import { Card, Button, Input, Badge } from './DesignSystem';
+import { Card, Button, Input, Badge, InfoIcon } from './DesignSystem';
 
 interface QueryInputProps {
   onSubmit: (request: QueryRequest) => void;
@@ -38,6 +38,9 @@ const SUGGESTIONS = [
   'Identify AI-agent infra projects where technical discussion is rising before mainstream media coverage.',
   'Where does social hype diverge from fundamentals in DePIN + AI compute markets right now?',
   'Find opportunities where TEE attestation and verifiable consensus create a defensible product moat.',
+  'Where does EigenLayer/EigenCompute adoption create immediate opportunities for verifiable AI products?',
+  'Which privacy-preserving AI narratives are gaining conviction across builders and market signals?',
+  'What Base + BNB Chain narratives are converging and where is momentum diverging by audience?',
 ];
 
 export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
@@ -82,6 +85,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
       (relevanceThreshold > 0.75 ? 25 : 0)) * 1.6,
     ),
   );
+  const metricKey = `${estimatedSeconds}-${Math.round(avgQuality)}-${totalCost.toFixed(4)}`;
 
   return (
     <Card accent="cyan" shadow="lg" className="p-4 sm:p-8">
@@ -151,24 +155,24 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   className="text-left p-4 min-h-[80px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
                     borderColor: unavailable
-                      ? 'var(--text-muted)'
+                      ? 'var(--accent-violet)'
                       : active
                         ? 'var(--accent-cyan)'
                         : 'var(--text-muted)',
                     boxShadow: unavailable
-                      ? '2px 2px 0px 0px var(--text-muted)'
+                      ? '2px 2px 0px 0px var(--accent-violet)'
                       : active
                         ? '4px 4px 0px 0px var(--accent-cyan)'
                         : '4px 4px 0px 0px var(--text-muted)',
                   }}
                   title={unavailable ? platform.reason : platform.hint}
                 >
-                  <p className="text-sm font-black uppercase" style={{ color: unavailable ? 'var(--text-muted)' : active ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
+                  <p className="text-sm font-black uppercase" style={{ color: unavailable ? 'var(--accent-violet)' : active ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
                     {platform.label}
                   </p>
                   <p className="text-xs text-[var(--text-muted)] mt-1">{platform.hint}</p>
                   {unavailable ? (
-                    <Badge variant="default" className="mt-2">COMING SOON</Badge>
+                    <Badge variant="violet" className="mt-2">COMING SOON</Badge>
                   ) : active ? (
                     <Badge variant="cyan" className="mt-2">ACTIVE</Badge>
                   ) : null}
@@ -189,18 +193,24 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
               <Sparkles className="w-4 h-4 text-[var(--accent-amber)]" />
               <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Consensus LLM Routes</span>
             </div>
-            <div className="flex items-center gap-3">
-               <div className="flex flex-col items-end">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center">
+               <div key={`cost-${metricKey}`} className="flex flex-col justify-center px-2 py-1.5 border-2 border-[var(--bg-tertiary)] transition-all animate-pulse">
                 <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Est. Cost</span>
-                <span className="text-xs font-black text-[var(--accent-amber)]">{totalCost.toFixed(4)} MON</span>
+                <span className="text-sm font-black text-[var(--accent-amber)]">{totalCost.toFixed(4)} MON</span>
               </div>
-              <div className="flex flex-col items-end border-l-2 border-[var(--bg-tertiary)] pl-3">
+              <div key={`time-${metricKey}`} className="flex flex-col justify-center px-2 py-1.5 border-2 border-[var(--bg-tertiary)] transition-all animate-pulse">
                 <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Est. Time</span>
-                <span className="text-xs font-black text-[var(--accent-emerald)]">~{estimatedSeconds}s</span>
+                <span className="text-sm font-black text-[var(--accent-emerald)]">~{estimatedSeconds}s</span>
               </div>
-              <div className="flex flex-col items-end border-l-2 border-[var(--bg-tertiary)] pl-3">
-                <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Mitigation Power</span>
-                <span className="text-xs font-black text-[var(--accent-cyan)]">{Math.round(avgQuality)}%</span>
+              <div key={`mitigation-${metricKey}`} className="flex flex-col justify-center px-2 py-1.5 border-2 border-[var(--bg-tertiary)] transition-all animate-pulse">
+                <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase inline-flex items-center justify-center gap-1">
+                  Mitigation Power
+                  <InfoIcon
+                    size="sm"
+                    tooltip="Estimated bias resistance based on model diversity and route quality. Higher means stronger cross-model challenge."
+                  />
+                </span>
+                <span className="text-sm font-black text-[var(--accent-cyan)]">{Math.round(avgQuality)}%</span>
               </div>
             </div>
           </div>
@@ -215,7 +225,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   type="button"
                   onClick={() => toggleModel(model.id, model.enabled !== false)}
                   disabled={disabled || unavailable}
-                  className="text-left p-3 min-h-[70px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-50"
+                  className="text-left p-3 min-h-[70px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-55 disabled:cursor-not-allowed"
                   style={{
                     borderColor: unavailable
                       ? 'var(--accent-violet)'

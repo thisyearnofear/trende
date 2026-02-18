@@ -347,14 +347,14 @@ class Repository:
     def get_public_research(
         self, limit: int = 50, sponsor: str | None = None
     ) -> list[dict[str, Any]]:
-        """Get completed research explicitly published to the public commons."""
+        """Get completed research for the public commons feed."""
         if not HAS_SQL or not self.Session:
             return []
         with self.Session() as session:
             query = (
                 session.query(TaskModel)
                 .filter(TaskModel.status == "completed")
-                .filter(or_(TaskModel.visibility == "public", TaskModel.visibility.is_(None)))
+                .filter(or_(TaskModel.visibility != "private", TaskModel.visibility.is_(None)))
             )
             if sponsor:
                 query = query.filter(TaskModel.sponsor_address == sponsor.lower())
