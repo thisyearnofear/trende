@@ -371,7 +371,17 @@ export default function Home() {
       showToast("Generating report image...", "info");
       const imageUrl = `/api/report/${activeQueryId}/image`;
       const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Image generation failed (${response.status})`);
+      }
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("image/png")) {
+        throw new Error("Image generation returned non-PNG content");
+      }
       const blob = await response.blob();
+      if (!blob || blob.size < 1024) {
+        throw new Error("Generated PNG is empty");
+      }
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
