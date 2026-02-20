@@ -1,6 +1,7 @@
 import asyncio
 import json
 import datetime
+import os
 import uuid
 from typing import Any, Optional
 
@@ -292,18 +293,49 @@ async def analyzer_node(state: GraphState) -> GraphState:
     tinyfish = TinyFishConnector()
 
     enriched_context = []
+    enrich_per_source_timeout = max(
+        5,
+        int(os.getenv("ENRICH_PER_SOURCE_TIMEOUT_SECS", "20")),
+    )
+    enrich_total_budget = max(
+        enrich_per_source_timeout,
+        int(os.getenv("ENRICH_TOTAL_BUDGET_SECS", "45")),
+    )
+    enrich_started_at = datetime.datetime.now(datetime.timezone.utc)
     # Sort by metrics (e.g. likes/retweets) or just take first few
     to_enrich = [f for f in findings_to_use if f.url and len(f.content) < 500][:3]
 
     if to_enrich:
         state["logs"].append(f"🔬 DEEP DIVE: Enriching {len(to_enrich)} key findings with agentic full-text analysis...")
         for item in to_enrich:
+            elapsed = (
+                datetime.datetime.now(datetime.timezone.utc) - enrich_started_at
+            ).total_seconds()
+            if elapsed >= enrich_total_budget:
+                state["logs"].append("⏱️ ENRICHMENT BUDGET REACHED: Continuing with collected context to keep the run responsive.")
+                break
             full_text = None
             if tinyfish.api_key:
-                full_text = await tinyfish.extract_content(item.url)
+                try:
+                    full_text = await asyncio.wait_for(
+                        tinyfish.extract_content(item.url),
+                        timeout=enrich_per_source_timeout,
+                    )
+                except asyncio.TimeoutError:
+                    state["logs"].append(
+                        f"⏱️ TinyFish timeout ({enrich_per_source_timeout}s) for {item.url}. Falling back."
+                    )
             
             if not full_text and tabstack.api_key:
-                full_text = await tabstack.extract_content(item.url)
+                try:
+                    full_text = await asyncio.wait_for(
+                        tabstack.extract_content(item.url),
+                        timeout=enrich_per_source_timeout,
+                    )
+                except asyncio.TimeoutError:
+                    state["logs"].append(
+                        f"⏱️ Tabstack extraction timeout ({enrich_per_source_timeout}s) for {item.url}."
+                    )
             
             if full_text:
                 enriched_context.append(
