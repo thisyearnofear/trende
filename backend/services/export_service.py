@@ -11,6 +11,16 @@ def _safe_text(value: Any) -> str:
     return text.encode("latin-1", "replace").decode("latin-1")
 
 
+def _wrap_hard_tokens(value: str, chunk: int = 32) -> str:
+    parts: list[str] = []
+    for token in value.split():
+        if len(token) <= chunk:
+            parts.append(token)
+            continue
+        parts.append(" ".join(token[i : i + chunk] for i in range(0, len(token), chunk)))
+    return " ".join(parts)
+
+
 def _iso_to_human(value: str | None) -> str:
     if not value:
         return "n/a"
@@ -138,43 +148,44 @@ def render_pdf_report(payload: dict[str, Any]) -> bytes:
     pdf.ln(1)
 
     pdf.set_font("Helvetica", "", 10)
-    pdf.multi_cell(0, 6, _safe_text(f"Task ID: {payload.get('task_id')}"))
-    pdf.multi_cell(0, 6, _safe_text(f"Generated: {_iso_to_human(payload.get('updated_at'))}"))
-    pdf.multi_cell(0, 6, _safe_text(f"Platforms: {', '.join(payload.get('platforms') or []) or 'n/a'}"))
-    pdf.multi_cell(0, 6, _safe_text(f"Models: {', '.join(payload.get('models') or []) or 'n/a'}"))
+    content_width = pdf.w - pdf.l_margin - pdf.r_margin
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Task ID: {payload.get('task_id')}")))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Generated: {_iso_to_human(payload.get('updated_at'))}")))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Platforms: {', '.join(payload.get('platforms') or []) or 'n/a'}")))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Models: {', '.join(payload.get('models') or []) or 'n/a'}")))
     pdf.ln(2)
 
     pdf.set_font("Helvetica", "B", 13)
-    pdf.multi_cell(0, 8, "Summary")
+    pdf.multi_cell(content_width, 8, "Summary")
     pdf.set_font("Helvetica", "", 11)
-    pdf.multi_cell(0, 6, summary)
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(summary))
     pdf.ln(2)
 
     pdf.set_font("Helvetica", "B", 13)
-    pdf.multi_cell(0, 8, "Consensus")
+    pdf.multi_cell(content_width, 8, "Consensus")
     pdf.set_font("Helvetica", "", 10)
-    pdf.multi_cell(0, 6, _safe_text(f"Providers: {', '.join(consensus.get('providers') or []) or 'n/a'}"))
-    pdf.multi_cell(0, 6, _safe_text(f"Agreement Score: {consensus.get('agreement_score', 0.0)}"))
-    pdf.multi_cell(0, 6, _safe_text(f"Diversity: {consensus.get('diversity_level', 'n/a')}"))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Providers: {', '.join(consensus.get('providers') or []) or 'n/a'}")))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Agreement Score: {consensus.get('agreement_score', 0.0)}")))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Diversity: {consensus.get('diversity_level', 'n/a')}")))
     warnings = consensus.get("warnings") or []
-    pdf.multi_cell(0, 6, _safe_text(f"Warnings: {', '.join(warnings) if warnings else 'none'}"))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Warnings: {', '.join(warnings) if warnings else 'none'}")))
     pdf.ln(2)
 
     pdf.set_font("Helvetica", "B", 13)
-    pdf.multi_cell(0, 8, "Attestation")
+    pdf.multi_cell(content_width, 8, "Attestation")
     pdf.set_font("Helvetica", "", 10)
-    pdf.multi_cell(0, 6, _safe_text(f"Provider: {attestation.get('provider') or 'n/a'}"))
-    pdf.multi_cell(0, 6, _safe_text(f"Method: {attestation.get('method') or 'n/a'}"))
-    pdf.multi_cell(0, 6, _safe_text(f"Status: {attestation.get('status') or 'n/a'}"))
-    pdf.multi_cell(0, 6, _safe_text(f"Attestation ID: {attestation.get('attestation_id') or 'n/a'}"))
-    pdf.multi_cell(0, 6, _safe_text(f"Input Hash: {attestation.get('input_hash') or 'n/a'}"))
-    pdf.multi_cell(0, 6, _safe_text(f"Generated At: {_iso_to_human(attestation.get('generated_at'))}"))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Provider: {attestation.get('provider') or 'n/a'}")))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Method: {attestation.get('method') or 'n/a'}")))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Status: {attestation.get('status') or 'n/a'}")))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Attestation ID: {attestation.get('attestation_id') or 'n/a'}")))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Input Hash: {attestation.get('input_hash') or 'n/a'}")))
+    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Generated At: {_iso_to_human(attestation.get('generated_at'))}")))
     pdf.ln(2)
 
     pdf.set_font("Helvetica", "B", 13)
-    pdf.multi_cell(0, 8, "Final Report (Markdown)")
+    pdf.multi_cell(content_width, 8, "Final Report (Markdown)")
     pdf.set_font("Helvetica", "", 9)
-    pdf.multi_cell(0, 5, report_md)
+    pdf.multi_cell(content_width, 5, _wrap_hard_tokens(report_md, chunk=48))
 
     out = BytesIO()
     out.write(pdf.output(dest="S").encode("latin-1"))
