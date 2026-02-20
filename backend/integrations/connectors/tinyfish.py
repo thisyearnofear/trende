@@ -2,6 +2,7 @@ import httpx
 import json
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any, Tuple
+from urllib.parse import quote_plus
 from backend.integrations.base import AbstractPlatformConnector
 from shared.models import TrendItem, PlatformType
 from shared.config import get_settings
@@ -35,20 +36,24 @@ class TinyFishConnector(AbstractPlatformConnector):
         }
         
         # Construct a goal-based research prompt for the TinyFish web agent
+        search_url = f"https://duckduckgo.com/?q={quote_plus(query)}"
         payload = {
+            "url": search_url,
             "goal": (
                 f"Identify emerging signals, sentiment, and key findings for the topic: '{query}'. "
-                "Navigate to primary research sources, project documentation, or community forums if necessary. "
-                "Provide a list of findings with source URLs."
+                "Open relevant primary sources (docs, posts, research pages) and return concise findings with source URLs."
             ),
-            "browser_profile": "stealth", # Use stealth for better compatibility
+            "browser_profile": "stealth",  # Use stealth for better compatibility
+            "proxy_config": {"enabled": False},
         }
 
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
                 async with client.stream("POST", f"{self.base_url}/automation/run-sse", headers=headers, json=payload) as response:
                     if response.status_code != 200:
-                        print(f"TinyFish search failed with status {response.status_code}")
+                        body = await response.aread()
+                        preview = body.decode("utf-8", errors="ignore")[:300]
+                        print(f"TinyFish search failed with status {response.status_code}: {preview}")
                         return []
                     
                     final_result = await self._parse_sse_response(response)
@@ -72,6 +77,7 @@ class TinyFishConnector(AbstractPlatformConnector):
             "url": url,
             "goal": goal or "Extract the main content, key data points, and any relevant metrics from this page in Markdown format.",
             "browser_profile": "stealth",
+            "proxy_config": {"enabled": False},
         }
 
         try:
@@ -135,7 +141,7 @@ class TinyFishConnector(AbstractPlatformConnector):
                 author_handle="tinyfish",
                 url="https://agent.tinyfish.ai",
                 timestamp=now,
-                metrics={"agentic_depth": "high"},
+                metrics={"agentic_depth": 1},
                 raw_data={"raw_result": result_text},
             )
         ]
