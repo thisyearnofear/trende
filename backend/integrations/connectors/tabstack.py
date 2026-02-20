@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any, Tuple
 from urllib.parse import quote_plus
 from backend.integrations.base import AbstractPlatformConnector
+from backend.utils.request_cache import build_cache_key, request_cache
 from shared.models import TrendItem, PlatformType
 from shared.config import get_settings
 from backend.utils.rate_limit import rate_limiter
@@ -23,27 +24,43 @@ class TabstackConnector(AbstractPlatformConnector):
         if not self.api_key:
             return []
 
+        cache_key = build_cache_key("tabstack.search", query=query, limit=limit)
+        cached = await request_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        lock = await request_cache.get_lock(cache_key)
+        async with lock:
+            cached_after_lock = await request_cache.get(cache_key)
+            if cached_after_lock is not None:
+                return cached_after_lock
+
         # Apply Rate Limiting (Tabstack is usually generous but we protect)
-        if not await rate_limiter.wait_for_slot("web"):
-            return []
+            if not await rate_limiter.wait_for_slot("web"):
+                return []
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-            "Accept": "text/event-stream",
-        }
-        timeout = httpx.Timeout(connect=10.0, read=90.0, write=30.0, pool=30.0)
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "Accept": "text/event-stream",
+            }
+            timeout = httpx.Timeout(connect=10.0, read=90.0, write=30.0, pool=30.0)
 
-        try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                answer, sources = await self._search_automate(client, headers, query)
-                if not answer and not sources:
-                    # Backward-compatible fallback for older Tabstack deployments.
-                    answer, sources = await self._search_research(client, headers, query)
-                return self._to_trend_items(query, answer, sources, limit)
-        except Exception as e:
-            print(f"Tabstack search failed: {e}")
-            return []
+            try:
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    answer, sources = await self._search_automate(client, headers, query)
+                    if not answer and not sources:
+                        # Backward-compatible fallback for older Tabstack deployments.
+                        answer, sources = await self._search_research(client, headers, query)
+                    items = self._to_trend_items(query, answer, sources, limit)
+                    if items:
+                        await request_cache.set(cache_key, items, self.settings.cache_ttl_seconds)
+                    return items
+            except Exception as e:
+                print(f"Tabstack search failed: {e}")
+                return []
+            finally:
+                await request_cache.clear_inflight(cache_key)
 
     async def extract_content(self, url: str) -> Optional[str]:
         """Extracts high-quality Markdown content from any URL."""

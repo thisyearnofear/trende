@@ -187,6 +187,45 @@ repo = Repository()
 tasks = {}
 
 
+def _normalize_key_parts(values: list[str]) -> tuple[str, ...]:
+    return tuple(sorted({(value or "").strip().lower() for value in values if (value or "").strip()}))
+
+
+def _find_matching_active_task(topic: str, platforms: list[str], models: list[str]) -> str | None:
+    topic_key = (topic or "").strip().lower()
+    platforms_key = _normalize_key_parts(platforms)
+    models_key = _normalize_key_parts(models)
+    active_statuses = {
+        QueryStatus.PENDING,
+        QueryStatus.PLANNING,
+        QueryStatus.RESEARCHING,
+        QueryStatus.PROCESSING,
+        QueryStatus.ANALYZING,
+    }
+    now = datetime.datetime.now(datetime.timezone.utc)
+    max_age = datetime.timedelta(minutes=20)
+
+    for existing_id, task in tasks.items():
+        if task.get("status") not in active_statuses:
+            continue
+        task_topic = str(task.get("topic", "")).strip().lower()
+        if task_topic != topic_key:
+            continue
+        if _normalize_key_parts(task.get("platforms", []) or []) != platforms_key:
+            continue
+        if _normalize_key_parts(task.get("models", []) or []) != models_key:
+            continue
+        created_at_raw = task.get("created_at")
+        try:
+            created_at = datetime.datetime.fromisoformat(str(created_at_raw).replace("Z", "+00:00"))
+        except Exception:
+            created_at = now
+        if now - created_at > max_age:
+            continue
+        return existing_id
+    return None
+
+
 class QueryRequest(BaseModel):
     topic: str | None = None
     idea: str | None = None
@@ -390,6 +429,21 @@ async def start_analysis(
     # If rate limit exceeded and no valid payment, return error
     if not allowed and not has_premium:
         return error_response or Response(status_code=429)
+
+    matching_task_id = _find_matching_active_task(
+        request.topic or "",
+        request.platforms,
+        request.models,
+    )
+    if matching_task_id:
+        existing = tasks.get(matching_task_id) or {}
+        return {
+            "task_id": matching_task_id,
+            "id": matching_task_id,
+            "status": existing.get("status", QueryStatus.PENDING),
+            "createdAt": existing.get("created_at"),
+            "reused": True,
+        }
 
     task_id = str(uuid.uuid4())
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()

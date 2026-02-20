@@ -105,6 +105,22 @@ async def planner_node(state: GraphState) -> GraphState:
 
 async def researcher_node(state: GraphState) -> GraphState:
     state["status"] = QueryStatus.RESEARCHING
+    deduped_queries: list[dict[str, str]] = []
+    seen = set()
+    for sq in state["search_queries"]:
+        platform = (sq.get("platform") or "").strip().lower()
+        query = (sq.get("query") or "").strip()
+        key = (platform, query.lower())
+        if not platform or not query or key in seen:
+            continue
+        seen.add(key)
+        deduped_queries.append({"platform": platform, "query": query})
+    if len(deduped_queries) != len(state["search_queries"]):
+        state["logs"].append(
+            f"♻️ REQUEST DEDUPE: Collapsed {len(state['search_queries']) - len(deduped_queries)} duplicate platform-query jobs."
+        )
+    state["search_queries"] = deduped_queries
+
     platforms = list(set(sq["platform"] for sq in state["search_queries"]))
     platform_names = ', '.join(platforms).upper()
     state["logs"].append(f"📡 MISSION: Scanning the digital cosmos for signals from {platform_names}...")
