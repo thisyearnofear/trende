@@ -268,10 +268,24 @@ export function ProcessingStatus({
               <p className="text-sm font-mono line-clamp-3 italic text-[var(--text-primary)]">
                 &quot;{queryData.topic}&quot;
               </p>
+              <div className="mt-3 grid grid-cols-3 gap-2 sm:hidden text-center">
+                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] px-2 py-1.5">
+                  <p className="text-[9px] font-mono uppercase text-[var(--text-muted)]">Sources</p>
+                  <p className="text-xs font-black text-[var(--accent-cyan)]">{queryData.platforms.length}</p>
+                </div>
+                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] px-2 py-1.5">
+                  <p className="text-[9px] font-mono uppercase text-[var(--text-muted)]">Models</p>
+                  <p className="text-xs font-black text-[var(--accent-amber)]">{(queryData.models || []).length || 3}</p>
+                </div>
+                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] px-2 py-1.5">
+                  <p className="text-[9px] font-mono uppercase text-[var(--text-muted)]">Strict</p>
+                  <p className="text-xs font-black text-[var(--accent-emerald)]">{Math.round((queryData.threshold || 0.6) * 100)}%</p>
+                </div>
+              </div>
             </div>
 
             {/* Config Summary Section */}
-            <div className="p-4 lg:w-1/3 bg-[var(--bg-primary)]">
+            <div className="hidden sm:block p-4 lg:w-1/3 bg-[var(--bg-primary)]">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -336,7 +350,7 @@ export function ProcessingStatus({
             </div>
 
             {/* Impact/Mitigation Section */}
-            <div className="p-4 lg:w-1/3">
+            <div className="hidden sm:block p-4 lg:w-1/3">
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="w-4 h-4 text-[var(--accent-emerald)]" />
                 <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
@@ -409,7 +423,56 @@ export function ProcessingStatus({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+        <div className="lg:hidden -mx-1 px-1 overflow-x-auto">
+          <div className="flex gap-2 min-w-max pb-1">
+            {STAGES.map((stage, index) => {
+              const isComplete = index < currentStageIndex;
+              const isActive = index === currentStageIndex;
+              const isExpanded = expandedStageId === stage.id;
+              const band = stageTimeBands[index];
+              return (
+                <button
+                  key={stage.id}
+                  type="button"
+                  onClick={() => setExpandedStageId(stage.id)}
+                  className="w-[170px] shrink-0 text-left p-2.5 border-2 bg-[var(--bg-primary)] transition-all duration-200"
+                  style={{
+                    borderColor: isComplete
+                      ? "var(--accent-emerald)"
+                      : isActive
+                        ? "var(--accent-cyan)"
+                        : isExpanded
+                          ? "var(--accent-violet)"
+                          : "var(--border-color)",
+                    boxShadow: isComplete
+                      ? "2px 2px 0px 0px var(--accent-emerald)"
+                      : isActive
+                        ? "0px 0px 12px rgba(0,255,255,0.4)"
+                        : isExpanded
+                          ? "2px 2px 0px 0px var(--accent-violet)"
+                          : "none",
+                  }}
+                  aria-expanded={isExpanded}
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    {isComplete ? (
+                      <CheckCircle2 className="w-3 h-3 text-[var(--accent-emerald)]" />
+                    ) : isActive ? (
+                      <div className="w-3 h-3 bg-[var(--accent-cyan)] animate-pulse" />
+                    ) : (
+                      <Circle className="w-3 h-3 text-[var(--text-muted)]" />
+                    )}
+                    <span className="text-[10px] font-black uppercase tracking-wider">{stage.label}</span>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] font-mono line-clamp-2">{stage.description}</p>
+                  <p className="text-[10px] font-mono text-[var(--accent-violet)] mt-1">~{band.min}s - {band.max}s</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="hidden lg:grid grid-cols-5 gap-3">
           {STAGES.map((stage, index) => {
             const isComplete = index < currentStageIndex;
             const isActive = index === currentStageIndex;
@@ -458,7 +521,7 @@ export function ProcessingStatus({
           })}
         </div>
 
-        <div className="mt-4 border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-3 sm:p-4">
+        <div className="mt-3 sm:mt-4 border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-3 sm:p-4">
           <button
             type="button"
             onClick={() => setExpandedStageId(expandedStage.id)}
@@ -532,7 +595,7 @@ export function ProcessingStatus({
         </div>
 
         {/* Stages */}
-        <div className="p-4 border-b-2 border-[var(--border-color)]">
+        <div className="hidden lg:block p-4 border-b-2 border-[var(--border-color)]">
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             {STAGES.map((stage, index) => {
               const isComplete = index < currentStageIndex;
