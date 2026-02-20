@@ -909,7 +909,7 @@ export default function Home() {
 
         {/* Processing Status */}
         {(isProcessing || status === "processing") && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <Card accent="amber" className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2">
@@ -951,6 +951,7 @@ export default function Home() {
               progress={progress}
               events={events}
               isProcessing={isProcessing}
+              elapsedSeconds={elapsedSeconds}
               queryData={
                 lastQuery
                   ? {

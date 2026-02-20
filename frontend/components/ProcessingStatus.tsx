@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { StreamEvent, QueryStatus } from "@/lib/types";
+import { estimateMissionRuntime } from "@/lib/runtimeEstimate";
 import {
   Terminal,
   Fingerprint,
@@ -12,6 +13,8 @@ import {
   Layers,
   Sparkles,
   Zap,
+  Clock3,
+  ChevronDown,
 } from "lucide-react";
 import { TerminalLog } from "./TypewriterText";
 import { AgentPersona } from "./AgentPersona";
@@ -23,6 +26,7 @@ interface ProcessingStatusProps {
   progress: number;
   events: StreamEvent[];
   isProcessing: boolean;
+  elapsedSeconds?: number;
   queryData?: {
     topic: string;
     platforms: string[];
@@ -32,15 +36,16 @@ interface ProcessingStatusProps {
 }
 
 const STAGES = [
-  { id: "planner", label: "PLAN", description: "Strategy & Source Selection" },
+  { id: "planner", label: "PLAN", description: "Strategy & Source Selection", detail: "Prompt decomposition, source selection, and query design." },
   {
     id: "researcher",
     label: "HARVEST",
     description: "Data Mining & Social Signal",
+    detail: "Parallel connector execution with rate limits, caching, and source normalization.",
   },
-  { id: "validator", label: "VALIDATE", description: "Truth Verification" },
-  { id: "consensus", label: "FORGE", description: "Multi-Model Consensus" },
-  { id: "architect", label: "ATTEST", description: "TEE Proof Signing" },
+  { id: "validator", label: "VALIDATE", description: "Truth Verification", detail: "Cross-source reliability scoring and noise reduction." },
+  { id: "consensus", label: "FORGE", description: "Multi-Model Consensus", detail: "Divergence analysis + neutral synthesis across selected models." },
+  { id: "architect", label: "ATTEST", description: "TEE Proof Signing", detail: "Final payload shaping, trace metadata, and proof-ready output." },
 ];
 
 const SIMULATED_LOGS: Record<string, string[]> = {
@@ -94,6 +99,7 @@ export function ProcessingStatus({
   progress,
   events,
   isProcessing,
+  elapsedSeconds = 0,
   queryData,
 }: ProcessingStatusProps) {
   const { isSoft } = useTheme();
@@ -104,6 +110,39 @@ export function ProcessingStatus({
   const currentStageId = STAGES[currentStageIndex]?.id || "planner";
   const [activeHash, setActiveHash] = useState("0x...");
   const [simulatedLog, setSimulatedLog] = useState<string | null>(null);
+  const [expandedStageId, setExpandedStageId] = useState<string>(currentStageId);
+
+  useEffect(() => {
+    setExpandedStageId(currentStageId);
+  }, [currentStageId]);
+
+  const runtimeEstimate = useMemo(
+    () =>
+      estimateMissionRuntime({
+        platforms: queryData?.platforms || [],
+        models: queryData?.models || [],
+        relevanceThreshold: queryData?.threshold,
+      }),
+    [queryData],
+  );
+
+  const stageTimeBands = useMemo(() => {
+    const perStage = runtimeEstimate.totalSeconds / STAGES.length;
+    return STAGES.map((stage, index) => {
+      const min = Math.max(5, Math.round(perStage * index));
+      const max = Math.max(min + 6, Math.round(perStage * (index + 1)));
+      return { stageId: stage.id, min, max };
+    });
+  }, [runtimeEstimate.totalSeconds]);
+
+  const expandedStage = useMemo(
+    () => STAGES.find((stage) => stage.id === expandedStageId) || STAGES[currentStageIndex],
+    [expandedStageId, currentStageIndex],
+  );
+  const expandedBand = useMemo(
+    () => stageTimeBands.find((band) => band.stageId === expandedStage.id),
+    [expandedStage.id, stageTimeBands],
+  );
 
   // Hash animation
   useEffect(() => {
@@ -210,7 +249,7 @@ export function ProcessingStatus({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Trende Agent */}
       <AgentPersona status={getAgentStatus()} progress={progress} />
 
@@ -355,6 +394,100 @@ export function ProcessingStatus({
           </div>
         </Card>
       )}
+
+      {/* Timeline Rail */}
+      <Card accent="violet" className="p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <Clock3 className="w-4 h-4 text-[var(--accent-violet)]" />
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider">
+              Mission Timeline
+            </h3>
+          </div>
+          <div className="text-[10px] sm:text-xs font-mono text-[var(--text-muted)]">
+            ETA {runtimeEstimate.minSeconds}s - {runtimeEstimate.maxSeconds}s
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+          {STAGES.map((stage, index) => {
+            const isComplete = index < currentStageIndex;
+            const isActive = index === currentStageIndex;
+            const isExpanded = expandedStageId === stage.id;
+            const band = stageTimeBands[index];
+            return (
+              <button
+                key={stage.id}
+                type="button"
+                onClick={() => setExpandedStageId(stage.id)}
+                className="text-left p-3 border-2 bg-[var(--bg-primary)] transition-all duration-200"
+                style={{
+                  borderColor: isComplete
+                    ? "var(--accent-emerald)"
+                    : isActive
+                      ? "var(--accent-cyan)"
+                      : isExpanded
+                        ? "var(--accent-violet)"
+                        : "var(--border-color)",
+                  boxShadow: isComplete
+                    ? "2px 2px 0px 0px var(--accent-emerald)"
+                    : isActive
+                      ? "0px 0px 14px rgba(0,255,255,0.45)"
+                      : isExpanded
+                        ? "2px 2px 0px 0px var(--accent-violet)"
+                        : "none",
+                }}
+                aria-expanded={isExpanded}
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  {isComplete ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[var(--accent-emerald)]" />
+                  ) : isActive ? (
+                    <div className="w-3.5 h-3.5 bg-[var(--accent-cyan)] animate-pulse" />
+                  ) : (
+                    <Circle className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                  )}
+                  <span className="text-[10px] font-black uppercase tracking-wider">{stage.label}</span>
+                </div>
+                <p className="text-[10px] text-[var(--text-muted)] font-mono mb-1">{stage.description}</p>
+                <p className="text-[10px] font-mono text-[var(--accent-violet)]">
+                  ~{band.min}s - {band.max}s
+                </p>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-3 sm:p-4">
+          <button
+            type="button"
+            onClick={() => setExpandedStageId(expandedStage.id)}
+            className="w-full flex items-center justify-between text-left"
+          >
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-wider text-[var(--accent-violet)]">
+                Active Narrative
+              </p>
+              <h4 className="text-sm font-black uppercase mt-0.5">{expandedStage.label}{" // "}{expandedStage.description}</h4>
+            </div>
+            <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />
+          </button>
+          <div className="mt-2 space-y-2">
+            <p className="text-xs font-mono text-[var(--text-secondary)]">{expandedStage.detail}</p>
+            <div className="flex flex-wrap gap-2 text-[10px] font-mono">
+              <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                Stage Window: ~{expandedBand?.min ?? 0}s - {expandedBand?.max ?? 0}s
+              </span>
+              <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                Elapsed: {elapsedSeconds}s
+              </span>
+              <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                Remaining: {Math.max(runtimeEstimate.totalSeconds - elapsedSeconds, 0)}s (est)
+              </span>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* Main Processing Card */}
       <Card accent="cyan" shadow="lg">

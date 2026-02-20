@@ -3,12 +3,22 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Send, Sparkles, Loader2, Compass, Layers, Zap, Shield, BarChart3, Settings2 } from 'lucide-react';
 import { QueryRequest } from '@/lib/types';
-import { Card, Button, Input, Badge, InfoIcon } from './DesignSystem';
+import { estimateMissionRuntime } from '@/lib/runtimeEstimate';
+import { Card, Button, Input, Badge } from './DesignSystem';
 
 interface QueryInputProps {
   onSubmit: (request: QueryRequest) => void;
   isLoading?: boolean;
   disabled?: boolean;
+}
+
+interface PlatformOption {
+  id: string;
+  label: string;
+  hint: string;
+  enabled: boolean;
+  reason?: string;
+  isPremium?: boolean;
 }
 
 const MODEL_OPTIONS = [
@@ -22,7 +32,7 @@ const MODEL_OPTIONS = [
   { id: 'minimax', label: 'MiniMax', hint: 'Alternative reasoning lane for diversity', quality: 84, cost: 0.0007, enabled: false, reason: 'Provider integration pending' },
 ];
 
-const PLATFORM_OPTIONS = [
+const PLATFORM_OPTIONS: PlatformOption[] = [
   { id: 'twitter', label: 'X / Twitter', hint: 'Fast social momentum', enabled: false, reason: 'API reliability in progress' },
   { id: 'linkedin', label: 'LinkedIn', hint: 'Professional conviction', enabled: false, reason: 'Connector stability in progress' },
   { id: 'newsapi', label: 'News', hint: 'Media narrative context', enabled: true },
@@ -130,15 +140,11 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const avgQuality = models.length > 0
     ? models.reduce((sum, m) => sum + (MODEL_OPTIONS.find(opt => opt.id === m)?.quality || 0), 0) / models.length
     : 0;
-  const estimatedSeconds = Math.max(
-    45,
-    Math.round(
-      (24 +
-        platforms.length * 18 +
-        models.length * 24 +
-        (relevanceThreshold > 0.75 ? 25 : 0)) * 1.6,
-    ),
-  );
+  const estimatedSeconds = estimateMissionRuntime({
+    platforms,
+    models,
+    relevanceThreshold,
+  }).totalSeconds;
   const metricKey = `${estimatedSeconds}-${Math.round(avgQuality)}-${totalCost.toFixed(4)}`;
 
   return (
@@ -159,7 +165,8 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
             <div>
               <p className="text-sm font-black uppercase tracking-wider">Mission Brief</p>
               <p className="text-xs text-[var(--text-muted)] font-mono">
-                {activeProfile ? `PROFILE: ${activeProfile.label.toUpperCase()}` : 'CUSTOM CONFIGURATION'} // SECURE
+                {activeProfile ? `PROFILE: ${activeProfile.label.toUpperCase()}` : 'CUSTOM CONFIGURATION'}
+                {" // SECURE"}
               </p>
             </div>
           </div>
@@ -260,7 +267,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                 {PLATFORM_OPTIONS.map((platform) => {
                   const active = platforms.includes(platform.id);
                   const unavailable = !platform.enabled;
-                  const isPremium = (platform as any).isPremium;
+                  const isPremium = platform.isPremium;
                   
                   return (
                     <button
