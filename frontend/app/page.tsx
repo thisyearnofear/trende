@@ -28,6 +28,11 @@ import {
   Megaphone,
   ListTree,
   Loader2,
+  Search,
+  Shield,
+  FileCheck,
+  Github,
+  MessageCircle,
 } from "lucide-react";
 import { ScrambleText, ScrambleWords, GlowText } from "@/components/ScrambleText";
 import { Motion, StaggerGrid, MicroInteraction, usePrefersReducedMotion } from "@/components/Motion";
@@ -1316,25 +1321,107 @@ export default function Home() {
         )}
 
 
-        {/* Empty State */}
+        {/* Empty State - Enhanced Landing */}
         {!queryId && !isProcessing && (
-          <div className="text-center py-12 border-2 border-dashed border-[var(--text-muted)]">
-            <div
-              className="w-16 h-16 mx-auto mb-4 flex items-center justify-center"
-              style={{
-                backgroundColor: "var(--accent-cyan)",
-                boxShadow: "4px 4px 0px 0px var(--shadow-color)",
-              }}
-            >
-              <Zap className="w-8 h-8 text-[var(--bg-primary)]" />
+          <div className="space-y-8">
+            {/* How It Works - Visual Flow */}
+            <Card accent="violet" className="p-6 overflow-hidden relative">
+              <div className="flex items-center gap-2 mb-6">
+                <Sparkles className="w-5 h-5 text-[var(--accent-violet)]" />
+                <h3 className="text-lg font-black uppercase tracking-wider">
+                  How Trende Works
+                </h3>
+              </div>
+              
+              {/* Flow Diagram */}
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
+                {/* Step 1 */}
+                <div className="flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-xl bg-[var(--accent-cyan)]/20 border-2 border-[var(--accent-cyan)] flex items-center justify-center mb-2">
+                    <Zap className="w-6 h-6 text-[var(--accent-cyan)]" />
+                  </div>
+                  <span className="text-xs font-black uppercase">1. Query</span>
+                  <span className="text-[10px] text-[var(--text-muted)] text-center max-w-[80px]">Enter your research question</span>
+                </div>
+                
+                <ChevronDown className="w-5 h-5 text-[var(--text-muted)] rotate-[-90deg] sm:rotate-0" />
+                
+                {/* Step 2 */}
+                <div className="flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-xl bg-[var(--accent-amber)]/20 border-2 border-[var(--accent-amber)] flex items-center justify-center mb-2">
+                    <Search className="w-6 h-6 text-[var(--accent-amber)]" />
+                  </div>
+                  <span className="text-xs font-black uppercase">2. Research</span>
+                  <span className="text-[10px] text-[var(--text-muted)] text-center max-w-[80px]">AI agents collect signals</span>
+                </div>
+                
+                <ChevronDown className="w-5 h-5 text-[var(--text-muted)] rotate-[-90deg] sm:rotate-0" />
+                
+                {/* Step 3 */}
+                <div className="flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-xl bg-[var(--accent-emerald)]/20 border-2 border-[var(--accent-emerald)] flex items-center justify-center mb-2">
+                    <Shield className="w-6 h-6 text-[var(--accent-emerald)]" />
+                  </div>
+                  <span className="text-xs font-black uppercase">3. Attest</span>
+                  <span className="text-[10px] text-[var(--text-muted)] text-center max-w-[80px]">TEE signs with cryptographic proof</span>
+                </div>
+                
+                <ChevronDown className="w-5 h-5 text-[var(--text-muted)] rotate-[-90deg] sm:rotate-0" />
+                
+                {/* Step 4 */}
+                <div className="flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-xl bg-[var(--accent-violet)]/20 border-2 border-[var(--accent-violet)] flex items-center justify-center mb-2">
+                    <FileCheck className="w-6 h-6 text-[var(--accent-violet)]" />
+                  </div>
+                  <span className="text-xs font-black uppercase">4. Results</span>
+                  <span className="text-[10px] text-[var(--text-muted)] text-center max-w-[80px]">Verifiable intelligence report</span>
+                </div>
+              </div>
+            </Card>
+            
+            {/* CTA + Footer */}
+            <div className="text-center py-8 border-t-2 border-[var(--border-color)]">
+              <h3 className="text-2xl font-black uppercase mb-3">
+                Ready to Discover Conviction?
+              </h3>
+              <p className="text-[var(--text-muted)] font-mono text-sm max-w-lg mx-auto mb-6">
+                Enter your research brief above. Trende executes in a TEE-secured 
+                environment and returns cryptographically verifiable intelligence.
+              </p>
+              
+              {/* Footer Links */}
+              <div className="flex flex-wrap justify-center gap-6 pt-6 border-t border-[var(--border-color)]">
+                <a 
+                  href="https://github.com/thisyearnofear/trende" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--accent-cyan)] transition-colors"
+                >
+                  <Github className="w-4 h-4" />
+                  <span className="font-mono">GitHub</span>
+                </a>
+                <a 
+                  href="https://farcaster.xyz/papa" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--accent-amber)] transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span className="font-mono">Developer</span>
+                </a>
+                <Link 
+                  href="/commons"
+                  className="flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--accent-emerald)] transition-colors"
+                >
+                  <ListTree className="w-4 h-4" />
+                  <span className="font-mono">Community Commons</span>
+                </Link>
+              </div>
+              
+              <p className="text-[10px] text-[var(--text-muted)] mt-6 font-mono">
+                © 2026 Trende • TEE-SECURED INTELLIGENCE
+              </p>
             </div>
-            <h3 className="text-xl font-black uppercase mb-2">
-              Initialize Analysis
-            </h3>
-            <p className="text-[var(--text-muted)] font-mono text-sm max-w-md mx-auto">
-              Enter a research brief above. Trende will execute in a TEE-secured
-              environment and return verifiable intelligence.
-            </p>
           </div>
         )}
 
