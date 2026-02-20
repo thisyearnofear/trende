@@ -188,7 +188,11 @@ def render_pdf_report(payload: dict[str, Any]) -> bytes:
     pdf.multi_cell(content_width, 5, _wrap_hard_tokens(report_md, chunk=48))
 
     out = BytesIO()
-    out.write(pdf.output(dest="S").encode("latin-1"))
+    rendered = pdf.output(dest="S")
+    if isinstance(rendered, str):
+        out.write(rendered.encode("latin-1"))
+    else:
+        out.write(bytes(rendered))
     return out.getvalue()
 
 
