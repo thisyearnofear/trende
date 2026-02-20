@@ -534,13 +534,14 @@ async def run_agent_workflow(
                 
                 # Set explicit QueryStatus based on node name
                 if node_name == "planner":
-                    tasks[task_id]["status"] = QueryStatus.PLANNING
-                elif node_name == "researcher":
+                    # Planner just completed; reflect that research execution has begun.
                     tasks[task_id]["status"] = QueryStatus.RESEARCHING
-                elif node_name == "validator":
+                elif node_name == "researcher":
                     tasks[task_id]["status"] = QueryStatus.PROCESSING
-                elif node_name == "analyzer":
+                elif node_name == "validator":
                     tasks[task_id]["status"] = QueryStatus.ANALYZING
+                elif node_name == "analyzer":
+                    tasks[task_id]["status"] = QueryStatus.PROCESSING
                 elif node_name == "architect":
                     tasks[task_id]["status"] = QueryStatus.COMPLETED
                     tasks[task_id]["logs"].append("🏆 MISSION ACCOMPLISHED: Final results ready.")

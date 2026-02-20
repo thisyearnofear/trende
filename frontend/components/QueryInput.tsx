@@ -40,7 +40,7 @@ const MISSION_PROFILES = [
     label: 'Alpha Hunter',
     icon: Zap,
     description: 'Fast social momentum & early signals',
-    platforms: ['newsapi', 'web', 'tinyfish'],
+    platforms: ['newsapi', 'web', 'hackernews'],
     models: ['venice', 'openrouter_llama_70b'],
     threshold: 0.5,
     accent: 'var(--accent-amber)'

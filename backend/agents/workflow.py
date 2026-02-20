@@ -154,6 +154,14 @@ async def researcher_node(state: GraphState) -> GraphState:
 
     tasks = []
     task_platforms = []
+    default_timeout = max(8, int(os.getenv("RESEARCH_PLATFORM_TIMEOUT_SECS", "35")))
+    tinyfish_timeout = max(default_timeout, int(os.getenv("RESEARCH_TINYFISH_TIMEOUT_SECS", "45")))
+
+    async def timed_search(platform: str, coro, timeout_secs: int):
+        try:
+            return await asyncio.wait_for(coro, timeout=timeout_secs)
+        except asyncio.TimeoutError:
+            raise TimeoutError(f"{platform} timed out after {timeout_secs}s")
     for sq in state["search_queries"]:
         platform = sq["platform"]
         query = sq["query"]
@@ -161,33 +169,33 @@ async def researcher_node(state: GraphState) -> GraphState:
         state["logs"].append(f"🤖 AGENT >> Establishing quantum link to {platform.upper()} for: '{query}'")
 
         if platform == "twitter":
-            tasks.append(twitter.search(query, limit=5))
+            tasks.append(timed_search(platform, twitter.search(query, limit=5), default_timeout))
         elif platform == "linkedin":
-            tasks.append(linkedin.search(query, limit=5))
+            tasks.append(timed_search(platform, linkedin.search(query, limit=5), default_timeout))
         elif platform in ["news", "newsapi"]:
-            tasks.append(news.search(query, limit=5))
+            tasks.append(timed_search(platform, news.search(query, limit=5), default_timeout))
         elif platform == "web":
-            tasks.append(tabstack.search(query, limit=5))
+            tasks.append(timed_search(platform, tabstack.search(query, limit=5), default_timeout))
         elif platform == "tiktok":
-            tasks.append(tiktok.search(query, limit=5))
+            tasks.append(timed_search(platform, tiktok.search(query, limit=5), default_timeout))
         elif platform == "youtube":
-            tasks.append(youtube.search(query, limit=5))
+            tasks.append(timed_search(platform, youtube.search(query, limit=5), default_timeout))
         elif platform == "gdelt":
-            tasks.append(gdelt.search(query, limit=5))
+            tasks.append(timed_search(platform, gdelt.search(query, limit=5), default_timeout))
         elif platform == "wikimedia":
-            tasks.append(wikimedia.search(query, limit=5))
+            tasks.append(timed_search(platform, wikimedia.search(query, limit=5), default_timeout))
         elif platform in ["hackernews", "hn"]:
-            tasks.append(hackernews.search(query, limit=5))
+            tasks.append(timed_search(platform, hackernews.search(query, limit=5), default_timeout))
         elif platform in ["stackexchange", "se"]:
-            tasks.append(stackexchange.search(query, limit=5))
+            tasks.append(timed_search(platform, stackexchange.search(query, limit=5), default_timeout))
         elif platform == "coingecko":
-            tasks.append(coingecko.search(query, limit=5))
+            tasks.append(timed_search(platform, coingecko.search(query, limit=5), default_timeout))
         elif platform == "tinyfish":
-            tasks.append(tinyfish.search(query, limit=5))
+            tasks.append(timed_search(platform, tinyfish.search(query, limit=5), tinyfish_timeout))
         else:
             # Fallback for unknown platforms
             state["logs"].append(f"⚠️  Warning: Platform {platform} not natively supported. Attempting web fallback.")
-            tasks.append(tabstack.search(query, limit=5))
+            tasks.append(timed_search(platform, tabstack.search(query, limit=5), default_timeout))
 
     if tasks:
         state["logs"].append(f"🔄 Gathering intelligence from {len(tasks)} sources simultaneously...")
