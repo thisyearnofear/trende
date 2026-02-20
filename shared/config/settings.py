@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
     newsapi_key: str = Field(default="", alias="NEWSAPI_KEY")
     tabstack_api_key: str = Field(default="", alias="TABSTACK_API_KEY")
+    tinyfish_api_key: str = Field(default="", alias="TINYFISH_API_KEY")
     coingecko_api_key: str = Field(default="", alias="COINGECKO_API_KEY")
 
     # Platform API Keys

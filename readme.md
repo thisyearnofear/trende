@@ -1,6 +1,6 @@
-# Trende: The Verifiable AI Oracle for Monad
+# Trende: The Verifiable AI Oracle for the Multichain Agent Economy
 
-Trende is a **Sovereign AI Agent** that bridges real-world social signal into verifiable on-chain intelligence. It serves as the "Truth Layer" for the Monad Agent Economy.
+Trende is a **Sovereign AI Agent** that bridges real-world social signal into verifiable intelligence. Powered by TEE-verifiable compute (Eigen), it serves as the "Truth Layer" for the emerging Agent Economy across Monad, Base, BNB, Solana, and beyond.
 
 ## 📖 Documentation
 
@@ -48,12 +48,11 @@ Trende is built for the agent-to-agent economy:
 
 ## 🛡️ Core Principles
 
-- **Verifiable First**: Cryptographic proof for every consensus report.
+- **Verifiable First**: Cryptographic proof for every report, leveraging **Eigen TEE** for verifiable compute.
 - **Multi-Model**: Eliminates single-source bias using Venice, GPT-4o, Llama, and Gemini.
+- **Chain Agnostic**: Built to serve intelligence to any ecosystem, including Monad, Base, BNB, and Solana.
 - **Privacy Centric**: Primary inference routed via Venice AI.
 
 ---
-
-Built for the [Moltiverse Hackathon](https://moltiverse.dev) (Agent Track) on **Monad**.
 
 **Monad Testnet**: Chain ID `10143` | RPC `https://testnet-rpc.monad.xyz` | [Explorer](https://testnet.monadexplorer.com)

@@ -218,7 +218,7 @@ class ACPService:
             
             # Extract parameters
             query = input_data.get("query")
-            platforms = input_data.get("platforms", ["twitter", "tiktok", "linkedin", "web"])
+            platforms = input_data.get("platforms", ["twitter", "tiktok", "linkedin", "web", "tinyfish"])
             
             logger.info(f"Starting research for job {job_id}: {query}")
             
@@ -273,12 +273,12 @@ class ACPService:
         attestation = summary.get("attestationData", {})
         
         return {
-            "summary": summary.get("overview", "No summary available"),
+            "summary": result.get("final_report_md", "No summary available"),
             "attestation_id": attestation.get("attestation_id", ""),
             "proof_url": f"https://trende.famile.xyz/proof/{task_id}",
             "confidence_score": summary.get("confidenceScore", 0.0),
             "signature": attestation.get("signature", ""),
-            "signer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+            "signer": self.agent_wallet_address or "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
             "input_hash": attestation.get("input_hash", ""),
             "providers": attestation.get("payload", {}).get("providers", []),
             "method": attestation.get("method", "tee-attestation"),

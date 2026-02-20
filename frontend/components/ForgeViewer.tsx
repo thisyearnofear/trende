@@ -87,6 +87,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const [copiedSignature, setCopiedSignature] = useState(false);
     const [isDeploying, setIsDeploying] = useState(false);
     const [isDrafting, setIsDrafting] = useState(false);
+    const [isMonitoring, setIsMonitoring] = useState(false);
     const [actions, setActions] = useState<AgentAction[]>([]);
     const [selectedActionPayload, setSelectedActionPayload] = useState<AgentAction | null>(null);
 
@@ -610,11 +611,11 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                     </div>
 
                     {/* Agentic Action Matrix */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 border-t border-white/5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-6 border-t border-white/5">
                         <button
                             onClick={handleDeployToken}
                             disabled={isDeploying}
-                            className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all group group"
+                            className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all group lg:col-span-1"
                         >
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 group-hover:scale-110 transition-transform">
@@ -631,7 +632,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                         <button
                             onClick={handleDraftArticle}
                             disabled={isDrafting}
-                            className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all group"
+                            className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all group lg:col-span-1"
                         >
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 group-hover:scale-110 transition-transform">
@@ -643,6 +644,41 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                 </div>
                             </div>
                             <Zap className="w-4 h-4 text-slate-700 group-hover:text-cyan-500 transition-colors" />
+                        </button>
+
+                        <button
+                            onClick={async () => {
+                                setIsMonitoring(true);
+                                try {
+                                    const response = await api.submitAction({
+                                        action_type: 'activate_sentinel',
+                                        task_id: queryId,
+                                        input: {
+                                            interval: 'daily',
+                                            alert_threshold: 0.8
+                                        }
+                                    });
+                                    addOrUpdateAction(response.action);
+                                    showToast('Sentinel activated. Monitoring for alpha divergence...', 'success');
+                                } catch {
+                                    showToast('Failed to activate Sentinel.', 'error');
+                                } finally {
+                                    setIsMonitoring(false);
+                                }
+                            }}
+                            disabled={isMonitoring}
+                            className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group lg:col-span-1"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                                </div>
+                                <div className="text-left">
+                                    <div className="text-xs font-bold text-slate-100 uppercase tracking-wider">Activate Sentinel</div>
+                                    <div className="text-[10px] text-slate-500">Enable recursive monitoring & alerts</div>
+                                </div>
+                            </div>
+                            <Sparkles className="w-4 h-4 text-slate-700 group-hover:text-emerald-500 transition-colors" />
                         </button>
                     </div>
 
@@ -885,7 +921,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                         const attestationId =
                                             (typeof payload?.attestation_id === 'string' && payload.attestation_id) ||
                                             (payload?.manifest &&
-                                            typeof (payload.manifest as Record<string, unknown>).attestation === 'object'
+                                                typeof (payload.manifest as Record<string, unknown>).attestation === 'object'
                                                 ? ((payload.manifest as Record<string, unknown>).attestation as Record<string, unknown>).attestation_id
                                                 : null);
                                         if (typeof attestationId === 'string' && attestationId) {

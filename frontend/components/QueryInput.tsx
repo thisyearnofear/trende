@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Send, Sparkles, Loader2, Compass, Layers } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
+import { Send, Sparkles, Loader2, Compass, Layers, Zap, Shield, BarChart3, Settings2 } from 'lucide-react';
 import { QueryRequest } from '@/lib/types';
 import { Card, Button, Input, Badge, InfoIcon } from './DesignSystem';
 
@@ -31,6 +31,40 @@ const PLATFORM_OPTIONS = [
   { id: 'hackernews', label: 'Hacker News', hint: 'Builder/tech pulse', enabled: true },
   { id: 'stackexchange', label: 'StackExchange', hint: 'Technical problem signals', enabled: true },
   { id: 'coingecko', label: 'CoinGecko', hint: 'Crypto market snapshots', enabled: true },
+  { id: 'tinyfish', label: 'TinyFish', hint: 'Autonomous deep-research agent', enabled: true },
+];
+
+const MISSION_PROFILES = [
+  {
+    id: 'alpha-hunter',
+    label: 'Alpha Hunter',
+    icon: Zap,
+    description: 'Fast social momentum & early signals',
+    platforms: ['newsapi', 'web', 'tinyfish'],
+    models: ['venice', 'openrouter_llama_70b'],
+    threshold: 0.5,
+    accent: 'var(--accent-amber)'
+  },
+  {
+    id: 'due-diligence',
+    label: 'Due Diligence',
+    icon: Shield,
+    description: 'Deep technical verification & TEE proof',
+    platforms: ['web', 'tinyfish', 'hackernews', 'stackexchange'],
+    models: ['venice', 'openrouter_hermes', 'aisa'],
+    threshold: 0.8,
+    accent: 'var(--accent-cyan)'
+  },
+  {
+    id: 'market-intel',
+    label: 'Market Intel',
+    icon: BarChart3,
+    description: 'Macro trends & cross-platform consensus',
+    platforms: ['newsapi', 'web', 'hackernews', 'coingecko'],
+    models: ['venice', 'openrouter_llama_70b', 'openrouter_hermes'],
+    threshold: 0.65,
+    accent: 'var(--accent-emerald)'
+  }
 ];
 
 const SUGGESTIONS = [
@@ -48,6 +82,25 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [platforms, setPlatforms] = useState<string[]>(['newsapi', 'web', 'hackernews', 'stackexchange']);
   const [models, setModels] = useState<string[]>(['venice', 'openrouter_llama_70b', 'openrouter_hermes']);
   const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const activeProfile = useMemo(() => {
+    return MISSION_PROFILES.find(p =>
+      p.platforms.every(plt => platforms.includes(plt)) &&
+      platforms.length === p.platforms.length &&
+      p.models.every(m => models.includes(m)) &&
+      models.length === p.models.length &&
+      Math.abs(p.threshold - relevanceThreshold) < 0.01
+    );
+  }, [platforms, models, relevanceThreshold]);
+
+  const applyProfile = (profileId: string) => {
+    const profile = MISSION_PROFILES.find(p => p.id === profileId);
+    if (!profile) return;
+    setPlatforms(profile.platforms);
+    setModels(profile.models);
+    setRelevanceThreshold(profile.threshold);
+  };
 
   const hasPlatforms = platforms.length > 0;
   const hasModels = models.length > 0;
@@ -73,42 +126,100 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   };
 
   const totalCost = models.reduce((sum, m) => sum + (MODEL_OPTIONS.find(opt => opt.id === m)?.cost || 0), 0);
-  const avgQuality = models.length > 0 
+  const avgQuality = models.length > 0
     ? models.reduce((sum, m) => sum + (MODEL_OPTIONS.find(opt => opt.id === m)?.quality || 0), 0) / models.length
     : 0;
   const estimatedSeconds = Math.max(
     45,
     Math.round(
       (24 +
-      platforms.length * 18 +
-      models.length * 24 +
-      (relevanceThreshold > 0.75 ? 25 : 0)) * 1.6,
+        platforms.length * 18 +
+        models.length * 24 +
+        (relevanceThreshold > 0.75 ? 25 : 0)) * 1.6,
     ),
   );
   const metricKey = `${estimatedSeconds}-${Math.round(avgQuality)}-${totalCost.toFixed(4)}`;
 
   return (
-    <Card accent="cyan" shadow="lg" className="p-4 sm:p-8">
+    <Card accent={activeProfile ? 'cyan' : 'violet'} shadow="lg" className="p-4 sm:p-8">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div 
-              className="w-10 h-10 flex items-center justify-center"
-              style={{ backgroundColor: 'var(--accent-cyan)', boxShadow: '3px 3px 0px 0px var(--shadow-color)' }}
+            <div
+              className="w-10 h-10 flex items-center justify-center transition-all duration-500"
+              style={{
+                backgroundColor: activeProfile ? activeProfile.accent : 'var(--accent-violet)',
+                boxShadow: `3px 3px 0px 0px var(--shadow-color)`
+              }}
             >
-              <Compass className="w-5 h-5 text-[var(--bg-primary)]" />
+              {activeProfile ? <activeProfile.icon className="w-5 h-5 text-[var(--bg-primary)]" /> : <Compass className="w-5 h-5 text-[var(--bg-primary)]" />}
             </div>
             <div>
-              <p className="text-sm font-black uppercase tracking-wider">Laboratory Brief</p>
-              <p className="text-xs text-[var(--text-muted)] font-mono">SECURE INPUT CHANNEL // TEE-PROTECTED</p>
+              <p className="text-sm font-black uppercase tracking-wider">Mission Brief</p>
+              <p className="text-xs text-[var(--text-muted)] font-mono">
+                {activeProfile ? `PROFILE: ${activeProfile.label.toUpperCase()}` : 'CUSTOM CONFIGURATION'} // SECURE
+              </p>
             </div>
           </div>
-          <Badge variant="cyan">{idea.trim().length} CHARS</Badge>
+          <div className="flex gap-2">
+            <Badge variant={activeProfile ? 'cyan' : 'violet'}>TEE-ACTIVE</Badge>
+          </div>
+        </div>
+
+        {/* Profile Selectors */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[var(--accent-amber)]" />
+              <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Select Mission Profile</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-[10px] font-mono flex items-center gap-1.5 uppercase hover:text-[var(--accent-cyan)] transition-colors"
+              style={{ color: showAdvanced ? 'var(--accent-cyan)' : 'var(--text-muted)' }}
+            >
+              <Settings2 className="w-3 h-3" />
+              Advanced Toggles {showAdvanced ? '[ - ]' : '[ + ]'}
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {MISSION_PROFILES.map((profile) => {
+              const active = activeProfile?.id === profile.id;
+              return (
+                <button
+                  key={profile.id}
+                  type="button"
+                  onClick={() => applyProfile(profile.id)}
+                  disabled={disabled}
+                  className="flex flex-col text-left p-4 bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 relative overflow-hidden group"
+                  style={{
+                    borderColor: active ? profile.accent : 'var(--bg-tertiary)',
+                    boxShadow: active ? `4px 4px 0px 0px ${profile.accent}` : '2px 2px 0px 0px var(--bg-tertiary)',
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <profile.icon className="w-4 h-4" style={{ color: active ? profile.accent : 'var(--text-muted)' }} />
+                    <span className="text-xs font-black uppercase tracking-tight" style={{ color: active ? profile.accent : 'var(--text-primary)' }}>{profile.label}</span>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] leading-tight">{profile.description}</p>
+
+                  {/* Visual Background indicator */}
+                  <div
+                    className="absolute -right-2 -bottom-2 opacity-[0.03] transition-transform duration-500 group-hover:scale-125"
+                    style={{ color: profile.accent }}
+                  >
+                    <profile.icon size={64} />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Input Area */}
-        <div className="relative">
+        <div className="relative pt-2">
           <Input
             value={idea}
             onChange={setIdea}
@@ -116,7 +227,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
             disabled={disabled}
             rows={4}
           />
-          
+
           {/* Submit button */}
           <div className="absolute bottom-4 right-4">
             <Button type="submit" disabled={!idea.trim() || isLoading || disabled || !hasPlatforms || !hasModels}>
@@ -128,161 +239,140 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
               ) : (
                 <span className="flex items-center gap-2">
                   <Send className="w-4 h-4" />
-                  RUN ANALYSIS
+                  EXECUTE MISSION
                 </span>
               )}
             </Button>
           </div>
         </div>
 
-        {/* Platform Selectors */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-[var(--accent-cyan)]" />
-            <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">World Selectors</span>
-          </div>
-          
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {PLATFORM_OPTIONS.map((platform) => {
-              const active = platforms.includes(platform.id);
-              const unavailable = !platform.enabled;
-              return (
-                <button
-                  key={platform.id}
-                  type="button"
-                  onClick={() => togglePlatform(platform.id, platform.enabled)}
-                  disabled={disabled || unavailable}
-                  className="text-left p-4 min-h-[80px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{
-                    borderColor: unavailable
-                      ? 'var(--accent-violet)'
-                      : active
-                        ? 'var(--accent-cyan)'
-                        : 'var(--text-muted)',
-                    boxShadow: unavailable
-                      ? '2px 2px 0px 0px var(--accent-violet)'
-                      : active
-                        ? '4px 4px 0px 0px var(--accent-cyan)'
-                        : '4px 4px 0px 0px var(--text-muted)',
-                  }}
-                  title={unavailable ? platform.reason : platform.hint}
-                >
-                  <p className="text-sm font-black uppercase" style={{ color: unavailable ? 'var(--accent-violet)' : active ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
-                    {platform.label}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">{platform.hint}</p>
-                  {unavailable ? (
-                    <Badge variant="violet" className="mt-2">COMING SOON</Badge>
-                  ) : active ? (
-                    <Badge variant="cyan" className="mt-2">ACTIVE</Badge>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-          
-          {!hasPlatforms && (
-            <p className="text-xs font-mono text-[var(--accent-rose)]">[!] SELECT AT LEAST ONE SOURCE</p>
-          )}
-        </div>
+        {showAdvanced && (
+          <div className="space-y-6 pt-4 border-t-2 border-dashed border-[var(--bg-tertiary)] animate-in fade-in slide-in-from-top-4 duration-300">
+            {/* Platform Selectors */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[var(--accent-cyan)]" />
+                <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Advanced: World Selectors</span>
+              </div>
 
-        {/* Model Selectors */}
-        <div className="space-y-4 pt-4 border-t-2 border-[var(--bg-tertiary)]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[var(--accent-amber)]" />
-              <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Consensus LLM Routes</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center">
-               <div key={`cost-${metricKey}`} className="flex flex-col justify-center px-2 py-1.5 border-2 border-[var(--bg-tertiary)] transition-all animate-pulse">
-                <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Est. Cost</span>
-                <span className="text-sm font-black text-[var(--accent-amber)]">{totalCost.toFixed(4)} MON</span>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {PLATFORM_OPTIONS.map((platform) => {
+                  const active = platforms.includes(platform.id);
+                  const unavailable = !platform.enabled;
+                  return (
+                    <button
+                      key={platform.id}
+                      type="button"
+                      onClick={() => togglePlatform(platform.id, platform.enabled)}
+                      disabled={disabled || unavailable}
+                      className="text-left p-3 min-h-[60px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                      style={{
+                        borderColor: unavailable
+                          ? 'var(--accent-violet)'
+                          : active
+                            ? 'var(--accent-cyan)'
+                            : 'var(--text-muted)',
+                        boxShadow: unavailable
+                          ? '2px 2px 0px 0px var(--accent-violet)'
+                          : active
+                            ? '4px 4px 0px 0px var(--accent-cyan)'
+                            : '4px 4px 0px 0px var(--text-muted)',
+                      }}
+                      title={unavailable ? platform.reason : platform.hint}
+                    >
+                      <p className="text-[11px] font-black uppercase" style={{ color: unavailable ? 'var(--accent-violet)' : active ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
+                        {platform.label}
+                      </p>
+                      {active && <Badge variant="cyan" className="mt-1 transform scale-75 origin-left">ACTIVE</Badge>}
+                    </button>
+                  );
+                })}
               </div>
-              <div key={`time-${metricKey}`} className="flex flex-col justify-center px-2 py-1.5 border-2 border-[var(--bg-tertiary)] transition-all animate-pulse">
-                <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Est. Time</span>
-                <span className="text-sm font-black text-[var(--accent-emerald)]">~{estimatedSeconds}s</span>
-              </div>
-              <div key={`mitigation-${metricKey}`} className="flex flex-col justify-center px-2 py-1.5 border-2 border-[var(--bg-tertiary)] transition-all animate-pulse">
-                <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase inline-flex items-center justify-center gap-1">
-                  Mitigation Power
-                  <InfoIcon
-                    size="sm"
-                    tooltip="Estimated bias resistance based on model diversity and route quality. Higher means stronger cross-model challenge."
-                  />
-                </span>
-                <span className="text-sm font-black text-[var(--accent-cyan)]">{Math.round(avgQuality)}%</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {MODEL_OPTIONS.map((model) => {
-              const active = models.includes(model.id);
-              const unavailable = model.enabled === false;
-              return (
-                <button
-                  key={model.id}
-                  type="button"
-                  onClick={() => toggleModel(model.id, model.enabled !== false)}
-                  disabled={disabled || unavailable}
-                  className="text-left p-3 min-h-[70px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-55 disabled:cursor-not-allowed"
-                  style={{
-                    borderColor: unavailable
-                      ? 'var(--accent-violet)'
-                      : active
-                        ? 'var(--accent-amber)'
-                        : 'var(--text-muted)',
-                    boxShadow: unavailable
-                      ? '2px 2px 0px 0px var(--accent-violet)'
-                      : active
-                        ? '4px 4px 0px 0px var(--accent-amber)'
-                        : '4px 4px 0px 0px var(--text-muted)',
-                    backgroundColor: active ? 'rgba(255, 170, 0, 0.08)' : undefined,
-                  }}
-                  title={unavailable ? model.reason : model.hint}
-                >
-                  <p className="text-xs font-black uppercase" style={{ color: unavailable ? 'var(--accent-violet)' : active ? 'var(--accent-amber)' : 'var(--text-primary)' }}>
-                    {model.label}
-                  </p>
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1 leading-tight">{model.hint}</p>
-                  {unavailable ? (
-                    <Badge variant="violet" className="mt-2">COMING SOON</Badge>
-                  ) : active ? (
-                    <Badge variant="amber" className="mt-2">ACTIVE</Badge>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-          
-          {!hasModels && (
-            <p className="text-xs font-mono text-[var(--accent-rose)]">[!] SELECT AT LEAST ONE MODEL FOR CONSENSUS</p>
-          )}
-        </div>
 
-        {/* Relevance Threshold */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Relevance Threshold</span>
-            <Badge variant="cyan">{Math.round(relevanceThreshold * 100)}%</Badge>
+              {!hasPlatforms && (
+                <p className="text-xs font-mono text-[var(--accent-rose)]">[!] SELECT AT LEAST ONE SOURCE</p>
+              )}
+            </div>
+
+            {/* Model Selectors */}
+            <div className="space-y-4 pt-4 border-t-2 border-[var(--bg-tertiary)]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[var(--accent-amber)]" />
+                  <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Advanced: Consensus Routes</span>
+                </div>
+                <div className="flex gap-2 text-center">
+                  <div key={`cost-${metricKey}`} className="flex flex-col justify-center px-3 py-1 border-2 border-[var(--bg-tertiary)]">
+                    <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase">Cost</span>
+                    <span className="text-xs font-black text-[var(--accent-amber)]">{totalCost.toFixed(4)} MON</span>
+                  </div>
+                  <div key={`mitigation-${metricKey}`} className="flex flex-col justify-center px-3 py-1 border-2 border-[var(--bg-tertiary)]">
+                    <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase inline-flex items-center justify-center gap-1">Bias Res.</span>
+                    <span className="text-xs font-black text-[var(--accent-cyan)]">{Math.round(avgQuality)}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {MODEL_OPTIONS.map((model) => {
+                  const active = models.includes(model.id);
+                  const unavailable = model.enabled === false;
+                  return (
+                    <button
+                      key={model.id}
+                      type="button"
+                      onClick={() => toggleModel(model.id, model.enabled !== false)}
+                      disabled={disabled || unavailable}
+                      className="text-left p-2.5 min-h-[50px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-55 disabled:cursor-not-allowed"
+                      style={{
+                        borderColor: unavailable
+                          ? 'var(--accent-violet)'
+                          : active
+                            ? 'var(--accent-amber)'
+                            : 'var(--text-muted)',
+                        boxShadow: unavailable
+                          ? '2px 2px 0px 0px var(--accent-violet)'
+                          : active
+                            ? '4px 4px 0px 0px var(--accent-amber)'
+                            : '4px 4px 0px 0px var(--text-muted)',
+                        backgroundColor: active ? 'rgba(255, 170, 0, 0.08)' : undefined,
+                      }}
+                      title={unavailable ? model.reason : model.hint}
+                    >
+                      <p className="text-[10px] font-black uppercase" style={{ color: unavailable ? 'var(--accent-violet)' : active ? 'var(--accent-amber)' : 'var(--text-primary)' }}>
+                        {model.label}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Relevance Threshold */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Relevance Threshold</span>
+                <Badge variant="cyan">{Math.round(relevanceThreshold * 100)}%</Badge>
+              </div>
+              <input
+                type="range"
+                min="0.2"
+                max="0.95"
+                step="0.05"
+                value={relevanceThreshold}
+                onChange={(e) => setRelevanceThreshold(Number(e.target.value))}
+                disabled={disabled}
+                className="w-full"
+                style={{ accentColor: 'var(--accent-cyan)' }}
+              />
+            </div>
           </div>
-          <input
-            type="range"
-            min="0.2"
-            max="0.95"
-            step="0.05"
-            value={relevanceThreshold}
-            onChange={(e) => setRelevanceThreshold(Number(e.target.value))}
-            disabled={disabled}
-            className="w-full"
-            style={{ accentColor: 'var(--accent-cyan)' }}
-          />
-        </div>
+        )}
 
         {/* Suggestions */}
         <div className="flex flex-wrap gap-2 items-center pt-2 border-t-2 border-[var(--text-muted)]">
           <Sparkles className="w-4 h-4 text-[var(--text-muted)]" />
-          <span className="text-xs text-[var(--text-muted)] font-mono">SUGGESTED_QUERIES:</span>
+          <span className="text-xs text-[var(--text-muted)] font-mono">INTEL_PREVIEW:</span>
           {SUGGESTIONS.map((suggestion) => (
             <button
               key={suggestion}

@@ -177,6 +177,7 @@ class RateLimiter:
             "hackernews": TokenBucket(rate=1.0, capacity=20),
             "stackexchange": TokenBucket(rate=0.8, capacity=15),
             "coingecko": TokenBucket(rate=0.8, capacity=15),
+            "tinyfish": TokenBucket(rate=0.2, capacity=5),  # High-fidelity, slower throughput
         }
 
     async def check_rate_limit(self, platform: str) -> bool:

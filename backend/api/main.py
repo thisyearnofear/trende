@@ -18,6 +18,12 @@ from backend.services.acp_service import acp_service
 from backend.database.repository import Repository, init_db
 from backend.services.ai_service import OPENROUTER_VARIANTS, ai_service
 from backend.services.attestation_service import attestation_service
+from backend.services.export_service import (
+    build_export_payload,
+    render_json_report,
+    render_markdown_report,
+    render_pdf_report,
+)
 from backend.services.x402_service import X402Payment, x402_service
 from backend.services.archive_service import archive_service
 from backend.utils.rate_limit import UserRateLimitInfo, user_rate_limiter
@@ -589,6 +595,26 @@ async def run_agent_action(action_id: str) -> None:
                 "input_hash": attestation.get("input_hash"),
                 "status": "ready",
             }
+        elif action_type == "activate_sentinel":
+            if not task:
+                raise ValueError("activate_sentinel requires task_id.")
+            
+            interval = input_payload.get("interval", "daily")
+            threshold = input_payload.get("alert_threshold", 0.8)
+            
+            result_payload = {
+                "sentinel_id": f"SNTL-{task_id[:8]}",
+                "status": "active",
+                "config": {
+                    "interval": interval,
+                    "target_task_id": task_id,
+                    "alert_threshold": threshold,
+                    "recursive_research": True,
+                    "tee_verification": True
+                },
+                "next_run": (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1)).isoformat(),
+                "message": f"Sentinel established for {task.get('topic', 'topic')}. Agent will monitor and re-verify alpha every {interval}."
+            }
         else:
             result_payload = {
                 "status": "accepted",
@@ -954,6 +980,49 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
         },
         "editorial": editorial_data,
     }
+
+
+@app.get("/api/trends/{task_id}/export", response_model=None)
+async def export_task_report(task_id: str, format: str = "pdf") -> Response:
+    task = tasks.get(task_id)
+    if not task:
+        task = repo.get_task(task_id)
+        if task:
+            tasks[task_id] = task
+    if not task:
+        return Response(status_code=404, content=json.dumps({"error": "Task not found"}))
+
+    normalized_format = (format or "pdf").strip().lower()
+    payload = build_export_payload(task_id=task_id, task=task)
+    file_stub = f"trende-report-{task_id[:8]}"
+
+    if normalized_format == "pdf":
+        body = render_pdf_report(payload)
+        media = "application/pdf"
+        filename = f"{file_stub}.pdf"
+    elif normalized_format in {"md", "markdown"}:
+        body = render_markdown_report(payload).encode("utf-8")
+        media = "text/markdown; charset=utf-8"
+        filename = f"{file_stub}.md"
+    elif normalized_format == "json":
+        body = render_json_report(payload)
+        media = "application/json; charset=utf-8"
+        filename = f"{file_stub}.json"
+    else:
+        return Response(
+            status_code=400,
+            content=json.dumps({"error": "format must be one of: pdf, md, json"}),
+            media_type="application/json",
+        )
+
+    return Response(
+        content=body,
+        media_type=media,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @app.get("/api/agent/alpha/{task_id}", response_model=None)

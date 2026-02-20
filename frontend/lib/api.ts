@@ -306,6 +306,30 @@ export const api = {
     });
     return handleResponse<{ action: AgentAction }>(response);
   },
+
+  /**
+   * Download a generated report artifact.
+   */
+  async downloadReport(
+    queryId: string,
+    format: 'pdf' | 'md' | 'json' = 'pdf'
+  ): Promise<{ blob: Blob; filename: string | null; contentType: string | null }> {
+    const response = await fetch(`${API_BASE}/api/trends/${queryId}/export?format=${format}`, {
+      headers: getHeaders(),
+    });
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown export error');
+      throw new ApiError(response.status, errorText, response);
+    }
+    const blob = await response.blob();
+    const contentDisposition = response.headers.get('content-disposition');
+    const filenameMatch = contentDisposition?.match(/filename=\"?([^\";]+)\"?/i);
+    return {
+      blob,
+      filename: filenameMatch?.[1] || null,
+      contentType: response.headers.get('content-type'),
+    };
+  },
 };
 
 

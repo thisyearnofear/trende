@@ -7,6 +7,7 @@ import { AttestationBadge } from '@/components/AttestationBadge';
 import { ShieldCheck, ArrowLeft, Loader2, Link2, Fingerprint, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
+import { api } from '@/lib/api';
 
 export default function ProofPage({ params }: { params: Promise<{ queryId: string }> }) {
     const { queryId } = use(params);
@@ -21,24 +22,18 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
 
     const handleDownloadReport = async () => {
         try {
-            showToast('Generating report image...', 'success');
-            const imageUrl = `/api/report/${queryId}/image`;
-            const response = await fetch(imageUrl);
-            if (!response.ok) {
-                throw new Error(`Image generation failed (${response.status})`);
+            showToast('Generating report export...', 'success');
+            const { blob, filename, contentType } = await api.downloadReport(queryId, 'pdf');
+            if (!contentType?.includes('application/pdf')) {
+                throw new Error('Export did not return a PDF');
             }
-            const contentType = response.headers.get('content-type') || '';
-            if (!contentType.includes('image/png')) {
-                throw new Error('Image generation returned non-PNG content');
-            }
-            const blob = await response.blob();
             if (!blob || blob.size < 1024) {
-                throw new Error('Generated PNG is empty');
+                throw new Error('Generated report is empty');
             }
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `trende-report-${queryId.slice(0, 8)}.png`;
+            a.download = filename || `trende-report-${queryId.slice(0, 8)}.pdf`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);

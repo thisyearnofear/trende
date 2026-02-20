@@ -10,6 +10,7 @@ from .connectors.wikimedia import WikimediaConnector
 from .connectors.hackernews import HackerNewsConnector
 from .connectors.stackexchange import StackExchangeConnector
 from .connectors.coingecko import CoinGeckoConnector
+from .connectors.tinyfish import TinyFishConnector
 
 __all__ = [
     "AbstractPlatformConnector",
@@ -24,4 +25,5 @@ __all__ = [
     "HackerNewsConnector",
     "StackExchangeConnector",
     "CoinGeckoConnector",
+    "TinyFishConnector",
 ]

@@ -112,8 +112,8 @@ confidence score, and cryptographic signature.
     },
     "platforms": {
       "type": "array",
-      "items": {"type": "string", "enum": ["twitter", "tiktok", "linkedin", "web"]},
-      "default": ["twitter", "tiktok", "linkedin", "web"]
+      "items": {"type": "string", "enum": ["twitter", "tiktok", "linkedin", "web", "tinyfish"]},
+      "default": ["twitter", "web", "tinyfish"]
     },
     "depth": {
       "type": "string",

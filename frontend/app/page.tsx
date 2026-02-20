@@ -368,24 +368,18 @@ export default function Home() {
     if (!activeQueryId) return;
 
     try {
-      showToast("Generating report image...", "info");
-      const imageUrl = `/api/report/${activeQueryId}/image`;
-      const response = await fetch(imageUrl);
-      if (!response.ok) {
-        throw new Error(`Image generation failed (${response.status})`);
+      showToast("Generating report export...", "info");
+      const { blob, filename, contentType } = await api.downloadReport(activeQueryId, "pdf");
+      if (!contentType?.includes("application/pdf")) {
+        throw new Error("Export did not return a PDF");
       }
-      const contentType = response.headers.get("content-type") || "";
-      if (!contentType.includes("image/png")) {
-        throw new Error("Image generation returned non-PNG content");
-      }
-      const blob = await response.blob();
       if (!blob || blob.size < 1024) {
-        throw new Error("Generated PNG is empty");
+        throw new Error("Generated report is empty");
       }
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `trende-report-${activeQueryId.slice(0, 8)}.png`;
+      a.download = filename || `trende-report-${activeQueryId.slice(0, 8)}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

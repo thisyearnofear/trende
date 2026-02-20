@@ -40,7 +40,7 @@ async def planner_node(state: GraphState) -> GraphState:
 
     Generate a research plan in JSON format.
     You MUST include search queries for each of the requested platforms.
-    Available platforms: twitter, linkedin, news, newsapi, tiktok, youtube, web, gdelt, wikimedia, hackernews, stackexchange, coingecko.
+    Available platforms: twitter, linkedin, news, newsapi, tiktok, youtube, web, gdelt, wikimedia, hackernews, stackexchange, coingecko, tinyfish.
     If the user asked for a specific platform, prioritize it.
 
     JSON format:
@@ -120,11 +120,13 @@ async def researcher_node(state: GraphState) -> GraphState:
     from backend.integrations.connectors.hackernews import HackerNewsConnector
     from backend.integrations.connectors.stackexchange import StackExchangeConnector
     from backend.integrations.connectors.coingecko import CoinGeckoConnector
+    from backend.integrations.connectors.tinyfish import TinyFishConnector
 
     twitter = TwitterConnector()
     linkedin = LinkedInConnector()
     news = NewsConnector()
     tabstack = TabstackConnector()
+    tinyfish = TinyFishConnector()
     tiktok = TikTokConnector()
     youtube = YouTubeConnector()
     gdelt = GDELTConnector()
@@ -163,6 +165,8 @@ async def researcher_node(state: GraphState) -> GraphState:
             tasks.append(stackexchange.search(query, limit=5))
         elif platform == "coingecko":
             tasks.append(coingecko.search(query, limit=5))
+        elif platform == "tinyfish":
+            tasks.append(tinyfish.search(query, limit=5))
         else:
             # Fallback for unknown platforms
             state["logs"].append(f"⚠️  Warning: Platform {platform} not natively supported. Attempting web fallback.")
@@ -264,19 +268,27 @@ async def analyzer_node(state: GraphState) -> GraphState:
 
     findings_to_use = state["filtered_findings"] or state["raw_findings"]
 
-    # Deep Enrichment: If we have Tabstack, enrich the top 3 most relevant-looking items
+    # Deep Enrichment: Use TinyFish if available, fallback to Tabstack
     from backend.integrations.connectors.tabstack import TabstackConnector
+    from backend.integrations.connectors.tinyfish import TinyFishConnector
 
     tabstack = TabstackConnector()
+    tinyfish = TinyFishConnector()
 
     enriched_context = []
     # Sort by metrics (e.g. likes/retweets) or just take first few
     to_enrich = [f for f in findings_to_use if f.url and len(f.content) < 500][:3]
 
-    if to_enrich and tabstack.api_key:
-        state["logs"].append(f"🔬 DEEP DIVE: Enriching {len(to_enrich)} key findings with full-text analysis...")
+    if to_enrich:
+        state["logs"].append(f"🔬 DEEP DIVE: Enriching {len(to_enrich)} key findings with agentic full-text analysis...")
         for item in to_enrich:
-            full_text = await tabstack.extract_content(item.url)
+            full_text = None
+            if tinyfish.api_key:
+                full_text = await tinyfish.extract_content(item.url)
+            
+            if not full_text and tabstack.api_key:
+                full_text = await tabstack.extract_content(item.url)
+            
             if full_text:
                 enriched_context.append(
                     f"### FULL SOURCE: {item.title}\nURL: {item.url}\n\n{full_text[:3000]}"

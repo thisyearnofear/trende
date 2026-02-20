@@ -19,6 +19,7 @@ class PlatformType(str, Enum):
     HACKERNEWS = "hackernews"
     STACKEXCHANGE = "stackexchange"
     COINGECKO = "coingecko"
+    TINYFISH = "tinyfish"
 
 
 class Platform:
@@ -134,6 +135,13 @@ PLATFORMS: dict[PlatformType, Platform] = {
         "CoinGecko",
         "CG",
         "#65A30D",
+        supports_embed=False,
+    ),
+    PlatformType.TINYFISH: Platform(
+        PlatformType.TINYFISH,
+        "TinyFish",
+        "🐠",
+        "#FF9F1C",
         supports_embed=False,
     ),
 }
