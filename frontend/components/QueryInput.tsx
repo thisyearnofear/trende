@@ -31,7 +31,7 @@ const PLATFORM_OPTIONS = [
   { id: 'hackernews', label: 'Hacker News', hint: 'Builder/tech pulse', enabled: true },
   { id: 'stackexchange', label: 'StackExchange', hint: 'Technical problem signals', enabled: true },
   { id: 'coingecko', label: 'CoinGecko', hint: 'Crypto market snapshots', enabled: true },
-  { id: 'tinyfish', label: 'TinyFish', hint: 'Autonomous deep-research agent', enabled: true },
+  { id: 'tinyfish', label: 'TinyFish 🤖', hint: 'AI agent that reads primary sources for deep research', isPremium: true, enabled: true },
 ];
 
 const MISSION_PROFILES = [
@@ -83,6 +83,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [models, setModels] = useState<string[]>(['venice', 'openrouter_llama_70b', 'openrouter_hermes']);
   const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const activeProfile = useMemo(() => {
     return MISSION_PROFILES.find(p =>
@@ -259,13 +260,15 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                 {PLATFORM_OPTIONS.map((platform) => {
                   const active = platforms.includes(platform.id);
                   const unavailable = !platform.enabled;
+                  const isPremium = (platform as any).isPremium;
+                  
                   return (
                     <button
                       key={platform.id}
                       type="button"
                       onClick={() => togglePlatform(platform.id, platform.enabled)}
                       disabled={disabled || unavailable}
-                      className="text-left p-3 min-h-[60px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="text-left p-3 min-h-[60px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed relative"
                       style={{
                         borderColor: unavailable
                           ? 'var(--accent-violet)'
@@ -280,6 +283,12 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                       }}
                       title={unavailable ? platform.reason : platform.hint}
                     >
+                      {/* Premium indicator */}
+                      {isPremium && (
+                        <div className="absolute -top-1 -right-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-md">
+                          🤖 AI Agent
+                        </div>
+                      )}
                       <p className="text-[11px] font-black uppercase" style={{ color: unavailable ? 'var(--accent-violet)' : active ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
                         {platform.label}
                       </p>
@@ -369,22 +378,35 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
           </div>
         )}
 
-        {/* Suggestions */}
-        <div className="flex flex-wrap gap-2 items-center pt-2 border-t-2 border-[var(--text-muted)]">
-          <Sparkles className="w-4 h-4 text-[var(--text-muted)]" />
-          <span className="text-xs text-[var(--text-muted)] font-mono">INTEL_PREVIEW:</span>
-          {SUGGESTIONS.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              onClick={() => setIdea(suggestion)}
-              disabled={disabled}
-              className="text-xs px-2 py-1 border font-mono transition-colors hover:bg-[var(--accent-cyan)] hover:text-[var(--bg-primary)]"
-              style={{ color: 'var(--accent-cyan)', borderColor: 'var(--accent-cyan)' }}
-            >
-              {suggestion.slice(0, 40)}...
-            </button>
-          ))}
+        {/* Suggestions - Collapsible */}
+        <div className="pt-2 border-t-2 border-[var(--text-muted)]">
+          <button
+            type="button"
+            onClick={() => setShowSuggestions(!showSuggestions)}
+            className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--accent-cyan)] transition-colors"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="text-xs font-mono">
+              {showSuggestions ? '[-] Hide Example Queries' : '[+] Show Example Queries'}
+            </span>
+          </button>
+          
+          {showSuggestions && (
+            <div className="flex flex-wrap gap-2 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
+              {SUGGESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => setIdea(suggestion)}
+                  disabled={disabled}
+                  className="text-xs px-2 py-1 border font-mono transition-colors hover:bg-[var(--accent-cyan)] hover:text-[var(--bg-primary)]"
+                  style={{ color: 'var(--accent-cyan)', borderColor: 'var(--accent-cyan)' }}
+                >
+                  {suggestion.slice(0, 40)}...
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </form>
     </Card>

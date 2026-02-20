@@ -118,18 +118,19 @@
   --shadow-color: rgba(0,0,0,0.1);
   --shadow-offset: 0px;
 
-  /* Accents - Softer colors */
-  --accent-cyan: #4db6ac;
-  --accent-emerald: #81c784;
-  --accent-amber: #ffb74d;
-  --accent-rose: #e57373;
-  --accent-violet: #9575cd;
+  /* Accents - Darker for soft theme to ensure good contrast on badges/buttons */
+  /* Text on these backgrounds should be white or very dark for readability */
+  --accent-cyan: #00796b;
+  --accent-emerald: #2e7d32;
+  --accent-amber: #f57c00;
+  --accent-rose: #c62828;
+  --accent-violet: #4527a0;
 
-  /* Status */
-  --status-success: #81c784;
-  --status-warning: #ffb74d;
-  --status-error: #e57373;
-  --status-info: #4db6ac;
+  /* Status - Darker versions for visibility */
+  --status-success: #2e7d32;
+  --status-warning: #f57c00;
+  --status-error: #c62828;
+  --status-info: #00796b;
 
   /* Neumorphism / Soft UI */
   --soft-shadow-out: 8px 8px 16px #bebebe, -8px -8px 16px #ffffff;
@@ -250,6 +251,75 @@ body {
   50% {
     opacity: 0.5;
   }
+}
+
+/* Glow animation for text - uses CSS variables for theme adaptation */
+@keyframes glow-pulse-cyan {
+  0%, 100% {
+    text-shadow: 0 0 5px var(--accent-cyan),
+                 0 0 10px var(--accent-cyan),
+                 0 0 20px var(--accent-cyan);
+  }
+  50% {
+    text-shadow: 0 0 10px var(--accent-cyan),
+                 0 0 20px var(--accent-cyan),
+                 0 0 40px var(--accent-cyan);
+  }
+}
+
+@keyframes glow-pulse-emerald {
+  0%, 100% {
+    text-shadow: 0 0 5px var(--accent-emerald),
+                 0 0 10px var(--accent-emerald),
+                 0 0 20px var(--accent-emerald);
+  }
+  50% {
+    text-shadow: 0 0 10px var(--accent-emerald),
+                 0 0 20px var(--accent-emerald),
+                 0 0 40px var(--accent-emerald);
+  }
+}
+
+@keyframes glow-pulse-amber {
+  0%, 100% {
+    text-shadow: 0 0 5px var(--accent-amber),
+                 0 0 10px var(--accent-amber),
+                 0 0 20px var(--accent-amber);
+  }
+  50% {
+    text-shadow: 0 0 10px var(--accent-amber),
+                 0 0 20px var(--accent-amber),
+                 0 0 40px var(--accent-amber);
+  }
+}
+
+@keyframes glow-pulse-violet {
+  0%, 100% {
+    text-shadow: 0 0 5px var(--accent-violet),
+                 0 0 10px var(--accent-violet),
+                 0 0 20px var(--accent-violet);
+  }
+  50% {
+    text-shadow: 0 0 10px var(--accent-violet),
+                 0 0 20px var(--accent-violet),
+                 0 0 40px var(--accent-violet);
+  }
+}
+
+.animate-glow-cyan {
+  animation: glow-pulse-cyan 2s ease-in-out infinite;
+}
+
+.animate-glow-emerald {
+  animation: glow-pulse-emerald 2s ease-in-out infinite;
+}
+
+.animate-glow-amber {
+  animation: glow-pulse-amber 2s ease-in-out infinite;
+}
+
+.animate-glow-violet {
+  animation: glow-pulse-violet 2s ease-in-out infinite;
 }
 
 .animate-fade-up {

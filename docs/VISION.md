@@ -17,20 +17,26 @@ Trende monitors and synthesizes trends across:
 - **LinkedIn** - Professional debates and B2B insights
 - **Web** - Research papers, news outlets, technical blogs
 
-### 2. Multi-Model Consensus
+### 2. AI Agent Research (TinyFish 🤖)
+**Key Differentiator**: Trende includes TinyFish, an autonomous deep-research agent:
+- **Agentic browsing**: Not just APIs - TinyFish autonomously navigates and reads primary sources
+- **Deep discovery**: Goes beyond surface-level search to understand context and nuance
+- **Premium research**: Enabled in Alpha Hunter and Due Diligence profiles
+
+### 3. Multi-Model Consensus
 Eliminate single-model bias through parallel AI verification:
 - **Primary**: Venice AI (private, uncensored)
 - **Failover**: AIsa, OpenRouter, OpenAI, Gemini
 - **Output**: Triangulated consensus with confidence scores
 
-### 3. Verifiable Attestation (TEE)
+### 4. Verifiable Attestation (TEE)
 Every report includes cryptographic proof:
 - **EigenCompute TEE** execution environment
 - **Cryptographic signatures** via dedicated wallet
 - **Public verification** at attest.famile.xyz
 - **Non-repudiation** with timestamped attestations
 
-### 4. Agent-to-Agent Commerce
+### 5. Agent-to-Agent Commerce
 Trende operates as a sovereign economic actor:
 - **ACP Provider** on Virtuals Protocol
 - **X402 payments** (EIP-3009) for agent hiring

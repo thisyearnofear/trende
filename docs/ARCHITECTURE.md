@@ -8,26 +8,38 @@ Trende is built on a 4-stage agentic pipeline (LangGraph) with TEE-attested cons
 ┌──────────────────────┐     ┌──────────────────────┐
 │  Frontend (Vercel)   │     │  TEE Attestation     │
 │   Next.js + React    │     │  baseline-attested   │
-└──────────┬───────────┘     │  (Port 8082)         │
-           │                 └──────────▲───────────┘
-┌──────────▼───────────┐                           │
-│  Backend API         │◄──────────────────────────┘
-│  FastAPI (Port 8000) │         HTTP POST /attest
+│  + Kinetic UI        │     │  (Port 8082)         │
+└──────────┬───────────┘     └──────────▲───────────┘
+           │                           │
+┌──────────▼───────────┐               │
+│  Backend API         │◄──────────────┘
+│  FastAPI (Port 8000) │   HTTP POST /attest
 │  - Trend Analysis    │
 │  - Consensus Engine  │
-│  - ACP Integration   │
+│  - ACP Integration  │
 └──────────┬───────────┘
            │
     ┌──────┴──────┐
     ▼             ▼
-┌───────┐   ┌──────────┐
-│ APIs  │   │ AI Models│
-│Twitter│   │Venice    │
-│TikTok │   │AIsa      │
-│LinkedIn│  │OpenRouter│
-│News   │   │          │
-└───────┘   └──────────┘
+┌─────────────────┐   ┌──────────┐
+│ Data Connectors │   │ AI Models│
+│ - Twitter       │   │ - Venice  │
+│ - TikTok        │   │ - AIsa    │
+│ - LinkedIn      │   │ - OpenRouter│
+│ - NewsAPI       │   │          │
+│ - TinyFish 🤖   │   │          │
+│   (AI Agent)    │   │          │
+└─────────────────┘   └──────────┘
 ```
+
+### Key Differentiator: TinyFish AI Agent
+
+**TinyFish** is Trende's autonomous deep-research agent - a key differentiator from competitors:
+
+- **Agentic, not just API**: TinyFish uses goal-based AI to autonomously browse the web
+- **Primary source reading**: Opens and reads actual docs, posts, research papers - not just API metadata
+- **Deep discovery**: Used for "deep" research profiles where depth matters more than speed
+- **Premium capability**: Included in Alpha Hunter and Due Diligence mission profiles
 
 ---
 

@@ -25,11 +25,12 @@ import {
   Fingerprint,
   Layers3,
   Share2,
-
   Megaphone,
   ListTree,
   Loader2,
 } from "lucide-react";
+import { ScrambleText, ScrambleWords, GlowText } from "@/components/ScrambleText";
+import { Motion, StaggerGrid, MicroInteraction, usePrefersReducedMotion } from "@/components/Motion";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, Button, IconButton, Tooltip, InfoIcon } from "@/components/DesignSystem";
@@ -691,41 +692,68 @@ export default function Home() {
       )}
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        {/* Hero */}
+        {/* Hero - Enhanced with kinetic typography */}
         {!queryId && !isProcessing && (
-          <Card accent="cyan" shadow="lg" className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Fingerprint className="w-5 h-5 text-[var(--accent-cyan)]" />
-              <span className="text-xs font-mono text-[var(--accent-cyan)]">
-                TEE-SECURED EXECUTION // CRYPTOGRAPHICALLY VERIFIABLE
-              </span>
+          <Card accent="cyan" shadow="lg" className="p-6 overflow-hidden relative">
+            {/* Animated background element */}
+            <div className="absolute inset-0 opacity-5 pointer-events-none">
+              <div className="absolute top-0 left-0 w-96 h-96 bg-cyan-500 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight mb-3">
-              Turn Social Signal Into Conviction-Ready Intelligence
-            </h2>
-            <p className="text-[var(--text-secondary)] font-mono text-sm max-w-2xl mb-4">
-              Run multi-platform research through verifiable TEE execution.
-              Cross-reference signals, validate consensus, generate
-              cryptographic attestations.
-            </p>
-            <div className="flex flex-wrap gap-4 pt-4 border-t border-[var(--border-color)]">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[var(--accent-emerald)]" />
-                <span className="text-xs text-[var(--text-secondary)]">
-                  Trusted Execution Environment
-                </span>
+            
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-4">
+                <Fingerprint className="w-5 h-5 text-[var(--accent-cyan)]" />
+                <GlowText text="TEE-SECURED EXECUTION // CRYPTOGRAPHICALLY VERIFIABLE" className="text-xs font-mono" color="cyan" />
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[var(--accent-emerald)]" />
-                <span className="text-xs text-[var(--text-secondary)]">
-                  Multi-Model Consensus
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[var(--accent-emerald)]" />
-                <span className="text-xs text-[var(--text-secondary)]">
-                  Cryptographic Signatures
-                </span>
+              
+              <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight mb-3">
+                <ScrambleWords
+                  words={[
+                    { text: 'Turn', highlight: false },
+                    { text: 'Social', highlight: true },
+                    { text: 'Signal', highlight: false },
+                    { text: 'Into', highlight: false },
+                    { text: 'Conviction-Ready', highlight: true },
+                    { text: 'Intelligence', highlight: false },
+                  ]}
+                  className="text-2xl sm:text-3xl font-black uppercase tracking-tight mb-3"
+                  stagger={0.15}
+                />
+              </h2>
+              
+              <p className="text-[var(--text-secondary)] font-mono text-sm max-w-2xl mb-4">
+                <ScrambleText 
+                  text="Run multi-platform research through verifiable TEE execution. Cross-reference signals, validate consensus, generate cryptographic attestations." 
+                  delay={0.8}
+                  className="text-[var(--text-secondary)] font-mono text-sm max-w-2xl mb-4"
+                />
+              </p>
+              
+              <div className="flex flex-wrap gap-4 pt-4 border-t border-[var(--border-color)]">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[var(--accent-emerald)]" />
+                  <span className="text-xs text-[var(--text-secondary)]">
+                    Trusted Execution Environment
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[var(--accent-emerald)]" />
+                  <span className="text-xs text-[var(--text-secondary)]">
+                    Multi-Model Consensus
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[var(--accent-amber)] animate-pulse" />
+                  <span className="text-xs text-[var(--text-secondary)] font-semibold">
+                    🤖 TinyFish AI Agent Research
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[var(--accent-emerald)]" />
+                  <span className="text-xs text-[var(--text-secondary)]">
+                    Cryptographic Signatures
+                  </span>
+                </div>
               </div>
             </div>
           </Card>

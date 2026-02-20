@@ -235,12 +235,22 @@ interface BadgeProps {
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
   const { isSoft } = useTheme();
+  
+  // For soft theme, use white text for better contrast on darker accent backgrounds
+  // For dark/light themes, use bg-primary (which is dark in dark mode, light in light mode)
+  const getTextColor = (variant: string) => {
+    if (isSoft && variant !== 'default') {
+      return 'text-white';
+    }
+    return 'text-[var(--bg-primary)]';
+  };
+
   const variantClasses = {
-    cyan: 'bg-[var(--accent-cyan)] text-[var(--bg-primary)]',
-    emerald: 'bg-[var(--accent-emerald)] text-[var(--bg-primary)]',
-    amber: 'bg-[var(--accent-amber)] text-[var(--bg-primary)]',
-    rose: 'bg-[var(--accent-rose)] text-[var(--bg-primary)]',
-    violet: 'bg-[var(--accent-violet)] text-[var(--bg-primary)]',
+    cyan: `bg-[var(--accent-cyan)] ${getTextColor('cyan')}`,
+    emerald: `bg-[var(--accent-emerald)] ${getTextColor('emerald')}`,
+    amber: `bg-[var(--accent-amber)] ${getTextColor('amber')}`,
+    rose: `bg-[var(--accent-rose)] ${getTextColor('rose')}`,
+    violet: `bg-[var(--accent-violet)] ${getTextColor('violet')}`,
     default: 'bg-[var(--bg-secondary)] text-[var(--text-primary)]',
   };
 
