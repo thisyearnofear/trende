@@ -26,6 +26,8 @@ interface ScrambleTextProps extends BaseProps {
   duration?: number;
   delay?: number;
   onHover?: boolean;
+  /** Change this value to re-trigger the scramble animation */
+  trigger?: number | string;
 }
 
 export function ScrambleText({
@@ -35,20 +37,20 @@ export function ScrambleText({
   delay = 0,
   onHover = false,
   color = 'cyan',
+  trigger,
 }: ScrambleTextProps) {
   const elementRef = useRef<HTMLSpanElement>(null);
-  const [displayText, setDisplayText] = useState<string>('');
+  const [displayText, setDisplayText] = useState<string>(text);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
-  // Avoid hydration mismatch
   useEffect(() => {
-    setIsMounted(true);
-    setDisplayText(text);
-  }, [text]);
+    if (!isAnimating) {
+      setDisplayText(text);
+    }
+  }, [text, isAnimating]);
 
   const scramble = useCallback(() => {
-    if (!elementRef.current || isAnimating || !isMounted) return;
+    if (!elementRef.current || isAnimating) return;
     
     setIsAnimating(true);
     const originalText = text;
@@ -82,35 +84,38 @@ export function ScrambleText({
     };
 
     requestAnimationFrame(frame);
-  }, [text, duration, isAnimating, isMounted]);
+  }, [text, duration, isAnimating]);
 
   // Initial animation on mount
   useEffect(() => {
-    if (!isMounted) return;
-    
     const timer = setTimeout(() => {
       scramble();
     }, delay * 1000);
     return () => clearTimeout(timer);
-  }, [scramble, delay, isMounted]);
+  }, [scramble, delay]);
+
+  // Trigger-driven re-scramble
+  const prevTriggerRef = useRef<number | string | undefined>(undefined);
+  useEffect(() => {
+    if (trigger === undefined) return;
+    if (trigger === prevTriggerRef.current) return;
+    prevTriggerRef.current = trigger;
+    scramble();
+  }, [trigger, scramble]);
 
   // Hover animation
   const handleMouseEnter = useCallback(() => {
-    if (onHover && isMounted) {
+    if (onHover) {
       scramble();
     }
-  }, [onHover, scramble, isMounted]);
-
-  // Don't render until mounted to avoid hydration mismatch
-  if (!isMounted) {
-    return <span className={className}>{text}</span>;
-  }
+  }, [onHover, scramble]);
 
   return (
     <span
       ref={elementRef}
       className={`inline-block ${className}`}
       onMouseEnter={handleMouseEnter}
+      style={{ color: THEME_COLORS[color] }}
     >
       {displayText}
     </span>
@@ -129,14 +134,9 @@ export function ScrambleWords({
   color = 'cyan',
 }: ScrambleWordsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!containerRef.current || !isMounted) return;
+    if (!containerRef.current) return;
 
     const ctx = gsap.context(() => {
       const spans = containerRef.current?.querySelectorAll('.word');
@@ -193,23 +193,7 @@ export function ScrambleWords({
     }, containerRef);
 
     return () => ctx.revert();
-  }, [stagger, color, isMounted]);
-
-  // Don't render scrambled content until mounted
-  if (!isMounted) {
-    return (
-      <div ref={containerRef} className={className}>
-        {words.map((word, i) => (
-          <span
-            key={i}
-            className={`inline-block mr-[0.25em] ${word.highlight ? 'highlighted' : ''}`}
-          >
-            {word.text}
-          </span>
-        ))}
-      </div>
-    );
-  }
+  }, [stagger, color]);
 
   return (
     <div ref={containerRef} className={className}>
@@ -240,14 +224,9 @@ export function MarqueeText({
 }: MarqueeTextProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!containerRef.current || !textRef.current || !isMounted) return;
+    if (!containerRef.current || !textRef.current) return;
 
     const textWidth = textRef.current.offsetWidth;
     const containerWidth = containerRef.current.offsetWidth;
@@ -269,17 +248,7 @@ export function MarqueeText({
     }, containerRef);
 
     return () => ctx.revert();
-  }, [text, direction, speed, isMounted]);
-
-  if (!isMounted) {
-    return (
-      <div ref={containerRef} className={`overflow-hidden ${className}`}>
-        <div className="inline-block whitespace-nowrap">
-          {text}
-        </div>
-      </div>
-    );
-  }
+  }, [text, direction, speed]);
 
   return (
     <div ref={containerRef} className={`overflow-hidden ${className}`}>
@@ -300,28 +269,11 @@ export function GlowText({
   className = '',
   color = 'cyan',
 }: GlowTextProps) {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   // Map color to CSS class - all themes use CSS variables
   const glowClass = `animate-glow-${color}`;
 
-  if (!isMounted) {
-    return (
-      <span 
-        className={`inline-block ${className}`}
-        style={{ color: THEME_COLORS[color] }}
-      >
-        {text}
-      </span>
-    );
-  }
-
   return (
-    <span className={`inline-block ${className} ${glowClass}`}>
+    <span className={`inline-block ${className} ${glowClass}`} style={{ color: THEME_COLORS[color] }}>
       {text}
     </span>
   );

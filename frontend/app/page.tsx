@@ -14,7 +14,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
-  Clock3,
   Copy,
   ExternalLink,
   RefreshCw,
@@ -35,7 +34,6 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { ScrambleText, ScrambleWords, GlowText } from "@/components/ScrambleText";
-import { Motion, StaggerGrid, MicroInteraction, usePrefersReducedMotion } from "@/components/Motion";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, Button, IconButton, Tooltip, InfoIcon } from "@/components/DesignSystem";
@@ -45,18 +43,6 @@ import { useTheme } from "@/components/ThemeProvider";
 import { ParagraphConnectModal } from "@/components/integrations/ParagraphConnectModal";
 import { WalletButton } from "@/components/WalletButton";
 
-const STATUS_ETAS: Record<
-  string,
-  { label: string; minSeconds: number; maxSeconds: number }
-> = {
-  pending: { label: "Queueing mission", minSeconds: 5, maxSeconds: 15 },
-  planning: { label: "Planning sources", minSeconds: 10, maxSeconds: 35 },
-  researching: { label: "Collecting signals", minSeconds: 20, maxSeconds: 90 },
-  processing: { label: "Consensus + attestation", minSeconds: 35, maxSeconds: 140 },
-  analyzing: { label: "Synthesizing brief", minSeconds: 20, maxSeconds: 70 },
-  completed: { label: "Completed", minSeconds: 0, maxSeconds: 0 },
-  failed: { label: "Failed", minSeconds: 0, maxSeconds: 0 },
-};
 const LAST_QUERY_STORAGE_KEY = "trende:last_query_id";
 
 export default function Home() {
@@ -263,23 +249,6 @@ export default function Home() {
     return Math.round(total);
   }, [confidenceDrivers]);
 
-  const shareCardText = useMemo(() => {
-    const title = data?.query?.idea || "Trend Analysis";
-    const summary = data?.summary?.overview || "No summary available.";
-    const compactSummary =
-      summary.length > 220 ? `${summary.slice(0, 217)}...` : summary;
-    return [
-      "TRENDE Conviction Snapshot",
-      `Topic: ${title}`,
-      `Confidence: ${weightedConfidence}%`,
-      `Sources: ${sourceCount}`,
-      `Freshness: ${freshness.label}`,
-      `Verdict: ${data?.summary?.sentiment || "neutral"}`,
-      `Summary: ${compactSummary}`,
-      reliabilityFlags.length > 0 ? `Known gaps: ${reliabilityFlags.slice(0, 2).join("; ")}` : "Known gaps: none critical",
-    ].join("\n");
-  }, [data, weightedConfidence, sourceCount, freshness.label, reliabilityFlags]);
-
   const panelSummaries = useMemo(
     () => ({
       brief: `${sourceCount} sources • ${stats.platforms} platforms • ${freshness.label}`,
@@ -303,7 +272,6 @@ export default function Home() {
     ],
   );
 
-  const activeEta = STATUS_ETAS[status || "pending"] || STATUS_ETAS.pending;
   const startedAt = data?.query?.createdAt ? new Date(data.query.createdAt).getTime() : null;
   const filteredCommons = useMemo(() => {
     const term = commonsSearch.trim().toLowerCase();
@@ -909,67 +877,29 @@ export default function Home() {
 
         {/* Processing Status */}
         {(isProcessing || status === "processing") && (
-          <div className="space-y-6">
-            <Card accent="amber" className="p-4 sm:p-5">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2">
-                  <Clock3 className="w-4 h-4 text-[var(--accent-amber)]" />
-                  <h3 className="text-sm font-black uppercase tracking-wider">
-                    Runtime Estimator
-                  </h3>
-                </div>
-                <span className="text-xs font-mono text-[var(--text-muted)] uppercase">
-                  {activeEta.label}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm font-mono">
-                <div className="p-3 border-2 border-[var(--border-color)] bg-[var(--bg-primary)]">
-                  <p className="text-[10px] uppercase text-[var(--text-muted)]">
-                    Typical Stage
-                  </p>
-                  <p className="font-black">
-                    {activeEta.minSeconds}s - {activeEta.maxSeconds}s
-                  </p>
-                </div>
-                <div className="p-3 border-2 border-[var(--border-color)] bg-[var(--bg-primary)]">
-                  <p className="text-[10px] uppercase text-[var(--text-muted)]">
-                    Elapsed
-                  </p>
-                  <p className="font-black">{elapsedSeconds}s</p>
-                </div>
-                <div className="p-3 border-2 border-[var(--border-color)] bg-[var(--bg-primary)]">
-                  <p className="text-[10px] uppercase text-[var(--text-muted)]">
-                    Progress
-                  </p>
-                  <p className="font-black">{progress}%</p>
-                </div>
-              </div>
-            </Card>
-
-            <ProcessingStatus
-              status={status}
-              progress={progress}
-              events={events}
-              isProcessing={isProcessing}
-              elapsedSeconds={elapsedSeconds}
-              queryData={
-                lastQuery
+          <ProcessingStatus
+            status={status}
+            progress={progress}
+            events={events}
+            isProcessing={isProcessing}
+            elapsedSeconds={elapsedSeconds}
+            queryData={
+              lastQuery
+                ? {
+                  topic: lastQuery.idea,
+                  platforms: lastQuery.platforms,
+                  models: lastQuery.models,
+                  threshold: lastQuery.relevanceThreshold,
+                }
+                : data?.query
                   ? {
-                    topic: lastQuery.idea,
-                    platforms: lastQuery.platforms,
-                    models: lastQuery.models,
-                    threshold: lastQuery.relevanceThreshold,
+                    topic: data.query.idea,
+                    platforms: data.query.platforms,
+                    threshold: data.query.relevanceThreshold,
                   }
-                  : data?.query
-                    ? {
-                      topic: data.query.idea,
-                      platforms: data.query.platforms,
-                      threshold: data.query.relevanceThreshold,
-                    }
-                    : undefined
-              }
-            />
-          </div>
+                  : undefined
+            }
+          />
         )}
 
         {/* Results */}

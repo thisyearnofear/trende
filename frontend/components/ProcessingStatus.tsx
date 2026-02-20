@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { StreamEvent, QueryStatus } from "@/lib/types";
 import { estimateMissionRuntime } from "@/lib/runtimeEstimate";
 import {
@@ -9,17 +9,14 @@ import {
   CheckCircle2,
   Circle,
   Loader2,
-  Shield,
-  Layers,
-  Sparkles,
-  Zap,
   Clock3,
-  ChevronDown,
 } from "lucide-react";
 import { TerminalLog } from "./TypewriterText";
 import { AgentPersona } from "./AgentPersona";
 import { Card, Progress, Badge } from "./DesignSystem";
 import { useTheme } from "./ThemeProvider";
+import { usePrefersReducedMotion } from "./Motion";
+import { ScrambleText } from "./ScrambleText";
 
 interface ProcessingStatusProps {
   status: QueryStatus | null;
@@ -37,12 +34,7 @@ interface ProcessingStatusProps {
 
 const STAGES = [
   { id: "planner", label: "PLAN", description: "Strategy & Source Selection", detail: "Prompt decomposition, source selection, and query design." },
-  {
-    id: "researcher",
-    label: "HARVEST",
-    description: "Data Mining & Social Signal",
-    detail: "Parallel connector execution with rate limits, caching, and source normalization.",
-  },
+  { id: "researcher", label: "HARVEST", description: "Data Mining & Social Signal", detail: "Parallel connector execution with rate limits, caching, and source normalization." },
   { id: "validator", label: "VALIDATE", description: "Truth Verification", detail: "Cross-source reliability scoring and noise reduction." },
   { id: "consensus", label: "FORGE", description: "Multi-Model Consensus", detail: "Divergence analysis + neutral synthesis across selected models." },
   { id: "architect", label: "ATTEST", description: "TEE Proof Signing", detail: "Final payload shaping, trace metadata, and proof-ready output." },
@@ -95,6 +87,160 @@ const SIMULATED_LOGS: Record<string, string[]> = {
   ],
 };
 
+// ============================================
+// STAGE CARD — single source of truth
+// ============================================
+
+interface StageCardProps {
+  stage: (typeof STAGES)[number];
+  band: { stageId: string; min: number; max: number };
+  isActive: boolean;
+  isComplete: boolean;
+  isExpanded: boolean;
+  onSelect: () => void;
+  variant: "rail" | "grid";
+  reducedMotion: boolean;
+  activationTick: number;
+  softMode: boolean;
+}
+
+function StageCard({
+  stage,
+  band,
+  isActive,
+  isComplete,
+  isExpanded,
+  onSelect,
+  variant,
+  reducedMotion,
+  activationTick,
+  softMode,
+}: StageCardProps) {
+  const isRail = variant === "rail";
+  const iconSize = isRail ? "w-3 h-3" : "w-3.5 h-3.5";
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      data-stage-id={stage.id}
+      className={`text-left bg-[var(--bg-primary)] border-2 transition-all duration-200 ${
+        isRail ? "w-44 shrink-0 snap-center p-2.5" : "p-3"
+      }`}
+      style={{
+        borderColor: isComplete
+          ? "var(--accent-emerald)"
+          : isActive
+            ? "var(--accent-cyan)"
+            : isExpanded
+              ? "var(--accent-violet)"
+              : "var(--border-color)",
+        boxShadow: isComplete
+          ? "2px 2px 0px 0px var(--accent-emerald)"
+          : isActive
+            ? "0px 0px 14px rgba(0,255,255,0.45)"
+            : isExpanded
+              ? "2px 2px 0px 0px var(--accent-violet)"
+              : "none",
+      }}
+      aria-expanded={isExpanded}
+    >
+      <div className="flex items-center gap-1.5 mb-1">
+        {isComplete ? (
+          <CheckCircle2 className={`${iconSize} text-[var(--accent-emerald)]`} />
+        ) : isActive ? (
+          <div className={`${iconSize} bg-[var(--accent-cyan)] ${reducedMotion ? "" : "animate-pulse"}`} />
+        ) : (
+          <Circle className={`${iconSize} ${softMode ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)]"}`} />
+        )}
+        {isActive && !reducedMotion ? (
+          <ScrambleText
+            text={stage.label}
+            trigger={activationTick}
+            duration={0.4}
+            className="text-[10px] font-black uppercase tracking-wider"
+          />
+        ) : (
+          <span className="text-[10px] font-black uppercase tracking-wider">
+            {stage.label}
+          </span>
+        )}
+      </div>
+      <p className={`text-[10px] ${softMode ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)]"} font-mono ${isRail ? "line-clamp-2" : "mb-1"}`}>
+        {stage.description}
+      </p>
+      <p className="text-[10px] font-mono text-[var(--accent-violet)]">
+        ~{band.min}s - {band.max}s
+      </p>
+    </button>
+  );
+}
+
+// ============================================
+// MOBILE RAIL DOT INDICATORS
+// ============================================
+
+function RailDots({
+  count,
+  expandedIndex,
+  currentStageIndex,
+  onSelect,
+}: {
+  count: number;
+  expandedIndex: number;
+  currentStageIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  return (
+    <div className="flex justify-center gap-2 mt-2 lg:hidden">
+      {Array.from({ length: count }, (_, i) => (
+        <button
+          key={i}
+          type="button"
+          onClick={() => onSelect(i)}
+          className="w-2 h-2 rounded-full transition-all duration-200"
+          style={{
+            backgroundColor:
+              i < currentStageIndex
+                ? "var(--accent-emerald)"
+                : i === currentStageIndex
+                  ? "var(--accent-cyan)"
+                  : i === expandedIndex
+                    ? "var(--accent-violet)"
+                    : "var(--border-color)",
+            transform: i === expandedIndex ? "scale(1.5)" : "scale(1)",
+          }}
+          aria-label={`Stage ${i + 1}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ============================================
+// SPINE SECTION MARKER
+// ============================================
+
+function SpineMarker({ lit, color }: { lit: boolean; color: "cyan" | "emerald" | "muted" }) {
+  const palette = {
+    cyan: { border: "var(--accent-cyan)", bg: "var(--accent-cyan)", shadow: "0 0 8px var(--accent-cyan)" },
+    emerald: { border: "var(--accent-emerald)", bg: "var(--accent-emerald)", shadow: "none" },
+    muted: { border: "var(--border-color)", bg: "var(--bg-primary)", shadow: "none" },
+  };
+  const c = lit ? palette[color] : palette.muted;
+
+  return (
+    <div
+      className="absolute -left-[26px] sm:-left-[30px] top-4 w-3 h-3 border-2 transition-all duration-500 z-10"
+      style={{ borderColor: c.border, backgroundColor: c.bg, boxShadow: c.shadow }}
+    />
+  );
+}
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
+
 export function ProcessingStatus({
   progress,
   events,
@@ -103,6 +249,7 @@ export function ProcessingStatus({
   queryData,
 }: ProcessingStatusProps) {
   const { isSoft } = useTheme();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const currentStageIndex = Math.min(
     Math.floor((progress / 100) * STAGES.length),
     STAGES.length - 1,
@@ -111,10 +258,12 @@ export function ProcessingStatus({
   const [activeHash, setActiveHash] = useState("0x...");
   const [simulatedLog, setSimulatedLog] = useState<string | null>(null);
   const [expandedStageId, setExpandedStageId] = useState<string>(currentStageId);
+  const [activationTick, setActivationTick] = useState(0);
+  const railRef = useRef<HTMLDivElement>(null);
+  const mutedTextClass = isSoft ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)]";
 
-  useEffect(() => {
-    setExpandedStageId(currentStageId);
-  }, [currentStageId]);
+  useEffect(() => { setExpandedStageId(currentStageId); }, [currentStageId]);
+  useEffect(() => { setActivationTick((t) => t + 1); }, [currentStageId]);
 
   const runtimeEstimate = useMemo(
     () =>
@@ -136,55 +285,52 @@ export function ProcessingStatus({
   }, [runtimeEstimate.totalSeconds]);
 
   const expandedStage = useMemo(
-    () => STAGES.find((stage) => stage.id === expandedStageId) || STAGES[currentStageIndex],
+    () => STAGES.find((s) => s.id === expandedStageId) || STAGES[currentStageIndex],
     [expandedStageId, currentStageIndex],
   );
   const expandedBand = useMemo(
-    () => stageTimeBands.find((band) => band.stageId === expandedStage.id),
+    () => stageTimeBands.find((b) => b.stageId === expandedStage.id),
     [expandedStage.id, stageTimeBands],
   );
 
   // Hash animation
   useEffect(() => {
     if (!isProcessing) return;
+    const isMobile = window.matchMedia("(max-width: 640px)").matches;
+    const intervalMs = prefersReducedMotion ? 260 : isMobile ? 140 : 80;
     const interval = setInterval(() => {
       setActiveHash(
         "0x" +
           Array.from({ length: 12 }, () =>
             Math.floor(Math.random() * 16).toString(16),
-          ).join("")
+          ).join(""),
       );
-    }, 80);
+    }, intervalMs);
     return () => clearInterval(interval);
-  }, [isProcessing]);
+  }, [isProcessing, prefersReducedMotion]);
 
   // Simulated telemetry logs
   useEffect(() => {
-    if (!isProcessing) {
-      return;
-    }
-
+    if (!isProcessing) return;
+    const isMobile = window.matchMedia("(max-width: 640px)").matches;
+    const intervalMs = prefersReducedMotion ? 2400 : isMobile ? 1700 : 1200;
     const logs = SIMULATED_LOGS[currentStageId] || SIMULATED_LOGS["planner"];
     const interval = setInterval(() => {
-      const randomLog = logs[Math.floor(Math.random() * logs.length)];
-      setSimulatedLog(`[SYSTEM] ${randomLog}`);
-    }, 1200);
-
+      setSimulatedLog(`[SYSTEM] ${logs[Math.floor(Math.random() * logs.length)]}`);
+    }, intervalMs);
     return () => {
       clearInterval(interval);
       setSimulatedLog(null);
     };
-  }, [isProcessing, currentStageId]);
+  }, [isProcessing, currentStageId, prefersReducedMotion]);
 
   const terminalEvents = useMemo(() => {
-    // Filter out repetitive status messages like "researching (45%)"
     const filtered = events.filter(
       (e) =>
         !e.message?.match(
           /^(pending|planning|researching|analyzing|processing) \(\d+%\)$/i,
         ),
     );
-
     const displayEvents = filtered.slice(-6).map((event, index) => ({
       id: `${event.type}-${index}-${event.message?.slice(0, 20) || ""}`,
       message: event.message || "",
@@ -194,15 +340,9 @@ export function ProcessingStatus({
           ? "success"
           : "info") as "error" | "success" | "info",
     }));
-
     if (simulatedLog && isProcessing) {
-      displayEvents.push({
-        id: "simulated",
-        message: simulatedLog,
-        type: "info",
-      });
+      displayEvents.push({ id: "simulated", message: simulatedLog, type: "info" });
     }
-
     return displayEvents.slice(-6);
   }, [events, simulatedLog, isProcessing]);
 
@@ -210,497 +350,242 @@ export function ProcessingStatus({
     if (!isProcessing) return "idle";
     if (progress < 10) return "thinking";
     if (progress < 100) {
-      if (
-        events.length > 0 &&
-        events[events.length - 1].message?.includes("Validation")
-      )
+      if (events.length > 0 && events[events.length - 1].message?.includes("Validation"))
         return "thinking";
       return "processing";
     }
     return "complete";
   };
 
-  const getPlatformLabel = (id: string) => {
-    const labels: Record<string, string> = {
-      twitter: "X / Twitter",
-      linkedin: "LinkedIn",
-      newsapi: "Global News",
-      web: "Deep Web",
-    };
-    return labels[id] || id;
-  };
+  // Scroll mobile rail to selected stage
+  const scrollToStage = useCallback((index: number) => {
+    setExpandedStageId(STAGES[index].id);
+    if (!railRef.current) return;
+    const card = railRef.current.querySelector(`[data-stage-id="${STAGES[index].id}"]`);
+    if (card) card.scrollIntoView({ inline: "center", behavior: "smooth" });
+  }, []);
 
-  const getModelLabel = (id: string) => {
-    const labels: Record<string, string> = {
-      venice: "Venice AI",
-      aisa: "AIsA (LLM Route)",
-      openrouter: "OpenRouter (Aggregate)",
-      openrouter_auto: "OR Auto",
-      openrouter_free: "OR Free",
-      openrouter_hermes: "OR Hermes",
-      openrouter_llama_70b: "OR Llama 70B",
-      openrouter_stepfun: "OR Stepfun",
-      openrouter_aurora: "OR Aurora",
-      gemini: "Gemini",
-      kimi: "Kimi",
-      minimax: "MiniMax",
-    };
-    return labels[id] || id;
-  };
+  const expandedIndex = STAGES.findIndex((s) => s.id === expandedStageId);
+  const remaining = Math.max(runtimeEstimate.totalSeconds - elapsedSeconds, 0);
 
   return (
-    <div className="space-y-6">
-      {/* Trende Agent */}
-      <AgentPersona status={getAgentStatus()} progress={progress} />
+    <div className="relative">
+      {/* Vertical Spine — background track */}
+      <div className="absolute left-[18px] sm:left-[22px] top-0 bottom-0 w-px bg-[var(--border-color)]" />
+      {/* Vertical Spine — progress fill */}
+      <div
+        className="absolute left-[18px] sm:left-[22px] top-0 w-px origin-top transition-transform duration-1000 ease-out"
+        style={{
+          backgroundColor: "var(--accent-cyan)",
+          transform: `scaleY(${Math.min(progress / 100, 1)})`,
+          height: "100%",
+        }}
+      />
 
-      {/* Mission Brief Summary (Only shown during processing) */}
-      {isProcessing && queryData && (
-        <Card accent="amber" className="overflow-hidden">
-          <div className="flex flex-col lg:flex-row divide-y-2 lg:divide-y-0 lg:divide-x-2 border-[var(--border-color)]">
-            {/* Thesis Section */}
-            <div className="p-4 lg:w-1/3">
-              <div className="flex items-center gap-2 mb-2">
-                <Shield className="w-4 h-4 text-[var(--accent-amber)]" />
-                <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
-                  Research Thesis
-                </span>
-              </div>
-              <p className="text-sm font-mono line-clamp-3 italic text-[var(--text-primary)]">
-                &quot;{queryData.topic}&quot;
-              </p>
-              <div className="mt-3 grid grid-cols-3 gap-2 sm:hidden text-center">
-                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] px-2 py-1.5">
-                  <p className="text-[9px] font-mono uppercase text-[var(--text-muted)]">Sources</p>
-                  <p className="text-xs font-black text-[var(--accent-cyan)]">{queryData.platforms.length}</p>
-                </div>
-                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] px-2 py-1.5">
-                  <p className="text-[9px] font-mono uppercase text-[var(--text-muted)]">Models</p>
-                  <p className="text-xs font-black text-[var(--accent-amber)]">{(queryData.models || []).length || 3}</p>
-                </div>
-                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] px-2 py-1.5">
-                  <p className="text-[9px] font-mono uppercase text-[var(--text-muted)]">Strict</p>
-                  <p className="text-xs font-black text-[var(--accent-emerald)]">{Math.round((queryData.threshold || 0.6) * 100)}%</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Config Summary Section */}
-            <div className="hidden sm:block p-4 lg:w-1/3 bg-[var(--bg-primary)]">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Layers className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
-                    <span className={`text-[10px] font-black uppercase tracking-wider ${isSoft ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>
-                      World Selectors
-                    </span>
-                  </div>
-                  <div className="flex gap-1">
-                    {queryData.platforms.map((p) => (
-                      <div
-                        key={p}
-                        className="w-1.5 h-1.5 bg-[var(--accent-cyan)]"
-                        title={getPlatformLabel(p)}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {queryData.platforms.map((p) => (
-                    <Badge
-                      key={p}
-                      variant="cyan"
-                      className={`text-[8px] py-0 px-1 ${isSoft ? '!bg-[var(--text-primary)] !text-[var(--bg-primary)]' : ''}`}
-                    >
-                      {getPlatformLabel(p).toUpperCase()}
-                    </Badge>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
-                    <span className={`text-[10px] font-black uppercase tracking-wider ${isSoft ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>
-                      Consensus Engine
-                    </span>
-                  </div>
-                  <div className="flex gap-1">
-                    {(queryData.models || []).map((m) => (
-                      <div
-                        key={m}
-                        className="w-1.5 h-1.5 bg-[var(--accent-amber)]"
-                        title={getModelLabel(m)}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {(queryData.models || ["venice", "openrouter_llama_70b", "openrouter_hermes"]).map(
-                    (m) => (
-                      <Badge
-                        key={m}
-                        variant="amber"
-                        className={`text-[8px] py-0 px-1 ${isSoft ? '!bg-[var(--text-primary)] !text-[var(--bg-primary)]' : ''}`}
-                      >
-                        {getModelLabel(m).toUpperCase()}
-                      </Badge>
-                    ),
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Impact/Mitigation Section */}
-            <div className="hidden sm:block p-4 lg:w-1/3">
-              <div className="flex items-center gap-2 mb-3">
-                <Zap className="w-4 h-4 text-[var(--accent-emerald)]" />
-                <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
-                  Mission Impact
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-y-4 gap-x-2">
-                <div className="space-y-1">
-                  <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-tight">
-                    Mitigation Power
-                  </p>
-                  <p className="text-xl font-black text-[var(--accent-emerald)]">
-                    {Math.round(
-                      ((queryData.models?.length || 3) / 4) *
-                        (queryData.threshold || 0.6) *
-                        100 +
-                        20,
-                    )}
-                    %
-                  </p>
-                </div>
-                <div className="space-y-1 text-right">
-                  <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-tight">
-                    Strictness
-                  </p>
-                  <p className="text-xl font-black text-[var(--accent-cyan)]">
-                    {Math.round((queryData.threshold || 0.6) * 100)}%
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-tight">
-                    Signal Depth
-                  </p>
-                  <p className="text-xs font-bold text-[var(--text-primary)]">
-                    {queryData.platforms.length > 2 ? "MAXIMUM" : "STANDARD"}
-                  </p>
-                </div>
-                <div className="space-y-1 text-right">
-                  <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-tight">
-                    Consensus
-                  </p>
-                  <p className="text-xs font-bold text-[var(--text-primary)]">
-                    {queryData.models?.length && queryData.models.length > 2
-                      ? "HIGH-TRUST"
-                      : "BASE-LAYER"}
-                  </p>
-                </div>
-              </div>
-              <p className="text-[9px] font-mono text-[var(--text-muted)] mt-3 leading-tight border-t border-[var(--border-color)] pt-2">
-                {queryData.models?.length && queryData.models.length > 2
-                  ? ">> Multi-model cross-verification enabled. Hallucination risk minimized via advanced consensus."
-                  : ">> Baseline consensus active. Standard social signal validation protocols."}
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Timeline Rail */}
-      <Card accent="violet" className="p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2">
-            <Clock3 className="w-4 h-4 text-[var(--accent-violet)]" />
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider">
-              Mission Timeline
-            </h3>
-          </div>
-          <div className="text-[10px] sm:text-xs font-mono text-[var(--text-muted)]">
-            ETA {runtimeEstimate.minSeconds}s - {runtimeEstimate.maxSeconds}s
-          </div>
+      <div className="space-y-6 pl-10 sm:pl-12">
+        {/* ── Section 1: Agent ── */}
+        <div
+          className="relative animate-in fade-in slide-in-from-bottom-4 duration-500"
+        >
+          <SpineMarker
+            lit={progress >= 0}
+            color={progress >= 20 ? "emerald" : "cyan"}
+          />
+          <AgentPersona status={getAgentStatus()} progress={progress} />
         </div>
 
-        <div className="lg:hidden -mx-1 px-1 overflow-x-auto">
-          <div className="flex gap-2 min-w-max pb-1">
-            {STAGES.map((stage, index) => {
-              const isComplete = index < currentStageIndex;
-              const isActive = index === currentStageIndex;
-              const isExpanded = expandedStageId === stage.id;
-              const band = stageTimeBands[index];
-              return (
-                <button
-                  key={stage.id}
-                  type="button"
-                  onClick={() => setExpandedStageId(stage.id)}
-                  className="w-[170px] shrink-0 text-left p-2.5 border-2 bg-[var(--bg-primary)] transition-all duration-200"
-                  style={{
-                    borderColor: isComplete
-                      ? "var(--accent-emerald)"
-                      : isActive
-                        ? "var(--accent-cyan)"
-                        : isExpanded
-                          ? "var(--accent-violet)"
-                          : "var(--border-color)",
-                    boxShadow: isComplete
-                      ? "2px 2px 0px 0px var(--accent-emerald)"
-                      : isActive
-                        ? "0px 0px 12px rgba(0,255,255,0.4)"
-                        : isExpanded
-                          ? "2px 2px 0px 0px var(--accent-violet)"
-                          : "none",
-                  }}
-                  aria-expanded={isExpanded}
-                >
-                  <div className="flex items-center gap-1.5 mb-1">
-                    {isComplete ? (
-                      <CheckCircle2 className="w-3 h-3 text-[var(--accent-emerald)]" />
-                    ) : isActive ? (
-                      <div className="w-3 h-3 bg-[var(--accent-cyan)] animate-pulse" />
-                    ) : (
-                      <Circle className="w-3 h-3 text-[var(--text-muted)]" />
-                    )}
-                    <span className="text-[10px] font-black uppercase tracking-wider">{stage.label}</span>
-                  </div>
-                  <p className="text-[10px] text-[var(--text-muted)] font-mono line-clamp-2">{stage.description}</p>
-                  <p className="text-[10px] font-mono text-[var(--accent-violet)] mt-1">~{band.min}s - {band.max}s</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="hidden lg:grid grid-cols-5 gap-3">
-          {STAGES.map((stage, index) => {
-            const isComplete = index < currentStageIndex;
-            const isActive = index === currentStageIndex;
-            const isExpanded = expandedStageId === stage.id;
-            const band = stageTimeBands[index];
-            return (
-              <button
-                key={stage.id}
-                type="button"
-                onClick={() => setExpandedStageId(stage.id)}
-                className="text-left p-3 border-2 bg-[var(--bg-primary)] transition-all duration-200"
-                style={{
-                  borderColor: isComplete
-                    ? "var(--accent-emerald)"
-                    : isActive
-                      ? "var(--accent-cyan)"
-                      : isExpanded
-                        ? "var(--accent-violet)"
-                        : "var(--border-color)",
-                  boxShadow: isComplete
-                    ? "2px 2px 0px 0px var(--accent-emerald)"
-                    : isActive
-                      ? "0px 0px 14px rgba(0,255,255,0.45)"
-                      : isExpanded
-                        ? "2px 2px 0px 0px var(--accent-violet)"
-                        : "none",
-                }}
-                aria-expanded={isExpanded}
-              >
-                <div className="flex items-center gap-2 mb-1.5">
-                  {isComplete ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[var(--accent-emerald)]" />
-                  ) : isActive ? (
-                    <div className="w-3.5 h-3.5 bg-[var(--accent-cyan)] animate-pulse" />
-                  ) : (
-                    <Circle className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                  )}
-                  <span className="text-[10px] font-black uppercase tracking-wider">{stage.label}</span>
-                </div>
-                <p className="text-[10px] text-[var(--text-muted)] font-mono mb-1">{stage.description}</p>
-                <p className="text-[10px] font-mono text-[var(--accent-violet)]">
-                  ~{band.min}s - {band.max}s
+        {/* ── Section 2: Timeline + Inline Brief ── */}
+        <div
+          className="relative animate-in fade-in slide-in-from-bottom-4 duration-500"
+          style={{ animationDelay: "150ms", animationFillMode: "both" }}
+        >
+          <SpineMarker
+            lit={progress >= 20}
+            color={progress >= 60 ? "emerald" : progress >= 20 ? "cyan" : "muted"}
+          />
+          <Card accent="violet" className="p-4 sm:p-5">
+            {/* Compact inline brief */}
+            {isProcessing && queryData && (
+              <div className="mb-4 pb-4 border-b-2 border-[var(--border-color)]">
+                <p className="text-sm font-mono italic line-clamp-2 text-[var(--text-primary)] mb-2">
+                  &quot;{queryData.topic}&quot;
                 </p>
-              </button>
-            );
-          })}
-        </div>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="cyan">{queryData.platforms.length} sources</Badge>
+                  <Badge variant="amber">{(queryData.models || []).length || 3} models</Badge>
+                  <Badge variant="emerald">{Math.round((queryData.threshold || 0.6) * 100)}% threshold</Badge>
+                </div>
+              </div>
+            )}
 
-        <div className="mt-3 sm:mt-4 border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-3 sm:p-4">
-          <button
-            type="button"
-            onClick={() => setExpandedStageId(expandedStage.id)}
-            className="w-full flex items-center justify-between text-left"
-          >
-            <div>
+            {/* Timeline header */}
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Clock3 className="w-4 h-4 text-[var(--accent-violet)]" />
+                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider">
+                  Mission Timeline
+                </h3>
+              </div>
+              <div className={`flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-mono ${mutedTextClass}`}>
+                <span>{elapsedSeconds}s</span>
+                <span className="hidden sm:inline">elapsed</span>
+                <span>•</span>
+                <span>~{remaining}s</span>
+                <span className="hidden sm:inline">remaining</span>
+              </div>
+            </div>
+
+            {/* Mobile: snap-scroll rail */}
+            <div
+              ref={railRef}
+              className="lg:hidden flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth overscroll-x-contain scrollbar-hide"
+            >
+              {STAGES.map((stage, index) => (
+                <StageCard
+                  key={stage.id}
+                  stage={stage}
+                  band={stageTimeBands[index]}
+                  isActive={index === currentStageIndex}
+                  isComplete={index < currentStageIndex}
+                  isExpanded={expandedStageId === stage.id}
+                  onSelect={() => setExpandedStageId(stage.id)}
+                  variant="rail"
+                  reducedMotion={prefersReducedMotion}
+                  activationTick={activationTick}
+                  softMode={isSoft}
+                />
+              ))}
+            </div>
+            <RailDots
+              count={STAGES.length}
+              expandedIndex={expandedIndex}
+              currentStageIndex={currentStageIndex}
+              onSelect={scrollToStage}
+            />
+
+            {/* Desktop: 5-col grid */}
+            <div className="hidden lg:grid grid-cols-5 gap-3">
+              {STAGES.map((stage, index) => (
+                <StageCard
+                  key={stage.id}
+                  stage={stage}
+                  band={stageTimeBands[index]}
+                  isActive={index === currentStageIndex}
+                  isComplete={index < currentStageIndex}
+                  isExpanded={expandedStageId === stage.id}
+                  onSelect={() => setExpandedStageId(stage.id)}
+                  variant="grid"
+                  reducedMotion={prefersReducedMotion}
+                  activationTick={activationTick}
+                  softMode={isSoft}
+                />
+              ))}
+            </div>
+
+            {/* Active narrative panel */}
+            <div className="mt-3 sm:mt-4 border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-3 sm:p-4">
               <p className="text-[10px] font-black uppercase tracking-wider text-[var(--accent-violet)]">
                 Active Narrative
               </p>
-              <h4 className="text-sm font-black uppercase mt-0.5">{expandedStage.label}{" // "}{expandedStage.description}</h4>
-            </div>
-            <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />
-          </button>
-          <div className="mt-2 space-y-2">
-            <p className="text-xs font-mono text-[var(--text-secondary)]">{expandedStage.detail}</p>
-            <div className="flex flex-wrap gap-2 text-[10px] font-mono">
-              <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-secondary)]">
-                Stage Window: ~{expandedBand?.min ?? 0}s - {expandedBand?.max ?? 0}s
-              </span>
-              <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-secondary)]">
-                Elapsed: {elapsedSeconds}s
-              </span>
-              <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-secondary)]">
-                Remaining: {Math.max(runtimeEstimate.totalSeconds - elapsedSeconds, 0)}s (est)
-              </span>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Main Processing Card */}
-      <Card accent="cyan" shadow="lg">
-        {/* Header */}
-        <div className="border-b-2 border-[var(--border-color)] p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 flex items-center justify-center relative"
-              style={{ backgroundColor: "var(--accent-cyan)" }}
-            >
-              <Fingerprint className="w-5 h-5 text-[var(--bg-primary)] animate-pulse" />
-              {isProcessing && (
-                <div className="absolute inset-0 border-2 border-[var(--accent-cyan)] animate-ping opacity-30" />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-black uppercase tracking-wider text-[var(--accent-cyan)]">
-                  {isProcessing ? "TEE RUNNING" : "TEE READY"}
-                </h3>
-                {isProcessing && (
-                  <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-cyan)]" />
-                )}
-              </div>
-              <p className="text-xs font-mono text-[var(--text-muted)] flex items-center gap-2">
-                <span className="text-emerald-500 animate-pulse">●</span>{" "}
-                {activeHash}
-                <span className="opacity-50">:: EigenCompute Enclave</span>
+              <h4 className="text-sm font-black uppercase mt-0.5">
+                {expandedStage.label}{" // "}{expandedStage.description}
+              </h4>
+              <p className="mt-2 text-xs font-mono text-[var(--text-secondary)]">
+                {expandedStage.detail}
               </p>
+              <div className="flex flex-wrap gap-2 mt-2 text-[10px] font-mono">
+                <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                  Stage: ~{expandedBand?.min ?? 0}s - {expandedBand?.max ?? 0}s
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="text-right">
-            <p className="text-3xl font-black text-[var(--accent-cyan)] tabular-nums">
-              {progress}%
-            </p>
-          </div>
+          </Card>
         </div>
 
-        {/* Progress Bar */}
-        <div className="p-4 border-b-2 border-[var(--border-color)]">
-          <Progress value={progress} accent="cyan" />
-        </div>
-
-        {/* Stages */}
-        <div className="hidden lg:block p-4 border-b-2 border-[var(--border-color)]">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            {STAGES.map((stage, index) => {
-              const isComplete = index < currentStageIndex;
-              const isActive = index === currentStageIndex;
-
-              return (
+        {/* ── Section 3: TEE Terminal ── */}
+        <div
+          className="relative animate-in fade-in slide-in-from-bottom-4 duration-500"
+          style={{ animationDelay: "300ms", animationFillMode: "both" }}
+        >
+          <SpineMarker
+            lit={progress >= 60}
+            color={progress >= 100 ? "emerald" : progress >= 60 ? "cyan" : "muted"}
+          />
+          <Card accent="cyan" shadow="lg">
+            {/* Header */}
+            <div className="border-b-2 border-[var(--border-color)] p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
                 <div
-                  key={stage.id}
-                  className={`p-3 border-2 min-h-[80px] transition-all duration-300 ${isActive ? "scale-105 z-10 shadow-lg" : "opacity-80"}`}
-                  style={{
-                    borderColor: isSoft ? 'transparent' : (isComplete
-                      ? "var(--accent-emerald)"
-                      : isActive
-                        ? "var(--accent-cyan)"
-                        : "var(--text-muted)"),
-                    backgroundColor: isComplete
-                      ? "rgba(0, 255, 136, 0.1)"
-                      : isActive
-                        ? "rgba(0, 255, 255, 0.1)"
-                        : "var(--bg-primary)",
-                    boxShadow: isSoft
-                      ? (isActive ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
-                      : (isComplete
-                        ? "2px 2px 0px 0px var(--accent-emerald)"
-                        : isActive
-                          ? "0px 0px 15px var(--accent-cyan)"
-                          : "none"),
-                    borderRadius: isSoft ? '16px' : '0'
-                  }}
+                  className="w-8 h-8 flex items-center justify-center relative"
+                  style={{ backgroundColor: "var(--accent-cyan)" }}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    {isComplete ? (
-                      <CheckCircle2 className="w-4 h-4 text-[var(--accent-emerald)]" />
-                    ) : isActive ? (
-                      <div
-                        className="w-4 h-4 animate-pulse"
-                        style={{ backgroundColor: "var(--accent-cyan)" }}
-                      />
-                    ) : (
-                      <Circle className="w-4 h-4 text-[var(--text-muted)]" />
-                    )}
-                    <span
-                      className="text-xs font-black uppercase"
-                      style={{
-                        color: isComplete
-                          ? "var(--accent-emerald)"
-                          : isActive
-                            ? "var(--accent-cyan)"
-                            : "var(--text-muted)",
-                      }}
-                    >
-                      {stage.label}
-                    </span>
-                    {isActive && (
-                      <Badge
-                        variant="cyan"
-                        className="ml-auto text-[8px] py-0 px-1 border-0 shadow-none"
-                      >
-                        ACTIVE
-                      </Badge>
+                  <Fingerprint className={`w-5 h-5 text-[var(--bg-primary)] ${prefersReducedMotion ? "" : "animate-pulse"}`} />
+                  {isProcessing && !prefersReducedMotion && (
+                    <div className="absolute inset-0 border-2 border-[var(--accent-cyan)] animate-ping opacity-30" />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black uppercase tracking-wider text-[var(--accent-cyan)]">
+                      {isProcessing ? "TEE RUNNING" : "TEE READY"}
+                    </h3>
+                    {isProcessing && (
+                      <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-cyan)]" />
                     )}
                   </div>
-                  <p className="text-[10px] text-[var(--text-muted)] font-mono">
-                    {stage.description}
+                  <p className={`text-xs font-mono flex items-center gap-2 ${mutedTextClass}`}>
+                    <span className={`text-emerald-500 ${prefersReducedMotion ? "" : "animate-pulse"}`}>●</span>
+                    {activeHash}
+                    <span className={`opacity-70 hidden sm:inline ${mutedTextClass}`}>:: EigenCompute Enclave</span>
                   </p>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Terminal */}
-        {terminalEvents.length > 0 && (
-          <div className="p-4">
-            <div
-              className="border-2 bg-[var(--bg-primary)]"
-              style={{ borderColor: isSoft ? "var(--border-color)" : "var(--text-muted)" }}
-            >
-              <div
-                className="flex items-center justify-between px-3 py-2 border-b-2 bg-[var(--bg-secondary)]"
-                style={{ borderColor: isSoft ? "var(--border-color)" : "var(--text-muted)" }}
-              >
-                <div className="flex items-center gap-2">
-                  <Terminal className={`w-3.5 h-3.5 ${isSoft ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`} />
-                  <span className={`text-[10px] font-mono ${isSoft ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>
-                    TEE_TELEMETRY.LOG
-                  </span>
-                </div>
-                <div className="flex gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/20" />
-                </div>
               </div>
-              <div className="p-3">
-                <TerminalLog
-                  events={terminalEvents}
-                  maxHeight="120px"
-                  className="text-xs"
-                />
-              </div>
+              <p className="text-3xl font-black text-[var(--accent-cyan)] tabular-nums">
+                {progress}%
+              </p>
             </div>
-          </div>
-        )}
-      </Card>
+
+            {/* Progress Bar */}
+            <div className="p-4 border-b-2 border-[var(--border-color)]">
+              <Progress value={progress} accent="cyan" />
+            </div>
+
+            {/* Terminal */}
+            {terminalEvents.length > 0 && (
+              <div className="p-4">
+                <div
+                  className="border-2 bg-[var(--bg-primary)]"
+                  style={{ borderColor: isSoft ? "var(--border-color)" : "var(--text-muted)" }}
+                >
+                  <div
+                    className="flex items-center justify-between px-3 py-2 border-b-2 bg-[var(--bg-secondary)]"
+                    style={{ borderColor: isSoft ? "var(--border-color)" : "var(--text-muted)" }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Terminal className={`w-3.5 h-3.5 ${isSoft ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`} />
+                      <span className={`text-[10px] font-mono ${isSoft ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>
+                        TEE_TELEMETRY.LOG
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      <div className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${prefersReducedMotion ? "" : "animate-pulse"}`} />
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/20" />
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <TerminalLog
+                      events={terminalEvents}
+                      maxHeight="120px"
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { gsap } from 'gsap';
+import { useTheme } from './ThemeProvider';
+import { usePrefersReducedMotion } from './Motion';
 import { 
   Bot, 
   Shield, 
@@ -79,6 +81,8 @@ export function AgentPersona({
   progress = 0, 
   message 
 }: AgentPersonaProps) {
+  const { isSoft } = useTheme();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
   const messageRef = useRef<HTMLParagraphElement>(null);
@@ -90,15 +94,20 @@ export function AgentPersona({
 
   useEffect(() => {
     if (status !== 'processing') return;
-    const interval = setInterval(() => setMessageTick((n) => n + 1), 2200);
+    const isMobile = window.matchMedia('(max-width: 640px)').matches;
+    const intervalMs = prefersReducedMotion ? 3200 : isMobile ? 2800 : 2200;
+    const interval = setInterval(() => setMessageTick((n) => n + 1), intervalMs);
     return () => clearInterval(interval);
-  }, [status]);
+  }, [status, prefersReducedMotion]);
 
   // Animate avatar based on status
   useEffect(() => {
     if (!avatarRef.current) return;
 
     const ctx = gsap.context(() => {
+      if (prefersReducedMotion) {
+        return;
+      }
       if (status === 'processing') {
         // Active processing animation
         gsap.to(avatarRef.current, {
@@ -130,7 +139,7 @@ export function AgentPersona({
     });
 
     return () => ctx.revert();
-  }, [status]);
+  }, [status, prefersReducedMotion]);
 
   // Typewriter effect for messages
   useEffect(() => {
@@ -152,31 +161,18 @@ export function AgentPersona({
     let currentIndex = 0;
     
     // Smooth transition between messages if not empty
-    if (displayMessage && displayMessage.length > 0) {
-      // Faster typing for transitions
-      const typeInterval = setInterval(() => {
-        if (currentIndex < targetMessage.length) {
-          setDisplayMessage(targetMessage.slice(0, currentIndex + 1));
-          currentIndex++;
-        } else {
-          clearInterval(typeInterval);
-          setIsTyping(false);
-        }
-      }, 20);
-      return () => clearInterval(typeInterval);
-    } else {
-      const typeInterval = setInterval(() => {
-        if (currentIndex < targetMessage.length) {
-          setDisplayMessage(targetMessage.slice(0, currentIndex + 1));
-          currentIndex++;
-        } else {
-          clearInterval(typeInterval);
-          setIsTyping(false);
-        }
-      }, 30);
-      return () => clearInterval(typeInterval);
-    }
-  }, [status, progress, message, messageTick]);
+    const charMs = prefersReducedMotion ? 42 : 26;
+    const typeInterval = setInterval(() => {
+      if (currentIndex < targetMessage.length) {
+        setDisplayMessage(targetMessage.slice(0, currentIndex + 1));
+        currentIndex++;
+      } else {
+        clearInterval(typeInterval);
+        setIsTyping(false);
+      }
+    }, charMs);
+    return () => clearInterval(typeInterval);
+  }, [status, progress, message, messageTick, prefersReducedMotion]);
 
   // Status indicator config
   const statusConfig = {
@@ -196,8 +192,10 @@ export function AgentPersona({
       ref={containerRef} 
       className="flex flex-col items-center sm:flex-row sm:items-start gap-4 p-4 sm:p-6 bg-[var(--bg-secondary)] border-2 border-[var(--border-color)] transition-all duration-300" 
       style={{ 
-        boxShadow: isHovered ? '8px 8px 0px 0px var(--accent-cyan)' : '4px 4px 0px 0px var(--shadow-color)',
-        transform: isHovered ? 'translate(-2px, -2px)' : 'none'
+        boxShadow: isSoft
+          ? (isHovered ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
+          : (isHovered ? '8px 8px 0px 0px var(--accent-cyan)' : '4px 4px 0px 0px var(--shadow-color)'),
+        transform: !isSoft && isHovered ? 'translate(-2px, -2px)' : 'none'
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -237,7 +235,7 @@ export function AgentPersona({
             className="text-sm sm:text-base font-mono leading-relaxed text-[var(--text-primary)] min-h-[3em]"
           >
             {displayMessage}
-            {isTyping && <span className="inline-block w-2 h-4 ml-1 bg-[var(--accent-cyan)] animate-pulse align-middle" />}
+            {isTyping && <span className={`inline-block w-2 h-4 ml-1 bg-[var(--accent-cyan)] ${prefersReducedMotion ? '' : 'animate-pulse'} align-middle`} />}
           </p>
         </div>
 
@@ -247,7 +245,7 @@ export function AgentPersona({
           {status === 'processing' && (
             <div className="flex gap-1">
               {[1, 2, 3].map(i => (
-                <div key={i} className="w-1 h-1 bg-[var(--accent-cyan)] animate-bounce" style={{ animationDelay: `${i * 0.1}s` }} />
+                <div key={i} className={`w-1 h-1 bg-[var(--accent-cyan)] ${prefersReducedMotion ? '' : 'sm:animate-bounce'}`} style={{ animationDelay: `${i * 0.1}s` }} />
               ))}
             </div>
           )}
