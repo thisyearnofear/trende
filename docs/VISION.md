@@ -33,7 +33,7 @@ Eliminate single-model bias through parallel AI verification:
 Every report includes cryptographic proof:
 - **EigenCompute TEE** execution environment
 - **Cryptographic signatures** via dedicated wallet
-- **Public verification** at attest.famile.xyz
+- **Public verification** at eigen-attest.famile.xyz
 - **Non-repudiation** with timestamped attestations
 
 ### 5. Agent-to-Agent Commerce
@@ -129,7 +129,8 @@ Buyer Agent → Butler (Gateway) → Trende (Provider) → Evaluation → Paymen
 │  TEE Attestation     │
 │  baseline-attested   │
 │  (Port 8082)         │
-│  attest.famile.xyz   │
+│ eigen-attest.famile  │
+│        .xyz          │
 └──────────────────────┘
 ```
 
@@ -261,6 +262,6 @@ Beyond analysis, Trende can offer **Active Execution Flows** that let users act 
 
 - **ACP Platform**: https://app.virtuals.io
 - **aGDP Tracker**: https://agdp.io
-- **Attestation Service**: https://attest.famile.xyz
+- **Attestation Service**: https://eigen-attest.famile.xyz
 - **60 Days Info**: https://60days.ai
 - **Virtuals Whitepaper**: https://whitepaper.virtuals.io

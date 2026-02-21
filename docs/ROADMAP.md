@@ -42,7 +42,7 @@
 - [x] **EigenCompute Integration**: Containerized as `baseline-attested`
 - [x] **TEE Execution**: Validator logic in Trusted Execution Environment
 - [x] **On-Chain Attestation**: Signed payload with every output
-- [x] **SSL Endpoint**: attest.famile.xyz with auto-renewing Let's Encrypt
+- [x] **SSL Endpoint**: eigen-attest.famile.xyz with auto-renewing Let's Encrypt
 - [ ] **CI Integration**: Fail deploy if attestation verification fails
 
 ---

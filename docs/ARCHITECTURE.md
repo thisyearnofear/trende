@@ -6,14 +6,14 @@ Trende is built on a 4-stage agentic pipeline (LangGraph) with TEE-attested cons
 
 ```
 ┌──────────────────────┐     ┌──────────────────────┐
-│  Frontend (Vercel)   │     │  TEE Attestation     │
-│   Next.js + React    │     │  baseline-attested   │
-│  + Kinetic UI        │     │  (Port 8082)         │
+│  Frontend (Vercel)   │     │  Eigen Attestation   │
+│   Next.js + React    │     │  eigen-attest.famile │
+│  + Kinetic UI        │     │  .xyz (HTTPS)        │
 └──────────┬───────────┘     └──────────▲───────────┘
            │                           │
 ┌──────────▼───────────┐               │
 │  Backend API         │◄──────────────┘
-│  FastAPI (Port 8000) │   HTTP POST /attest
+│  FastAPI (Port 8000) │   HTTPS POST /attest
 │  - Trend Analysis    │
 │  - Consensus Engine  │
 │  - ACP Integration  │
@@ -88,22 +88,22 @@ Output synthesis into two lenses:
 │   (Port 8000)   │
 └────────┬────────┘
          │
-         │ HTTP POST /attest
+         │ HTTPS POST /attest
          ▼
 ┌─────────────────────────┐
-│  TEE Attestation Service│
-│  (baseline-attested)    │
-│     Port 8082           │
+│  Eigen Attestation      │
+│  Service (EigenCompute) │
+│   HTTPS public domain   │
 │                         │
 │  🔐 Signs with wallet:  │
-│  0xf39Fd...92266        │
+│  0xD518...0f15b         │
 └─────────────────────────┘
 ```
 
 ### Attestation Flow
 
 1. **Research Completion**: Backend creates consensus payload
-2. **TEE Request**: POST to `http://baseline-attested:8080/attest`
+2. **TEE Request**: POST to `https://eigen-attest.famile.xyz/attest`
 3. **Cryptographic Signing**:
    - Canonical hash (SHA-256)
    - Attestation ID generation
@@ -121,7 +121,7 @@ Output synthesis into two lenses:
   "attestation_id": "ATTEST-2b54e3ca4ce336cf",
   "input_hash": "2b54e3ca4ce336cf5365bbba86564c6123f7e983...",
   "signature": "0xf2f8f589fa013b00f7d660cad8c46c40b00ca0a3...",
-  "signer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "signer": "0xD518465105bc1a4Db877e5d7b0C64cc88260f15B",
   "key_id": "eigencompute-tee",
   "generated_at": "2026-02-16T13:36:42.927422+00:00",
   "payload": { /* original consensus data */ }
@@ -145,7 +145,7 @@ curl -X POST https://api.trende.famile.xyz/api/attest/verify \
 ```json
 {
   "verified": true,
-  "signer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "signer": "0xD518465105bc1a4Db877e5d7b0C64cc88260f15B",
   "attestation_id": "ATTEST-2b54e3ca4ce336cf",
   "message": "TrendeAttestation|ATTEST-2b54e3ca...|2b54e3ca...|...",
   "timestamp": "2026-02-16T13:40:00.000000+00:00"
@@ -161,7 +161,7 @@ curl -X POST https://api.trende.famile.xyz/api/attest/verify \
 - ✅ Public verifiability
 
 **Future Enhancements**:
-- [ ] Hardware TEE (Intel SGX, AMD SEV)
+- [x] Production Eigen endpoint with trusted custom-domain TLS
 - [ ] Remote attestation quotes
 - [ ] Key rotation mechanism
 - [ ] On-chain attestation registry
@@ -179,8 +179,8 @@ ATTESTATION_PROVIDER=eigencompute
 ATTESTATION_STRICT_MODE=true
 
 # TEE Service Endpoints
-EIGEN_ATTEST_URL=http://baseline-attested:8080/attest
-EIGEN_HEALTH_URL=http://baseline-attested:8080/health
+EIGEN_ATTEST_URL=https://eigen-attest.famile.xyz/attest
+EIGEN_HEALTH_URL=https://eigen-attest.famile.xyz/health
 
 # Retry Configuration
 EIGEN_ATTEST_TIMEOUT_SECS=10
@@ -195,6 +195,16 @@ ACP_ENTITY_ID=...
 ACP_SERVICE_PRICE=10.00
 ACP_SERVICE_SLA_SECONDS=180
 ```
+
+### Domain + TLS Notes
+
+Use a real domain you control for Eigen TLS issuance, for example:
+
+```bash
+eigen-attest.famile.xyz -> 34.10.131.255
+```
+
+Do not use shared wildcard helper domains (for example `nip.io`) in production due to ACME rate limits.
 
 ### Docker Network
 
@@ -313,7 +323,7 @@ console.log('Verified:', result.verified);
 
 **Solution**: Ensure same Docker network, use container name:
 ```bash
-EIGEN_ATTEST_URL=http://baseline-attested:8080/attest
+EIGEN_ATTEST_URL=https://eigen-attest.famile.xyz/attest
 ```
 
 ### Signature Verification Fails
@@ -333,6 +343,6 @@ docker logs baseline-attested
 
 ## Signer Address
 
-**Production TEE Wallet**: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
+**Production TEE Wallet**: `0xD518465105bc1a4Db877e5d7b0C64cc88260f15B`
 
 All attestations are signed by this address. Verify against it to confirm authenticity.

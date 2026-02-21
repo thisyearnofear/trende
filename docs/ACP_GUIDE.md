@@ -302,7 +302,7 @@ acp_deliverable = {
     "metadata": {
         "execution_time": 145,
         "attestation_method": "tee-attestation",
-        "signer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+        "signer": "0xD518465105bc1a4Db877e5d7b0C64cc88260f15B"
     }
 }
 ```
