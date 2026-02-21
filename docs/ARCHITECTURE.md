@@ -212,16 +212,13 @@ Do not use shared wildcard helper domains (for example `nip.io`) in production d
 ```bash
 docker network create trende-network
 
-docker run -d --name baseline-attested \
-  --network trende-network \
-  -p 8082:8080 \
-  trende/baseline:v2
-
 docker run -d --name trende-backend \
   --network trende-network \
   -p 8000:8000 \
   trende/backend:latest
 ```
+
+Production attestation is served by EigenCloud via `https://eigen-attest.famile.xyz`, so no local attestor container is required on Hetzner.
 
 ---
 
@@ -229,7 +226,7 @@ docker run -d --name trende-backend \
 
 ### Attestation Service
 ```bash
-curl http://localhost:8082/health
+curl https://eigen-attest.famile.xyz/health
 ```
 
 ### Backend Attestation Status
@@ -261,17 +258,13 @@ curl https://api.trende.famile.xyz/api/acp/status
 
 ## Deployment
 
-### Attestation Service (Hetzner)
+### Attestation Service (Production)
 
 ```bash
-ssh snel-bot "/opt/trende-deploy/deploy-baseline.sh"
+curl https://eigen-attest.famile.xyz/health
 ```
 
-Script performs:
-1. `git pull` in `/opt/trende-deploy/trende-repo/`
-2. Rebuilds Docker image
-3. Stops and replaces container (preserving `.env`)
-4. Health-checks `/random` endpoint
+EigenCloud hosts the attestor. Hetzner backend deploy does not rebuild attestation containers.
 
 ### Backend API
 
@@ -337,7 +330,7 @@ EIGEN_ATTEST_URL=https://eigen-attest.famile.xyz/attest
 
 **Solution**: Check MNEMONIC in `.env`:
 ```bash
-docker logs baseline-attested
+docker logs eigen-attestor
 ```
 
 ---

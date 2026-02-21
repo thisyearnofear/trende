@@ -127,7 +127,7 @@ Buyer Agent → Butler (Gateway) → Trende (Provider) → Evaluation → Paymen
            │
 ┌──────────▼───────────┐
 │  TEE Attestation     │
-│  baseline-attested   │
+│  eigen-attestor      │
 │  (Port 8082)         │
 │ eigen-attest.famile  │
 │        .xyz          │

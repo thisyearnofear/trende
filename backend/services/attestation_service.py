@@ -20,7 +20,7 @@ class AttestationService:
     Hardening:
     - strict mode can disable local fallback in production
     - retries/backoff for remote attestation calls
-    - baseline health checks for readiness gating
+    - provider health checks for readiness gating
     """
 
     def __init__(self):

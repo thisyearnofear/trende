@@ -39,7 +39,7 @@
 
 ## Phase 5: Verifiable Sovereignty ✅ LIVE
 
-- [x] **EigenCompute Integration**: Containerized as `baseline-attested`
+- [x] **EigenCompute Integration**: Containerized as `eigen-attestor`
 - [x] **TEE Execution**: Validator logic in Trusted Execution Environment
 - [x] **On-Chain Attestation**: Signed payload with every output
 - [x] **SSL Endpoint**: eigen-attest.famile.xyz with auto-renewing Let's Encrypt
