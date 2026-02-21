@@ -65,6 +65,12 @@ Trende uses **Chainlink Functions** and the **Chainlink Runtime Environment (CRE
 1. **Data Sourcing**: GDELT & CoinGecko data fetched via Chainlink Functions.
 2. **Oracle**: `TrendeOracle` contract for on-chain trend resolution.
 
+## ✅ Production Ops
+
+- CI gates: `/.github/workflows/ci.yml`
+- Release runbook: `docs/PRODUCTION_CHECKLIST.md`
+- Smoke matrix script: `scripts/smoke_matrix.sh`
+
 ---
 
 **Monad Testnet**: Chain ID `10143` | RPC `https://testnet-rpc.monad.xyz` | [Explorer](https://testnet.monadexplorer.com)

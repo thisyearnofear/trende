@@ -7,7 +7,7 @@ from shared.config import get_settings
 settings = get_settings()
 
 try:
-    from sqlalchemy import JSON, Boolean, Column, DateTime, Float, String, create_engine, inspect, or_, text
+    from sqlalchemy import JSON, Boolean, Column, DateTime, Float, String, create_engine, inspect, text
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.orm import sessionmaker
 
@@ -39,9 +39,6 @@ except ImportError:
     def create_engine(*args: Any, **kwargs: Any) -> Any:
         return None  # type: ignore
     
-    def or_(*args: Any, **kwargs: Any) -> Any:
-        return None  # type: ignore
-
     def sessionmaker(*args: Any, **kwargs: Any) -> Any:
         return None  # type: ignore
 
@@ -400,7 +397,7 @@ class Repository:
             query = (
                 session.query(TaskModel)
                 .filter(TaskModel.status == "completed")
-                .filter(or_(TaskModel.visibility != "private", TaskModel.visibility.is_(None)))
+                .filter(TaskModel.visibility == "public")
             )
             if sponsor:
                 query = query.filter(TaskModel.sponsor_address == sponsor.lower())

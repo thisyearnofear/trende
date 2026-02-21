@@ -482,7 +482,11 @@ export default function Home() {
             </Link>
 
             <div className="flex items-center gap-2">
-              <WalletButton compact />
+              <Tooltip content="Connect wallet for saved mission history, ownership, and publishing permissions.">
+                <div>
+                  <WalletButton compact />
+                </div>
+              </Tooltip>
               <Tooltip content="Switch between visual themes.">
                 <div>
                   <ThemeToggle />
@@ -749,7 +753,7 @@ export default function Home() {
                   Community Commons
                 </h3>
                 <p className="text-xs font-mono text-[var(--text-muted)]">
-                  Public completed research runs from the network
+                  Public completed research runs from the network (saved with visibility = PUBLIC)
                 </p>
               </div>
             </div>
@@ -789,6 +793,10 @@ export default function Home() {
                   Showing {visibleCommons.length} / {filteredCommons.length}
                 </div>
               </div>
+              <p className="text-[11px] font-mono text-[var(--text-muted)]">
+                Runs set to <span className="text-[var(--accent-emerald)] font-black">PUBLIC</span> appear here.{" "}
+                <span className="text-[var(--text-secondary)]">UNLISTED runs stay shareable via direct proof link only.</span>
+              </p>
 
               {commonsLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -953,6 +961,9 @@ export default function Home() {
                     {isSavingResearch ? "Saving..." : "Save Run"}
                   </Button>
                 </div>
+                <p className="text-[10px] font-mono text-[var(--text-muted)] sm:max-w-[260px]">
+                  Only <span className="text-[var(--accent-emerald)] font-black">PUBLIC</span> runs are indexed in Community Commons.
+                </p>
                 <Tooltip
                   content="Publish this report as a draft on Paragraph.xyz, a decentralized publishing platform."
                   learnMoreUrl="https://paragraph.xyz"

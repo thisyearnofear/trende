@@ -172,8 +172,10 @@ export interface ResultsResponse {
   telemetry?: {
     runId: string;
     providerCount: number;
+    providerFailureRate?: number;
     agreementScore: number;
     diversityLevel: 'low' | 'medium' | 'high';
+    durationSeconds?: number;
     attestationStatus: string;
     warnings: string[];
     logs: string[];

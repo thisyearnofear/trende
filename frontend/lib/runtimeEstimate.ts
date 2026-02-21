@@ -17,9 +17,9 @@ export function estimateMissionRuntime(input: RuntimeEstimateInput): RuntimeEsti
   const platforms = input.platforms?.length || 0;
   const models = input.models?.length || 0;
   const threshold = input.relevanceThreshold ?? 0.6;
-  const weighted = 24 + platforms * 18 + models * 24 + (threshold > 0.75 ? 25 : 0);
-  const totalSeconds = Math.max(45, Math.round(weighted * 1.6));
-  const minSeconds = Math.max(30, Math.round(totalSeconds * 0.75));
-  const maxSeconds = Math.round(totalSeconds * 1.35);
+  const weighted = 70 + platforms * 30 + models * 34 + (threshold > 0.75 ? 40 : 0);
+  const totalSeconds = Math.max(120, Math.round(weighted));
+  const minSeconds = Math.max(90, Math.round(totalSeconds * 0.85));
+  const maxSeconds = Math.round(totalSeconds * 1.9);
   return { totalSeconds, minSeconds, maxSeconds };
 }

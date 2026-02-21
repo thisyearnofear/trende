@@ -226,6 +226,62 @@ def _find_matching_active_task(topic: str, platforms: list[str], models: list[st
     return None
 
 
+def _parse_iso(value: Any) -> datetime.datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+
+def _provider_failure_rate(consensus_data: dict[str, Any]) -> float:
+    outputs = consensus_data.get("provider_outputs") or []
+    if not outputs:
+        return 0.0
+    failures = [item for item in outputs if str(item.get("status", "ok")).lower() != "ok"]
+    return round(len(failures) / max(len(outputs), 1), 3)
+
+
+def _task_runtime_alerts(task: dict[str, Any]) -> list[str]:
+    alerts: list[str] = []
+    status = str(task.get("status", "")).lower()
+    created_at = _parse_iso(task.get("created_at"))
+    updated_at = _parse_iso(task.get("updated_at")) or datetime.datetime.now(datetime.timezone.utc)
+    consensus = task.get("consensus_data") or {}
+    result_node = task.get("result") if isinstance(task.get("result"), dict) else {}
+    consensus = consensus or result_node.get("consensus_data") or {}
+    attestation = task.get("attestation_data") or result_node.get("attestation_data") or {}
+    findings = result_node.get("raw_findings") or task.get("raw_findings") or []
+    report_md = str(result_node.get("final_report_md") or task.get("final_report_md") or "").strip()
+
+    stuck_seconds = int(os.getenv("RUN_HEALTH_STUCK_SECONDS", "420"))
+    if created_at and status in {
+        QueryStatus.PENDING,
+        QueryStatus.PLANNING,
+        QueryStatus.RESEARCHING,
+        QueryStatus.PROCESSING,
+        QueryStatus.ANALYZING,
+    }:
+        elapsed = (updated_at - created_at).total_seconds()
+        if elapsed > stuck_seconds:
+            alerts.append(f"stuck_run: elapsed {int(elapsed)}s > {stuck_seconds}s")
+
+    if status == QueryStatus.COMPLETED and str(attestation.get("status", "")).lower() != "signed":
+        alerts.append("attestation_not_signed")
+
+    provider_failure_rate = _provider_failure_rate(consensus)
+    if provider_failure_rate >= float(os.getenv("RUN_HEALTH_PROVIDER_FAIL_RATE", "0.5")):
+        alerts.append(f"provider_failure_rate_high:{provider_failure_rate}")
+
+    if status == QueryStatus.COMPLETED and len(findings) == 0:
+        alerts.append("empty_findings")
+    if status == QueryStatus.COMPLETED and len(report_md) < 120:
+        alerts.append("report_too_short_for_export")
+
+    return alerts
+
+
 class QueryRequest(BaseModel):
     topic: str | None = None
     idea: str | None = None
@@ -381,6 +437,42 @@ async def attestation_health(probe: bool = False) -> dict[str, Any]:
     - probe=true: performs live Eigen endpoint reachability test when configured
     """
     return await attestation_service.health_check(probe=probe)
+
+
+@app.get("/api/health/runs")
+async def run_health(limit: int = 50) -> dict[str, Any]:
+    """
+    Runtime guardrail snapshot for recent runs.
+    Highlights stuck runs, attestation issues, export-risk runs, and provider instability.
+    """
+    records = repo.get_all_tasks(limit=limit)
+    inspected: list[dict[str, Any]] = []
+    issue_count = 0
+
+    for item in records:
+        task_id = item.get("task_id")
+        if not task_id:
+            continue
+        full = tasks.get(task_id) or repo.get_task(task_id) or item
+        alerts = _task_runtime_alerts(full)
+        if alerts:
+            issue_count += 1
+        inspected.append(
+            {
+                "task_id": task_id,
+                "status": full.get("status", QueryStatus.PENDING),
+                "created_at": full.get("created_at"),
+                "updated_at": full.get("updated_at"),
+                "alerts": alerts,
+            }
+        )
+
+    return {
+        "ok": issue_count == 0,
+        "inspected": len(inspected),
+        "issues": issue_count,
+        "runs": inspected,
+    }
 
 
 @app.get("/api/user/rate-limit")
@@ -550,13 +642,27 @@ async def run_agent_workflow(
 
                 consensus_data = tasks[task_id].get("consensus_data") or {}
                 attestation_data = tasks[task_id].get("attestation_data") or {}
+                created_dt = _parse_iso(tasks[task_id].get("created_at"))
+                updated_dt = _parse_iso(tasks[task_id].get("updated_at"))
+                duration_seconds = (
+                    int((updated_dt - created_dt).total_seconds())
+                    if created_dt and updated_dt
+                    else 0
+                )
+                provider_failure_rate = _provider_failure_rate(consensus_data)
+                guardrail_alerts = _task_runtime_alerts(tasks[task_id])
+                merged_warnings = list(
+                    dict.fromkeys((consensus_data.get("warnings", []) or []) + guardrail_alerts)
+                )
                 tasks[task_id]["run_telemetry"] = {
                     "run_id": task_id,
                     "provider_count": len(consensus_data.get("providers", [])),
                     "agreement_score": consensus_data.get("agreement_score", 0.0),
                     "diversity_level": consensus_data.get("diversity_level", "low"),
                     "attestation_status": attestation_data.get("status", "pending"),
-                    "warnings": consensus_data.get("warnings", []),
+                    "warnings": merged_warnings,
+                    "provider_failure_rate": provider_failure_rate,
+                    "duration_seconds": duration_seconds,
                     "logs": tasks[task_id].get("logs", [])[-12:],
                     "updated_at": tasks[task_id]["updated_at"],
                 }
@@ -1018,12 +1124,17 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             "providerCount": run_telemetry.get(
                 "provider_count", len((consensus_data or {}).get("providers") or [])
             ),
+            "providerFailureRate": run_telemetry.get(
+                "provider_failure_rate",
+                _provider_failure_rate(consensus_data or {}),
+            ),
             "agreementScore": run_telemetry.get(
                 "agreement_score", (consensus_data or {}).get("agreement_score", 0.0)
             ),
             "diversityLevel": run_telemetry.get(
                 "diversity_level", (consensus_data or {}).get("diversity_level", "low")
             ),
+            "durationSeconds": run_telemetry.get("duration_seconds", 0),
             "attestationStatus": run_telemetry.get(
                 "attestation_status", (attestation_data or {}).get("status", "pending")
             ),
@@ -1049,6 +1160,15 @@ async def export_task_report(task_id: str, format: str = "pdf") -> Response:
 
     normalized_format = (format or "pdf").strip().lower()
     payload = build_export_payload(task_id=task_id, task=task)
+    report_md = str(payload.get("final_report_md") or "").strip()
+    summary = str(payload.get("summary") or "").strip()
+    source_count = int((payload.get("stats") or {}).get("source_count") or 0)
+    if not report_md and not summary and source_count == 0:
+        return Response(
+            status_code=422,
+            content=json.dumps({"error": "Report content is empty; export aborted."}),
+            media_type="application/json",
+        )
     file_stub = f"trende-report-{task_id[:8]}"
 
     if normalized_format == "pdf":

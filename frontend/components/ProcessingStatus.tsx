@@ -53,6 +53,8 @@ const SIMULATED_LOGS: Record<string, string[]> = {
     "CONNECTING TO TWITTER API (RAPIDAPI)...",
     "SCRAPING NEWSAPI ENDPOINTS...",
     "QUERYING TABSTACK WEB SOURCE...",
+    "CONSULTING WIKIMEDIA EVENT STREAM FOR BREAKOUT NARRATIVES...",
+    "PULLING COINGECKO SNAPSHOTS FOR MARKET CONTEXT...",
     "EXTRACTING LONG-FORM CONTEXT VIA TABSTACK MARKDOWN...",
     "SCANNING HACKER NEWS + STACKEXCHANGE FOR EARLY TECH SIGNALS...",
     "PARSING UNSTRUCTURED DATA...",
@@ -69,6 +71,7 @@ const SIMULATED_LOGS: Record<string, string[]> = {
   ],
   consensus: [
     "INITIALIZING CONSENSUS FORGE...",
+    "ROUTING PRIMARY INFERENCE THROUGH VENICE PRIVACY LANE...",
     "CONSULTING VENICE AI (PRIVACY-FIRST)...",
     "CONSULTING AISA ROUTE...",
     "CONSULTING OPENROUTER LLAMA 70B...",
@@ -80,8 +83,10 @@ const SIMULATED_LOGS: Record<string, string[]> = {
   ],
   architect: [
     "SYNTHESIZING SOVEREIGN REPORT...",
+    "ENCODING VERIFIABLE EVIDENCE REFERENCES...",
     "BINDING EVIDENCE HASHES TO FINAL MANIFEST...",
     "GENERATING EIGEN PROOF...",
+    "REQUESTING EIGENCLOUD ATTESTATION QUOTE...",
     "SIGNING ATTESTATION PAYLOAD...",
     "ESTABLISHING PROOF OF COMPUTE...",
     "MISSION COMPLETE.",
@@ -135,7 +140,7 @@ function StageCard({
             ? "var(--accent-cyan)"
             : isExpanded
               ? "var(--accent-violet)"
-              : "var(--border-color)",
+              : (softMode ? "var(--text-secondary)" : "var(--border-color)"),
         boxShadow: isComplete
           ? "2px 2px 0px 0px var(--accent-emerald)"
           : isActive
@@ -317,7 +322,7 @@ export function ProcessingStatus({
   useEffect(() => {
     if (!isProcessing) return;
     const isMobile = window.matchMedia("(max-width: 640px)").matches;
-    const intervalMs = prefersReducedMotion ? 2400 : isMobile ? 1700 : 1200;
+    const intervalMs = prefersReducedMotion ? 2000 : isMobile ? 1000 : 700;
     const logs = SIMULATED_LOGS[currentStageId] || SIMULATED_LOGS["planner"];
     const interval = setInterval(() => {
       setSimulatedLog(`[SYSTEM] ${logs[Math.floor(Math.random() * logs.length)]}`);
@@ -613,11 +618,11 @@ export function ProcessingStatus({
               <div className="p-4">
                 <div
                   className="border-2 bg-[var(--bg-primary)]"
-                  style={{ borderColor: isSoft ? "var(--border-color)" : "var(--text-muted)" }}
+                  style={{ borderColor: isSoft ? "var(--text-secondary)" : "var(--text-muted)" }}
                 >
                   <div
                     className="flex items-center justify-between px-3 py-2 border-b-2 bg-[var(--bg-secondary)]"
-                    style={{ borderColor: isSoft ? "var(--border-color)" : "var(--text-muted)" }}
+                    style={{ borderColor: isSoft ? "var(--text-secondary)" : "var(--text-muted)" }}
                   >
                     <div className="flex items-center gap-2">
                       <Terminal className={`w-3.5 h-3.5 ${isSoft ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`} />

@@ -147,27 +147,27 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading }: 
           </div>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">Model Agreement</p>
+              <p className={`text-[10px] font-black uppercase tracking-wider ${isSoft ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}`}>Model Agreement</p>
               <p className="text-lg font-black" style={{ color: 'var(--accent-amber)' }}>{Math.round((consensus.agreement_score || 0) * 100)}%</p>
             </div>
             <div className="space-y-1 text-right">
-              <p className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">Diversity Index</p>
+              <p className={`text-[10px] font-black uppercase tracking-wider ${isSoft ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}`}>Diversity Index</p>
               <p className="text-lg font-black" style={{ color: 'var(--accent-cyan)' }}>{consensus.diversity_level || 'low'}</p>
             </div>
           </div>
           {consensus.providers && consensus.providers.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">Consensus Providers</p>
+              <p className={`text-[10px] font-black uppercase tracking-wider ${isSoft ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}`}>Consensus Providers</p>
               <div className="flex flex-wrap gap-1.5">
                 {consensus.providers.map((p) => (
-                  <Badge key={p} variant={isSoft ? "default" : "amber"} className={isSoft ? '!bg-[var(--text-primary)] !text-[var(--bg-primary)]' : ''}>{p}</Badge>
+                  <Badge key={p} variant={isSoft ? "violet" : "amber"}>{p}</Badge>
                 ))}
               </div>
             </div>
           )}
           {consensus.main_divergence && (
             <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--accent-amber)' }}>
-              <p className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)] mb-1">Divergence Signal</p>
+              <p className={`text-[10px] font-black uppercase tracking-wider mb-1 ${isSoft ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}`}>Divergence Signal</p>
               <p className="text-xs italic text-[var(--text-secondary)]">&ldquo;{consensus.main_divergence}&rdquo;</p>
             </div>
           )}

@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Send, Sparkles, Loader2, Compass, Layers, Zap, Shield, BarChart3, Settings2 } from 'lucide-react';
 import { QueryRequest } from '@/lib/types';
 import { estimateMissionRuntime } from '@/lib/runtimeEstimate';
-import { Card, Button, Input, Badge } from './DesignSystem';
+import { Card, Button, Input, Badge, Tooltip } from './DesignSystem';
 
 interface QueryInputProps {
   onSubmit: (request: QueryRequest) => void;
@@ -300,6 +300,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                         {platform.label}
                       </p>
                       {active && <Badge variant="cyan" className="mt-1 transform scale-75 origin-left">ACTIVE</Badge>}
+                      {unavailable && <Badge variant="violet" className="mt-1 transform scale-75 origin-left">COMING SOON</Badge>}
                     </button>
                   );
                 })}
@@ -317,14 +318,31 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   <Sparkles className="w-4 h-4 text-[var(--accent-amber)]" />
                   <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Advanced: Consensus Routes</span>
                 </div>
-                <div className="flex gap-2 text-center">
-                  <div key={`cost-${metricKey}`} className="flex flex-col justify-center px-3 py-1 border-2 border-[var(--bg-tertiary)]">
+                  <div className="flex gap-2 text-center">
+                  <div
+                    key={`cost-${metricKey}`}
+                    className="flex flex-col justify-center px-3 py-1 border-2 border-[var(--bg-tertiary)] transition-transform duration-200 animate-in fade-in"
+                  >
                     <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase">Cost</span>
                     <span className="text-xs font-black text-[var(--accent-amber)]">{totalCost.toFixed(4)} MON</span>
                   </div>
-                  <div key={`mitigation-${metricKey}`} className="flex flex-col justify-center px-3 py-1 border-2 border-[var(--bg-tertiary)]">
-                    <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase inline-flex items-center justify-center gap-1">Bias Res.</span>
-                    <span className="text-xs font-black text-[var(--accent-cyan)]">{Math.round(avgQuality)}%</span>
+                  <Tooltip content="Mitigation Power estimates how well your selected model mix reduces single-model bias and improves consensus reliability.">
+                    <div
+                      key={`mitigation-${metricKey}`}
+                      className="flex flex-col justify-center px-3 py-1 border-2 border-[var(--bg-tertiary)] transition-transform duration-200 animate-in fade-in cursor-help"
+                    >
+                      <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase inline-flex items-center justify-center gap-1">
+                        Mitigation Power
+                      </span>
+                      <span className="text-xs font-black text-[var(--accent-cyan)]">{Math.round(avgQuality)}%</span>
+                    </div>
+                  </Tooltip>
+                  <div
+                    key={`eta-${metricKey}`}
+                    className="flex flex-col justify-center px-3 py-1 border-2 border-[var(--bg-tertiary)] transition-transform duration-200 animate-in fade-in"
+                  >
+                    <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase">ETA</span>
+                    <span className="text-xs font-black text-[var(--accent-emerald)]">~{Math.round(estimatedSeconds / 60)}m</span>
                   </div>
                 </div>
               </div>
@@ -339,7 +357,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                       type="button"
                       onClick={() => toggleModel(model.id, model.enabled !== false)}
                       disabled={disabled || unavailable}
-                      className="text-left p-2.5 min-h-[50px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-55 disabled:cursor-not-allowed"
+                      className="text-left p-2.5 min-h-[50px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed relative"
                       style={{
                         borderColor: unavailable
                           ? 'var(--accent-violet)'
@@ -358,6 +376,11 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                       <p className="text-[10px] font-black uppercase" style={{ color: unavailable ? 'var(--accent-violet)' : active ? 'var(--accent-amber)' : 'var(--text-primary)' }}>
                         {model.label}
                       </p>
+                      {unavailable && (
+                        <Badge variant="violet" className="mt-1 transform scale-75 origin-left">
+                          COMING SOON
+                        </Badge>
+                      )}
                     </button>
                   );
                 })}
