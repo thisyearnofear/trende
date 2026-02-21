@@ -72,6 +72,42 @@ Trend Report → "Publish" → Connect Modal → API Key → Draft Created → R
 
 ---
 
+## Chainlink (Verifiable Oracle) 🚀 HACKATHON
+
+Transitioning Trende to a decentralized, verifiable intelligence oracle for the **Convergence: A Chainlink Hackathon**.
+
+### Overview
+
+Trende uses Chainlink to bridge real-world social data with on-chain smart contracts verifiably:
+1. **Verifiable Data Sourcing**: Chainlink Functions for GDELT and CoinGecko.
+2. **Decentralized Consensus**: Moving AI reasoning into the Chainlink Runtime Environment (CRE).
+3. **Trend Prediction Markets**: On-chain resolution of social narratives.
+
+### Integration Pillars
+
+#### 1. Chainlink Functions (Data Integrity)
+Fetches data from off-chain APIs with cryptographic proof.
+- **Connectors**: `GDELTConnector`, `CoinGeckoConnector`
+- **Output**: Request ID, Commitment, and Data Proof on-chain.
+
+#### 2. Chainlink Runtime Environment (CRE)
+Executes the `ConsensusEngine` across a decentralized node network.
+- **Nodes**: Ported `analyzer_node` logic.
+- **AI Oracles**: Venice, AI.SA, Gemini.
+- **Aggregation**: Verified multi-model synthesis within the CRE.
+
+### Technical Architecture
+
+**On-Chain Components**:
+- `contracts/TrendeOracle.sol`: Manages market creation and resolution.
+- `contracts/TrendeFunctionsConsumer.sol`: Handles off-chain data fetching.
+
+**Off-Chain Components**:
+- `cre-module/`: The CRE-compatible consensus module.
+- `functions-snippets/`: JavaScript code executed by Chainlink nodes.
+
+---
+
 ## Future Integrations
 
 ### Token Launchers (nad.fun, Pump.fun)

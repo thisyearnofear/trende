@@ -1,0 +1,15 @@
+{
+  "name": "trende-contracts",
+  "version": "1.0.0",
+  "description": "Trende Oracle Contracts for Chainlink",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@chainlink/contracts": "^1.4.0"
+  }
+}

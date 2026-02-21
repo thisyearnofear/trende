@@ -41,7 +41,7 @@ async def planner_node(state: GraphState) -> GraphState:
 
     Generate a research plan in JSON format.
     You MUST include search queries for each of the requested platforms.
-    Available platforms: twitter, linkedin, news, newsapi, tiktok, youtube, web, gdelt, wikimedia, hackernews, stackexchange, coingecko, tinyfish.
+    Available platforms: twitter, linkedin, news, newsapi, tiktok, youtube, web, gdelt, wikimedia, hackernews, stackexchange, coingecko, tinyfish, chainlink.
     If the user asked for a specific platform, prioritize it.
 
     JSON format:
@@ -138,6 +138,7 @@ async def researcher_node(state: GraphState) -> GraphState:
     from backend.integrations.connectors.stackexchange import StackExchangeConnector
     from backend.integrations.connectors.coingecko import CoinGeckoConnector
     from backend.integrations.connectors.tinyfish import TinyFishConnector
+    from backend.integrations.connectors.chainlink import ChainlinkConnector
 
     twitter = TwitterConnector()
     linkedin = LinkedInConnector()
@@ -151,6 +152,7 @@ async def researcher_node(state: GraphState) -> GraphState:
     hackernews = HackerNewsConnector()
     stackexchange = StackExchangeConnector()
     coingecko = CoinGeckoConnector()
+    chainlink = ChainlinkConnector()
 
     tasks = []
     task_platforms = []
@@ -192,6 +194,8 @@ async def researcher_node(state: GraphState) -> GraphState:
             tasks.append(timed_search(platform, coingecko.search(query, limit=5), default_timeout))
         elif platform == "tinyfish":
             tasks.append(timed_search(platform, tinyfish.search(query, limit=5), tinyfish_timeout))
+        elif platform == "chainlink":
+            tasks.append(timed_search(platform, chainlink.search(query, limit=1), default_timeout))
         else:
             # Fallback for unknown platforms
             state["logs"].append(f"⚠️  Warning: Platform {platform} not natively supported. Attempting web fallback.")

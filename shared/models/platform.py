@@ -20,6 +20,7 @@ class PlatformType(str, Enum):
     STACKEXCHANGE = "stackexchange"
     COINGECKO = "coingecko"
     TINYFISH = "tinyfish"
+    CHAINLINK = "chainlink"
 
 
 class Platform:
@@ -142,6 +143,13 @@ PLATFORMS: dict[PlatformType, Platform] = {
         "TinyFish",
         "🐠",
         "#FF9F1C",
+        supports_embed=False,
+    ),
+    PlatformType.CHAINLINK: Platform(
+        PlatformType.CHAINLINK,
+        "Chainlink",
+        "⛓️",
+        "#375BD2",
         supports_embed=False,
     ),
 }

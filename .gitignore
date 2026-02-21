@@ -55,3 +55,12 @@ Thumbs.db
 *.tar.gz
 temp_eigen/
 .junie/
+
+# Foundry / Solidity build artifacts
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+contracts/node_modules/
+contracts/lib/forge-std/
+contracts/lib/chainlink/
+contracts/lib/chainlink-brownie-contracts/

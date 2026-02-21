@@ -53,6 +53,18 @@ Trende is built for the agent-to-agent economy:
 - **Chain Agnostic**: Built to serve intelligence to any ecosystem, including Monad, Base, BNB, and Solana.
 - **Privacy Centric**: Primary inference routed via Venice AI.
 
+## 🔗 Chainlink Integration (Hackathon 2026)
+
+Trende uses **Chainlink Functions** and the **Chainlink Runtime Environment (CRE)** to provide verifiable social intelligence.
+
+- **Contracts**: Located in `/contracts`
+- **Functions**: JS sources in `backend/chainlink/functions`
+- **Deployment**: See [docs/CHAINLINK_DEPLOY.md](docs/CHAINLINK_DEPLOY.md)
+
+### Verifiable Features
+1. **Data Sourcing**: GDELT & CoinGecko data fetched via Chainlink Functions.
+2. **Oracle**: `TrendeOracle` contract for on-chain trend resolution.
+
 ---
 
 **Monad Testnet**: Chain ID `10143` | RPC `https://testnet-rpc.monad.xyz` | [Explorer](https://testnet.monadexplorer.com)

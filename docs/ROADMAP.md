@@ -57,6 +57,15 @@
 
 ---
 
+## Phase 7: The Verifiable Oracle (Chainlink Convergence Hackathon)
+
+- [ ] **Chainlink Functions**: Decentralized data sourcing (GDELT, CoinGecko)
+- [ ] **Chainlink Runtime Environment (CRE)**: Port Consensus Engine to CRE
+- [ ] **Social Prediction Markets**: Trend resolution oracle contract
+- [ ] **Verifiable Social Proof**: Chainlink-attested reports
+
+---
+
 ## Milestones
 
 ### Q1 2026 (Jan-Mar)
@@ -64,7 +73,9 @@
 | Milestone | Target | Status |
 |-----------|--------|--------|
 | ACP Agent Registration | Feb 15 | ✅ Done |
+| Chainlink Hackathon Start | Feb 6 | ✅ Done |
 | 10 ACP Jobs (Graduation) | Feb 28 | In Progress |
+| Chainlink Hackathon Submission | Mar 1 | In Progress |
 | $1K ACP Revenue | Mar 15 | Pending |
 | 60 Days Launch Decision | Mar 20 | Pending |
 | Top 5 FDV (60 Days) | Apr 15 | Pending |
