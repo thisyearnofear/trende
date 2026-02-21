@@ -46,7 +46,7 @@ return Functions.encodeString(JSON.stringify({
 
         return [
             TrendItem(
-                id=request.get("request_id", f"chainlink-{int(timestamp.timestamp())}"),
+                id=request.get("request_id") or f"chainlink-{int(timestamp.timestamp())}",
                 platform=self.platform,
                 title=f"Chainlink Verification: {query[:120]}",
                 content=details,
