@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp, Check, Copy, Zap, PenLine, Rocket } from 'lucide-react';
+import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp, Check, Copy, Zap, PenLine, Rocket, Download } from 'lucide-react';
 import { AgentAction, TrendSummary as TrendSummaryType } from '@/lib/types';
 import { useToast } from '@/components/Toast';
-import { AttestationBadge, VerificationStatus } from '@/components/AttestationBadge';
+import { AttestationBadge } from '@/components/AttestationBadge';
 import { useTheme } from './ThemeProvider';
 import { api } from '@/lib/api';
 
@@ -92,7 +92,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const [selectedActionPayload, setSelectedActionPayload] = useState<AgentAction | null>(null);
 
     const isMeme = mode === 'meme';
-    const providers = consensus?.providers || [];
+    const providers = useMemo(() => consensus?.providers || [], [consensus?.providers]);
     const consensusWarnings = consensus?.warnings || [];
     const providerOutputs = consensus?.provider_outputs || [];
     const isLowDiversity = (consensus?.diversity_level || 'low') === 'low';
@@ -102,6 +102,44 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const activeActions = useMemo(
         () => actions.filter((a) => !['succeeded', 'failed', 'compensated'].includes(a.status)),
         [actions]
+    );
+    const proofLink = useMemo(() => {
+        if (typeof window === 'undefined') return '';
+        return `${window.location.origin}/proof/${queryId}`;
+    }, [queryId]);
+    const attestedPayload = useMemo(
+        () =>
+            (attestation?.payload as Record<string, unknown> | undefined) || {
+                prompt: summary.overview,
+                providers,
+                consensus_report: summary.overview,
+                generated_at: attestation?.generated_at || summary.generatedAt,
+                provider_count: providers.length,
+            },
+        [attestation?.generated_at, attestation?.payload, providers, summary.generatedAt, summary.overview]
+    );
+    const proofJson = useMemo(
+        () => ({
+            verification_result: verified === null ? 'not-run' : verified ? 'verified' : 'failed',
+            attestation_id: attestation?.attestation_id || null,
+            signer: attestation?.signer || null,
+            method: attestation?.method || null,
+            payload_hash: attestation?.input_hash || null,
+            generated_at: attestation?.generated_at || summary.generatedAt || null,
+            verify_endpoint: attestation?.verify_endpoint || null,
+            payload: attestedPayload,
+        }),
+        [
+            attestation?.attestation_id,
+            attestation?.generated_at,
+            attestation?.input_hash,
+            attestation?.method,
+            attestation?.signer,
+            attestation?.verify_endpoint,
+            attestedPayload,
+            summary.generatedAt,
+            verified,
+        ]
     );
 
     useEffect(() => {
@@ -203,15 +241,6 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
             return;
         }
 
-        const payload =
-            (attestation.payload as Record<string, unknown> | undefined) || {
-                prompt: summary.overview,
-                providers,
-                consensus_report: summary.overview,
-                generated_at: attestation.generated_at || summary.generatedAt,
-                provider_count: providers.length,
-            };
-
         try {
             setIsVerifying(true);
             setVerifyStatus('Verifying cryptographic signature...');
@@ -219,7 +248,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
             const response = await fetch(`${baseUrl}/api/attest/verify`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ payload, attestation }),
+                body: JSON.stringify({ payload: attestedPayload, attestation }),
             });
 
             if (!response.ok) {
@@ -236,6 +265,13 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
             setVerified(false);
         } finally {
             setIsVerifying(false);
+        }
+    };
+
+    const openVerificationPanel = async () => {
+        setShowVerificationDetails(true);
+        if (verified === null && !isVerifying) {
+            await verifyAttestation();
         }
     };
 
@@ -442,15 +478,19 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                     <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">
                                         TEE Signer Address
                                     </p>
-                                    <a
-                                        href="https://etherscan.io/address/0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs text-emerald-400 hover:text-emerald-300 font-mono flex items-center gap-2 transition-colors"
-                                    >
-                                        0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-                                        <ExternalLink className="w-3 h-3" />
-                                    </a>
+                                    {attestation?.signer ? (
+                                        <a
+                                            href={`https://etherscan.io/address/${attestation.signer}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-emerald-400 hover:text-emerald-300 font-mono flex items-center gap-2 transition-colors break-all"
+                                        >
+                                            {attestation.signer}
+                                            <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                        </a>
+                                    ) : (
+                                        <p className="text-xs text-slate-400 font-mono">n/a</p>
+                                    )}
                                 </div>
 
                                 <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-700/50">
@@ -504,21 +544,49 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                 )}
 
                                 <div className="mt-4 pt-4 border-t border-slate-700/50">
-                                    <VerificationStatus
-                                        isVerifying={isVerifying}
-                                        verified={verified}
-                                        onVerify={verifyAttestation}
-                                    />
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={openVerificationPanel}
+                                            className="px-4 py-2 rounded-lg border border-emerald-500/40 text-sm font-semibold text-emerald-200 hover:bg-emerald-500/15 transition-all flex items-center gap-2"
+                                        >
+                                            <ShieldCheck className="w-4 h-4" />
+                                            Verify Proof
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (!proofLink) return;
+                                                navigator.clipboard.writeText(proofLink);
+                                                showToast('Proof URL copied to clipboard', 'success');
+                                            }}
+                                            className="px-3 py-2 rounded-lg border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-800/70 transition-all flex items-center gap-1.5"
+                                        >
+                                            <Link2 className="w-3.5 h-3.5" />
+                                            Share Proof
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const blob = new Blob([JSON.stringify(proofJson, null, 2)], { type: 'application/json' });
+                                                const url = URL.createObjectURL(blob);
+                                                const link = document.createElement('a');
+                                                link.href = url;
+                                                link.download = `trende-proof-${queryId.slice(0, 8)}.json`;
+                                                document.body.appendChild(link);
+                                                link.click();
+                                                document.body.removeChild(link);
+                                                URL.revokeObjectURL(url);
+                                            }}
+                                            className="px-3 py-2 rounded-lg border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-800/70 transition-all flex items-center gap-1.5"
+                                        >
+                                            <Download className="w-3.5 h-3.5" />
+                                            Download Proof JSON
+                                        </button>
+                                    </div>
                                     {verifyStatus && (
                                         <p className="text-xs text-slate-400 mt-2">{verifyStatus}</p>
                                     )}
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowVerificationDetails(true)}
-                                        className="mt-2 text-xs text-slate-400 hover:text-slate-300 underline"
-                                    >
-                                        View full technical details →
-                                    </button>
                                 </div>
                             </section>
 
@@ -594,7 +662,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
                         <div className="flex items-center gap-2 text-xs text-slate-500">
                             <Quote className="w-4 h-4" />
-                            <span>Consensus includes attestation metadata and verification endpoint support.</span>
+                            <span>Verifiable outputs can be trusted and settled by other agents, not just viewed by one user.</span>
                         </div>
                         <div className="flex gap-3">
                             <button className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-bold text-slate-100 transition-colors border border-slate-700">
@@ -607,6 +675,20 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                             >
                                 {isMeme ? 'Get Attested Alpha Manifest' : 'Generate Alpha Link'}
                             </button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-300 mb-1">Trader Flow</p>
+                            <p className="text-xs text-slate-400">Trader agent requests thesis, execution agent acts only when proof is verified.</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-cyan-300 mb-1">DAO Risk Flow</p>
+                            <p className="text-xs text-slate-400">Risk agent submits attested findings for governance review and vote staging.</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300 mb-1">Creator Flow</p>
+                            <p className="text-xs text-slate-400">Publishing agent drafts from citations while preserving provenance and proof links.</p>
                         </div>
                     </div>
 
@@ -769,7 +851,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                         aria-label="Verification details"
                     >
                         <div className="flex items-start justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-slate-100">Verification Details</h3>
+                            <h3 className="text-lg font-semibold text-slate-100">Proof Verification</h3>
                             <button
                                 type="button"
                                 onClick={() => setShowVerificationDetails(false)}
@@ -779,38 +861,138 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                             </button>
                         </div>
 
-                        <div className="space-y-3 text-sm">
-                            <p className="text-slate-300">
-                                <span className="text-slate-500">Provider:</span> {attestation?.provider || 'n/a'}
-                            </p>
-                            <p className="text-slate-300">
-                                <span className="text-slate-500">Method:</span> {attestation?.method || 'n/a'}
-                            </p>
-                            <p className="text-slate-300 break-all">
-                                <span className="text-slate-500">Attestation ID:</span> {attestation?.attestation_id || 'n/a'}
-                            </p>
-                            <p className="text-slate-300 break-all">
-                                <span className="text-slate-500">Input hash:</span> {attestation?.input_hash || 'n/a'}
-                            </p>
-                            <p className="text-slate-300 break-all font-mono text-xs">
-                                <span className="text-slate-500">Signature:</span> {attestation?.signature || 'n/a'}
-                            </p>
-                            <p className="text-slate-300">
-                                <span className="text-slate-500">Key ID:</span> {attestation?.key_id || 'n/a'}
-                            </p>
-                            <p className="text-slate-300">
-                                <span className="text-slate-500">Generated at:</span> {attestation?.generated_at ? new Date(attestation.generated_at).toUTCString() : 'n/a'}
-                            </p>
-                            <p className="text-slate-300">
-                                <span className="text-slate-500">Providers in consensus:</span>{' '}
-                                {providers.length > 0 ? providers.join(', ') : 'n/a'}
-                            </p>
+                        <div
+                            className={`mb-4 rounded-xl border px-3 py-2 text-sm font-semibold ${
+                                verified === null
+                                    ? 'border-slate-700 bg-slate-800/50 text-slate-300'
+                                    : verified
+                                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                                      : 'border-rose-500/40 bg-rose-500/10 text-rose-300'
+                            }`}
+                        >
+                            Verification Result:{' '}
+                            {verified === null ? 'Not yet verified' : verified ? 'Verified' : 'Failed'}
+                        </div>
+
+                        <div className="space-y-3 text-sm mb-4">
+                            <div className="grid grid-cols-[140px,1fr] gap-2">
+                                <span className="text-slate-500">Method</span>
+                                <span className="text-slate-300 font-mono">{attestation?.method || 'n/a'}</span>
+                            </div>
+                            <div className="grid grid-cols-[140px,1fr] gap-2 items-start">
+                                <span className="text-slate-500">Attestation ID</span>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-slate-300 font-mono break-all">{attestation?.attestation_id || 'n/a'}</span>
+                                    {attestation?.attestation_id && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(attestation.attestation_id || '');
+                                                showToast('Attestation ID copied', 'success');
+                                            }}
+                                            className="text-[11px] px-2 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700"
+                                        >
+                                            Copy
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-[140px,1fr] gap-2 items-start">
+                                <span className="text-slate-500">Signer</span>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-slate-300 font-mono break-all">{attestation?.signer || 'n/a'}</span>
+                                    {attestation?.signer && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(attestation.signer || '');
+                                                    showToast('Signer copied', 'success');
+                                                }}
+                                                className="text-[11px] px-2 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700"
+                                            >
+                                                Copy
+                                            </button>
+                                            <a
+                                                href={`https://etherscan.io/address/${attestation.signer}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-[11px] px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+                                            >
+                                                Explorer
+                                            </a>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-[140px,1fr] gap-2">
+                                <span className="text-slate-500">Payload Hash</span>
+                                <span className="text-slate-300 font-mono break-all">{attestation?.input_hash || 'n/a'}</span>
+                            </div>
+                            <div className="grid grid-cols-[140px,1fr] gap-2">
+                                <span className="text-slate-500">Code Release</span>
+                                <span className="text-slate-300 font-mono break-all">
+                                    {(attestedPayload['build_commit'] as string) ||
+                                        (attestedPayload['git_commit'] as string) ||
+                                        (attestedPayload['release_id'] as string) ||
+                                        'n/a'}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-[140px,1fr] gap-2">
+                                <span className="text-slate-500">Timestamp (UTC)</span>
+                                <span className="text-slate-300 font-mono">
+                                    {attestation?.generated_at
+                                        ? new Date(attestation.generated_at).toUTCString()
+                                        : summary.generatedAt
+                                          ? new Date(summary.generatedAt).toUTCString()
+                                          : 'n/a'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                            <button
+                                type="button"
+                                onClick={verifyAttestation}
+                                disabled={isVerifying}
+                                className="text-xs px-3 py-2 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50"
+                            >
+                                {isVerifying ? 'Verifying…' : 'Re-verify'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (!proofLink) return;
+                                    navigator.clipboard.writeText(proofLink);
+                                    showToast('Proof URL copied to clipboard', 'success');
+                                }}
+                                className="text-xs px-3 py-2 rounded bg-slate-800 text-slate-300 hover:bg-slate-700"
+                            >
+                                Share Proof Link
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const blob = new Blob([JSON.stringify(proofJson, null, 2)], { type: 'application/json' });
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = `trende-proof-${queryId.slice(0, 8)}.json`;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    URL.revokeObjectURL(url);
+                                }}
+                                className="text-xs px-3 py-2 rounded bg-slate-800 text-slate-300 hover:bg-slate-700"
+                            >
+                                Download Proof JSON
+                            </button>
                         </div>
 
                         <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950/70 p-3">
                             <p className="text-xs text-slate-500 mb-2">Canonical payload preview</p>
                             <pre className="text-xs text-slate-300 overflow-auto max-h-56">
-                                {JSON.stringify(attestation?.payload || {}, null, 2)}
+                                {JSON.stringify(attestedPayload, null, 2)}
                             </pre>
                         </div>
                     </div>

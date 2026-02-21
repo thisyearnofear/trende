@@ -191,6 +191,9 @@ class AttestationService:
                             # can deterministically recompute and validate integrity.
                             "input_hash": local_input_hash,
                             "signature": body.get("signature", ""),
+                            "signer": body.get("signer", ""),
+                            "message": body.get("message", ""),
+                            "message_hash": body.get("message_hash", ""),
                             "key_id": body.get("key_id", "eigencompute"),
                             "quote": body.get("quote"),
                             "receipt": body.get("receipt"),

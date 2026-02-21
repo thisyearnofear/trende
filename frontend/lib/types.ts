@@ -91,6 +91,9 @@ export interface TrendSummary {
     attestation_id?: string;
     input_hash?: string;
     signature?: string;
+    signer?: string;
+    message?: string;
+    message_hash?: string;
     key_id?: string;
     quote?: string;
     receipt?: string;
