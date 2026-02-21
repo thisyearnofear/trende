@@ -14,15 +14,7 @@ post_run() {
   local response
   response="$(curl -sS -X POST "${API_BASE}/api/trends/start" -H 'Content-Type: application/json' -d "${payload}")"
   local task_id
-  task_id="$(printf '%s' "${response}" | python3 - <<'PY'
-import json,sys
-try:
-    data=json.loads(sys.stdin.read())
-    print(data.get("id") or data.get("task_id") or "")
-except Exception:
-    print("")
-PY
-)"
+  task_id="$(printf '%s' "${response}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("id") or d.get("task_id") or "")' 2>/dev/null || true)"
   if [[ -z "${task_id}" ]]; then
     echo "[$name] failed to start: ${response}"
     return 1
@@ -38,15 +30,7 @@ poll_run() {
   for (( i=1; i<=MAX_POLLS; i++ )); do
     local status_json status
     status_json="$(curl -sS "${API_BASE}/api/trends/${task_id}")"
-    status="$(printf '%s' "${status_json}" | python3 - <<'PY'
-import json,sys
-try:
-    d=json.loads(sys.stdin.read())
-    print((d.get("query") or {}).get("status",""))
-except Exception:
-    print("")
-PY
-)"
+    status="$(printf '%s' "${status_json}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print((d.get("query") or {}).get("status",""))' 2>/dev/null || true)"
     echo "[$name] poll=${i} status=${status}"
     if [[ "${status}" == "completed" || "${status}" == "failed" ]]; then
       break
@@ -56,24 +40,8 @@ PY
 
   local final_json summary_overview attestation_status
   final_json="$(curl -sS "${API_BASE}/api/trends/${task_id}")"
-  summary_overview="$(printf '%s' "${final_json}" | python3 - <<'PY'
-import json,sys
-try:
-    d=json.loads(sys.stdin.read())
-    print(((d.get("summary") or {}).get("overview") or "")[:140])
-except Exception:
-    print("")
-PY
-)"
-  attestation_status="$(printf '%s' "${final_json}" | python3 - <<'PY'
-import json,sys
-try:
-    d=json.loads(sys.stdin.read())
-    print(((d.get("summary") or {}).get("attestationData") or {}).get("status",""))
-except Exception:
-    print("")
-PY
-)"
+  summary_overview="$(printf '%s' "${final_json}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(((d.get("summary") or {}).get("overview") or "")[:140])' 2>/dev/null || true)"
+  attestation_status="$(printf '%s' "${final_json}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(((d.get("summary") or {}).get("attestationData") or {}).get("status",""))' 2>/dev/null || true)"
   echo "[$name] overview='${summary_overview}'"
   echo "[$name] attestation_status=${attestation_status}"
 
