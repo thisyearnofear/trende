@@ -11,6 +11,7 @@ import {
   Loader2,
   Clock3,
 } from "lucide-react";
+import { gsap } from "gsap";
 import { TerminalLog } from "./TypewriterText";
 import { AgentPersona } from "./AgentPersona";
 import { Card, Progress, Badge } from "./DesignSystem";
@@ -231,7 +232,7 @@ function SpineMarker({ lit, color }: { lit: boolean; color: "cyan" | "emerald" |
 
   return (
     <div
-      className="absolute -left-[26px] sm:-left-[30px] top-4 w-3 h-3 border-2 transition-all duration-500 z-10"
+      className="hidden sm:block absolute -left-[30px] top-4 w-3 h-3 border-2 transition-all duration-500 z-10"
       style={{ borderColor: c.border, backgroundColor: c.bg, boxShadow: c.shadow }}
     />
   );
@@ -260,6 +261,9 @@ export function ProcessingStatus({
   const [expandedStageId, setExpandedStageId] = useState<string>(currentStageId);
   const [activationTick, setActivationTick] = useState(0);
   const railRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const revealedRef = useRef<Set<string>>(new Set());
+  const initialProgressRef = useRef(progress);
   const mutedTextClass = isSoft ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)]";
 
   useEffect(() => { setExpandedStageId(currentStageId); }, [currentStageId]);
@@ -365,16 +369,70 @@ export function ProcessingStatus({
     if (card) card.scrollIntoView({ inline: "center", behavior: "smooth" });
   }, []);
 
+  // GSAP: stage reveal animation as progress crosses thresholds
+  useEffect(() => {
+    if (prefersReducedMotion || !isProcessing) return;
+
+    STAGES.forEach((stage, i) => {
+      const threshold = (i / STAGES.length) * 100;
+      if (progress < threshold) return;
+      if (revealedRef.current.has(stage.id)) return;
+      revealedRef.current.add(stage.id);
+
+      // Skip animation for stages already past threshold on mount
+      if (threshold <= initialProgressRef.current) return;
+
+      [railRef.current, gridRef.current].forEach((container) => {
+        if (!container) return;
+        const el = container.querySelector(`[data-stage-id="${stage.id}"]`);
+        if (!el) return;
+        gsap.fromTo(
+          el,
+          { scale: 0.92, opacity: 0.5 },
+          { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.4)" },
+        );
+      });
+    });
+  }, [progress, prefersReducedMotion, isProcessing]);
+
+  // GSAP: pulse glow when active stage changes
+  useEffect(() => {
+    if (prefersReducedMotion || !isProcessing) return;
+
+    [railRef.current, gridRef.current].forEach((container) => {
+      if (!container) return;
+      const el = container.querySelector(`[data-stage-id="${currentStageId}"]`);
+      if (!el) return;
+      gsap.fromTo(
+        el,
+        { boxShadow: "0 0 0px rgba(0,255,255,0)" },
+        {
+          boxShadow: "0 0 22px rgba(0,255,255,0.5)",
+          duration: 0.4,
+          yoyo: true,
+          repeat: 1,
+          ease: "sine.inOut",
+        },
+      );
+    });
+  }, [currentStageId, prefersReducedMotion, isProcessing]);
+
+  // Auto-scroll mobile rail to active stage
+  useEffect(() => {
+    if (!railRef.current) return;
+    const card = railRef.current.querySelector(`[data-stage-id="${currentStageId}"]`);
+    if (card) card.scrollIntoView({ inline: "center", behavior: "smooth" });
+  }, [currentStageId]);
+
   const expandedIndex = STAGES.findIndex((s) => s.id === expandedStageId);
   const remaining = Math.max(runtimeEstimate.totalSeconds - elapsedSeconds, 0);
 
   return (
     <div className="relative">
-      {/* Vertical Spine — background track */}
-      <div className="absolute left-[18px] sm:left-[22px] top-0 bottom-0 w-px bg-[var(--border-color)]" />
-      {/* Vertical Spine — progress fill */}
+      {/* Vertical Spine — hidden on small phones to reclaim content width */}
+      <div className="hidden sm:block absolute left-[22px] top-0 bottom-0 w-px bg-[var(--border-color)]" />
       <div
-        className="absolute left-[18px] sm:left-[22px] top-0 w-px origin-top transition-transform duration-1000 ease-out"
+        className="hidden sm:block absolute left-[22px] top-0 w-px origin-top transition-transform duration-1000 ease-out"
         style={{
           backgroundColor: "var(--accent-cyan)",
           transform: `scaleY(${Math.min(progress / 100, 1)})`,
@@ -382,7 +440,7 @@ export function ProcessingStatus({
         }}
       />
 
-      <div className="space-y-6 pl-10 sm:pl-12">
+      <div className="space-y-6 sm:pl-12">
         {/* ── Section 1: Agent ── */}
         <div
           className="relative animate-in fade-in slide-in-from-bottom-4 duration-500"
@@ -464,7 +522,7 @@ export function ProcessingStatus({
             />
 
             {/* Desktop: 5-col grid */}
-            <div className="hidden lg:grid grid-cols-5 gap-3">
+            <div ref={gridRef} className="hidden lg:grid grid-cols-5 gap-3">
               {STAGES.map((stage, index) => (
                 <StageCard
                   key={stage.id}
