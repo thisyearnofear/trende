@@ -8,6 +8,9 @@ dotenv.config();
 
 async function main() {
     const mnemonic = process.env.MNEMONIC;
+    const attestApiToken = (process.env.ATTEST_API_TOKEN || '').trim();
+    const rateWindowSecs = Number(process.env.ATTEST_RATE_LIMIT_WINDOW_SECS ?? 60);
+    const maxRequestsPerWindow = Number(process.env.ATTEST_RATE_LIMIT_MAX_REQUESTS ?? 60);
 
     if (!mnemonic) {
         console.error('MNEMONIC environment variable is not set');
@@ -24,6 +27,34 @@ async function main() {
     }
 
     const server = Fastify({ logger: true });
+    const ipRateLimit = new Map<string, { count: number; resetAt: number }>();
+
+    function clientIp(request: any): string {
+        const forwardedFor = request.headers?.['x-forwarded-for'];
+        if (typeof forwardedFor === 'string' && forwardedFor.length > 0) {
+            return forwardedFor.split(',')[0].trim();
+        }
+        return request.ip || request.socket?.remoteAddress || 'unknown';
+    }
+
+    function isRateLimited(ip: string): boolean {
+        const now = Date.now();
+        const windowMs = Math.max(1, rateWindowSecs) * 1000;
+        const max = Math.max(1, maxRequestsPerWindow);
+        const current = ipRateLimit.get(ip);
+
+        if (!current || now >= current.resetAt) {
+            ipRateLimit.set(ip, { count: 1, resetAt: now + windowMs });
+            return false;
+        }
+
+        if (current.count >= max) {
+            return true;
+        }
+
+        current.count += 1;
+        return false;
+    }
 
     // Enable CORS for API access
     server.register(require('@fastify/cors'), {
@@ -64,6 +95,19 @@ async function main() {
     // Attestation endpoint for arbitrary payloads
     server.post('/attest', async (request, reply) => {
         try {
+            if (attestApiToken) {
+                const authHeader = String(request.headers.authorization || '');
+                const expected = `Bearer ${attestApiToken}`;
+                if (authHeader !== expected) {
+                    return reply.code(401).send({ error: 'Unauthorized' });
+                }
+            }
+
+            const ip = clientIp(request);
+            if (isRateLimited(ip)) {
+                return reply.code(429).send({ error: 'Rate limit exceeded' });
+            }
+
             const body = request.body as any;
             const { request_id, payload, generated_at } = body;
 

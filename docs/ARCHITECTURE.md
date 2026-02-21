@@ -181,6 +181,7 @@ ATTESTATION_STRICT_MODE=true
 # TEE Service Endpoints
 EIGEN_ATTEST_URL=https://eigen-attest.famile.xyz/attest
 EIGEN_HEALTH_URL=https://eigen-attest.famile.xyz/health
+EIGEN_ATTEST_TOKEN=replace_me_secure_token
 
 # Retry Configuration
 EIGEN_ATTEST_TIMEOUT_SECS=10
