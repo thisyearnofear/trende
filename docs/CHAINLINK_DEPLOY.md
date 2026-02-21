@@ -54,3 +54,9 @@ CHAINLINK_SUBSCRIPTION_ID=...
 ## 6. Verification
 
 Your backend can now trigger real on-chain verification requests whenever `ChainlinkConnector` is selected in a run.
+
+## Troubleshooting
+
+- **Missing Results**: If Chainlink queries return 0 results despite successful logs, ensure your connector is returning valid `TrendItem` objects with **string IDs**. The backend validation pipeline drops items with `null` IDs (Fixed in `0de9ab9`).
+- **Gas Failures**: Ensure your subscription is funded with LINK (at least 2-3 LINK for testing).
+- **Unauthorized Consumer**: If transactions revert, double-check that you added the consumer contract address to your subscription in the Chainlink Functions UI.

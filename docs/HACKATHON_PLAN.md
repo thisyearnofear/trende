@@ -35,17 +35,18 @@
 
 ## Roadmap & Milestones
 
-| Date | Milestone | Description |
-|------|-----------|-------------|
-| **Feb 21** | **Planning & Setup** | Finalize architecture and register for the hackathon. |
-| **Feb 22-23** | **Functions Integration** | Implement Chainlink Functions for GDELT and CoinGecko. |
-| **Feb 24-25** | **CRE Migration** | Port `ConsensusEngine` to Chainlink Runtime Environment. |
-| **Feb 26** | **Oracle Contract** | Deploy the "Meme Oracle" Solidity contract on Base/Monad Testnet. |
-| **Feb 27-28** | **E2E Testing** | Connect the frontend to the on-chain oracle data. |
-| **Mar 1** | **Submission** | Finalize video demo and technical documentation. |
+| Date | Milestone | Description | Status |
+|------|-----------|-------------|--------|
+| **Feb 21** | **Planning & Setup** | Finalize architecture and register for the hackathon. | ✅ Done |
+| **Feb 22-23** | **Functions Integration** | Implement Chainlink Functions for GDELT and CoinGecko. | ✅ Backend Live |
+| **Feb 24-25** | **CRE Migration** | Port `ConsensusEngine` to Chainlink Runtime Environment. | 🚧 In Progress |
+| **Feb 26** | **Oracle Contract** | Deploy the "Meme Oracle" Solidity contract on Base/Monad Testnet. | ⏳ Pending |
+| **Feb 27-28** | **E2E Testing** | Connect the frontend to the on-chain oracle data. | ⏳ Pending |
+| **Mar 1** | **Submission** | Finalize video demo and technical documentation. | ⏳ Pending |
 
 ## Success Metrics for Hackathon
-- [ ] 100% Verifiable Data Sourcing for at least 2 platforms.
+- [x] Backend Integration for Chainlink Functions (Connectors wired & verified).
+- [ ] 100% Verifiable Data Sourcing for at least 2 platforms (On-chain tx confirmation).
 - [ ] Consensus Report generated and signed within CRE.
 - [ ] At least one successful prediction market resolution via Trende Oracle.
 - [ ] Technical post-mortem/guide on "Building Verifiable AI Agents with CRE".
