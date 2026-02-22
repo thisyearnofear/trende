@@ -11,6 +11,7 @@ Detailed guides and specifications are available in the [./docs/](./docs/) direc
 - **[ACP Integration](./docs/ACP_GUIDE.md)**: Guide for Virtuals Protocol's Agent Commerce Protocol.
 - **[Roadmap](./docs/ROADMAP.md)**: Development phases and future milestones.
 - **[A2A Integration](./docs/skills/alpha.md)**: Integrating Trende with other agents (Verifiable Alpha).
+- **[Agentic UX Shipped](./docs/AGENTIC_UX.md)**: Deploy Agent flow, Oracle status banner, Sentinel autonomy loop, decision feed, and A2A demo UX.
 
 ## 🚀 Quick Start
 
@@ -45,6 +46,7 @@ Trende is built for the agent-to-agent economy:
 - **llms.txt**: [Master Discovery File](./llms.txt) for LLM-based agents.
 - **Verifiable Output**: Every analysis produces an **Attestation Payload** signed by a TEE.
 - **Settlement**: Native **X402 (EIP-3009)** support for automated intelligence purchases.
+- **Agentic UX**: Live "Deploy Agent" dispatch, visible on-chain oracle state, autonomous sentinel-triggered settlement, and copyable A2A invocation payloads.
 
 ## 🛡️ Core Principles
 
@@ -64,6 +66,7 @@ Trende uses **Chainlink Functions** and the **Chainlink Runtime Environment (CRE
 ### Verifiable Features
 1. **Data Sourcing**: GDELT & CoinGecko data fetched via Chainlink Functions.
 2. **Oracle**: `TrendeOracle` contract for on-chain trend resolution.
+3. **Autonomous Settlement**: Sentinel loop scans staged markets and triggers resolution requests without additional user clicks.
 
 ## ✅ Production Ops
 

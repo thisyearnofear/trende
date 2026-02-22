@@ -41,7 +41,7 @@ States:
 ### ✅ #3 — Sentinel Auto-Resolve Loop (True Backend Autonomy)
 **Problem**: Nothing happens unless a human presses a button. Judges need to see autonomous action.
 **Fix**: Background asyncio task in the `lifespan` context that:
-1. Every 60s, scans for completed research tasks where `oracle_market_id` is set but market is not yet resolved.
+1. Every 90s, scans for completed research tasks where `oracle_market_id` is set but market is not yet resolved.
 2. Automatically calls `resolve_market` via `ChainlinkService`.
 3. Logs the autonomous action as a system-generated `AgentAction`.
 
@@ -90,5 +90,5 @@ States:
 | ENHANCEMENT FIRST | All changes are edits to existing components |
 | DRY | Sentinel reuses ChainlinkService; Oracle banner reuses `actions` state |
 | MODULAR | Sentinel is a standalone coroutine; Oracle banner is a derived view |
-| PERFORMANT | Sentinel uses exponential polling, not a tight loop |
+| PERFORMANT | Sentinel uses fixed-interval background polling (90s), not a tight loop |
 | CLEAN | Each concern (sentinel / oracle UX / A2A) is clearly separated |

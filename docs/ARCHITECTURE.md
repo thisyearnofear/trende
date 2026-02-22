@@ -189,9 +189,19 @@ curl -X POST https://api.trende.famile.xyz/api/attest/verify \
 ### Market Resolution Flow
 
 1. **Market Creation**: An agent stages a prediction market on-chain via the `ChainlinkService` by calling `createMarket`.
-2. **Resolution Trigger**: When the trend's designated duration ends, the backend agent initiates settlement by calling `resolveMarket`.
+2. **Sentinel Monitoring Loop**: A backend asyncio sentinel scans staged markets on a fixed cadence (currently every 90 seconds) and detects markets ready for settlement.
+3. **Autonomous Resolution Trigger**: When the trend's designated duration ends, the sentinel initiates settlement by calling `resolveMarket` automatically.
 3. **Decentralized Evaluation**: The Chainlink Decentralized Oracle Network (DON) executes the `oracle-resolution.js` script. This script independently queries Trende's API for the final aggregated AI consensus score.
 4. **On-Chain Settlement**: The DON returns a structured `score|summary` string. The `TrendeOracle` contract decodes this payload using `splitResponse` and irrevocably settles the on-chain market.
+
+### Agentic UX Surface
+
+The frontend exposes this autonomous flow directly:
+
+1. **Deploy Agent command bar** in mission input.
+2. **Oracle Status Banner** in Forge (staged -> processing -> resolved with explorer link).
+3. **Agent Decision Feed** in processing telemetry.
+4. **A2A demo payload/curl** in Forge manifest modal for external agent interoperability.
 
 ---
 

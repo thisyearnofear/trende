@@ -107,9 +107,18 @@ Trende uses a specialized `TrendeOracle` contract and a JavaScript resolution sc
 3. **Automated AI Consensus**: The `oracle-resolution.js` script fetches the consensus from the Trende API, verifies the agreement score, and returns it to the oracle.
 4. **On-Chain Settlement**: `TrendeOracle.fulfillRequest` decodes the result and updates the market status to `resolved=true`.
 
+### Sentinel Autonomy Layer
+
+Production backend runs a sentinel loop that periodically scans staged markets and requests resolution automatically when they mature.
+
+- Cadence: currently every 90 seconds.
+- No manual UI action required after staging.
+- UI reflects status in the Forge Oracle Status Banner with explorer links.
+
 ## Troubleshooting
 
 - **Missing Results**: Ensure your connector returns valid `TrendItem` objects with **string IDs**. The backend drops items with `null` IDs.
 - **Gas Failures**: Ensure your subscription is funded with LINK (at least 2-3 LINK per network).
 - **Unauthorized Consumer**: Double-check that you added the consumer contract address to your subscription in the Chainlink Functions UI.
 - **Wrong DON ID**: The deploy script auto-selects based on chain ID. If deploying manually, verify the DON ID matches the network.
+- **No Autonomous Resolve**: Verify backend is on latest commit and sentinel loop is running (check `trende-backend` logs for sentinel scan and resolve events).

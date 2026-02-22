@@ -51,6 +51,11 @@
 
 - [x] **Editorial Engine**: Transform analysis reports into published articles
 - [x] **Paragraph Integration**: One-click publishing to Paragraph.xyz
+- [x] **Deploy Agent UX**: Agent briefing language + deploy stateful dispatch flow
+- [x] **Oracle Status Banner**: Live staged/resolution/resolved status in Forge
+- [x] **Sentinel Loop**: Autonomous backend market resolution trigger
+- [x] **Agent Decision Feed**: Timestamped reasoning log + proactive suggestions
+- [x] **A2A Demo Surface**: Copyable curl + manifest visibility for agent-to-agent calls
 - [ ] **Token Launcher**: One-click token creation from meme pages
 - [ ] **Knowledge Sites**: Dynamic microsites for tracked trends
 - [ ] **Signal Scout**: Ongoing trend monitoring with alerts
