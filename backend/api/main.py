@@ -39,7 +39,80 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     await resume_interrupted_tasks()
     if acp_service.enabled:
         asyncio.create_task(acp_service.start_listening())
+    # Start sentinel: autonomous oracle market resolution loop
+    asyncio.create_task(_sentinel_loop())
     yield
+
+
+async def _sentinel_loop() -> None:
+    """
+    Autonomous agent sentinel that scans for completed research where an oracle
+    market has been staged but not yet resolved, then triggers resolution via
+    Chainlink Functions without any human action.
+
+    This is Trende's proof of genuine autonomy — the agent acts on its own.
+    Poll interval: 90s (avoids hammering RPC, gives markets time to mature).
+    """
+    await asyncio.sleep(30)  # Initial grace period for server startup
+    while True:
+        try:
+            await _sentinel_tick()
+        except Exception as exc:
+            print(f"[SENTINEL] ⚠️ Tick error (non-fatal): {exc}")
+        await asyncio.sleep(90)
+
+
+async def _sentinel_tick() -> None:
+    """Single sentinel evaluation cycle."""
+    from backend.services.chainlink_service import chainlink_service  # lazy import
+
+    if not chainlink_service.is_configured():
+        return  # Skip silently if Chainlink not configured
+
+    # Find tasks with staged markets not yet resolved
+    all_tasks = repo.get_all_tasks()
+    eligible = [
+        t for t in all_tasks
+        if t.get("status") == QueryStatus.COMPLETED
+        and t.get("oracle_market_id")
+        and not t.get("oracle_resolved")
+    ]
+
+    if not eligible:
+        return
+
+    print(f"[SENTINEL] 🔍 Found {len(eligible)} task(s) eligible for oracle resolution.")
+
+    for task in eligible[:3]:  # Process at most 3 per tick to avoid overloading
+        task_id = task.get("task_id")
+        market_id = task.get("oracle_market_id")
+
+        # Check if a resolve action is already in flight
+        existing_actions = repo.get_actions_for_task(task_id) if task_id else []
+        already_resolving = any(
+            a.get("action_type") == "resolve_oracle_market"
+            and a.get("status") in ("queued", "running", "succeeded")
+            for a in existing_actions
+        )
+        if already_resolving:
+            continue
+
+        print(f"[SENTINEL] ⚙️ Auto-resolving market {market_id} for task {task_id}")
+
+        # Create a system-initiated resolve action
+        action_id = str(uuid.uuid4())
+        created = repo.create_action(
+            action_id=action_id,
+            action_type="resolve_oracle_market",
+            task_id=task_id,
+            caller_address="sentinel://auto",
+            idempotency_key=f"sentinel-{task_id}-{market_id}",
+            input_payload={"market_id": market_id, "source": "sentinel"},
+        )
+        if created:
+            asyncio.create_task(run_agent_action(action_id))
+            print(f"[SENTINEL] ✅ Dispatched resolution action {action_id} for market {market_id}")
+
 
 
 app = FastAPI(title="Trende Agent API", lifespan=lifespan)

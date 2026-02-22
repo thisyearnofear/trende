@@ -90,6 +90,21 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const [isMonitoring, setIsMonitoring] = useState(false);
     const [actions, setActions] = useState<AgentAction[]>([]);
     const [selectedActionPayload, setSelectedActionPayload] = useState<AgentAction | null>(null);
+    const [copiedCurl, setCopiedCurl] = useState(false);
+
+    // Derived oracle state from actions — DRY, no new state needed
+    const oracleAction = useMemo(() =>
+        actions.find(a => a.action_type === 'stage_oracle_market' || a.action_type === 'resolve_oracle_market'),
+        [actions]
+    );
+    const oracleResolutionAction = useMemo(() =>
+        actions.find(a => a.action_type === 'resolve_oracle_market' && a.status === 'succeeded'),
+        [actions]
+    );
+    const oracleStaged = useMemo(() =>
+        actions.some(a => a.action_type === 'stage_oracle_market' && a.status === 'succeeded'),
+        [actions]
+    );
 
     const isMeme = mode === 'meme';
     const providers = useMemo(() => consensus?.providers || [], [consensus?.providers]);
@@ -277,6 +292,42 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
 
     return (
         <>
+            {/* Oracle Status Banner — derived from actions state, always visible when market is staged */}
+            {oracleAction && (() => {
+                const txHash = oracleAction.result_payload?.tx_hash ? String(oracleAction.result_payload.tx_hash) : null;
+                return (
+                    <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border text-xs font-mono transition-all ${oracleResolutionAction
+                        ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                        : oracleAction.status === 'running' || oracleAction.action_type === 'resolve_oracle_market'
+                            ? 'bg-blue-950/40 border-blue-500/40 text-blue-300 animate-pulse'
+                            : 'bg-slate-900/60 border-amber-500/30 text-amber-300'
+                        }`}>
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${oracleResolutionAction ? 'bg-emerald-400' :
+                            oracleAction.status === 'running' ? 'bg-blue-400 animate-pulse' : 'bg-amber-400'
+                            }`} />
+                        <span className="flex-1">
+                            {oracleResolutionAction
+                                ? `✅ Settled on Arbitrum Sepolia — Chainlink DON consensus recorded on-chain`
+                                : oracleAction.action_type === 'resolve_oracle_market'
+                                    ? `🔵 Chainlink DON processing consensus... awaiting oracle callback`
+                                    : `🟡 Market staged on Arbitrum Sepolia — awaiting resolution trigger`
+                            }
+                        </span>
+                        {txHash && (
+                            <a
+                                href={`https://sepolia.arbiscan.io/tx/${txHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 underline underline-offset-2 opacity-70 hover:opacity-100 shrink-0"
+                            >
+                                <ExternalLink className="w-3 h-3" />
+                                Arbiscan
+                            </a>
+                        )}
+                    </div>
+                );
+            })()}
+
             <div className="space-y-6 animate-fade-up">
                 <div
                     className={`p-6 border transition-all duration-500 ${isSoft ? 'soft-ui-out border-0' : `rounded-3xl shadow-xl bg-slate-900/80 ${isMeme ? 'border-cyan-500/30' : 'border-emerald-500/30'}`}`}
@@ -1081,15 +1132,49 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                         <div className="space-y-4">
                             <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700">
                                 <p className="text-sm text-slate-300 mb-2">
-                                    This signed JSON manifest is intended for external launch agents.
-                                    It contains the verifiable thesis link for the <strong>nad.fun</strong> metadata contract.
+                                    This signed JSON manifest is intended for external launch agents operating in the A2A economy.
+                                    Any agent with the query ID can fetch and verify this intelligence payload.
                                 </p>
-                                <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-500/10 w-fit px-2 py-1 rounded">
-                                    <ShieldCheck className="w-3 h-3" /> EigenCompute Attested
+                                <div className="flex gap-2 flex-wrap">
+                                    <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-500/10 w-fit px-2 py-1 rounded">
+                                        <ShieldCheck className="w-3 h-3" /> EigenCompute Attested
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px] font-bold text-cyan-400 uppercase tracking-widest bg-cyan-500/10 w-fit px-2 py-1 rounded">
+                                        <Link2 className="w-3 h-3" /> A2A Compatible
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="rounded-2xl bg-slate-950 border border-slate-800 p-4 max-h-80 overflow-auto">
+                            {/* A2A Curl Demo — copy this to call Trende from another agent */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Agent Call (curl)</span>
+                                    <button
+                                        onClick={() => {
+                                            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.trende.famile.xyz';
+                                            const curlCmd = `curl -X GET "${apiUrl}/api/agent/alpha/${queryId}" \\\n  -H "X-Agent-Id: your-agent-id" \\\n  -H "X-Payment: x402-payment-token"`;
+                                            navigator.clipboard.writeText(curlCmd);
+                                            setCopiedCurl(true);
+                                            showToast('curl command copied!', 'success');
+                                            setTimeout(() => setCopiedCurl(false), 2000);
+                                        }}
+                                        className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-cyan-400 transition-colors"
+                                    >
+                                        {copiedCurl ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                        {copiedCurl ? 'Copied!' : 'Copy'}
+                                    </button>
+                                </div>
+                                <div className="rounded-xl bg-slate-950 border border-slate-800/80 p-3 font-mono text-[10px] text-slate-400 leading-relaxed">
+                                    <span className="text-emerald-400">GET</span>{' '}
+                                    <span className="text-cyan-300">/api/agent/alpha/<span className="text-amber-300">{queryId.slice(0, 8)}...</span></span>
+                                    <br />
+                                    <span className="text-slate-600">X-Agent-Id:</span> your-agent-id
+                                    <br />
+                                    <span className="text-slate-600">X-Payment:</span> x402-token {'// Optional: enables premium alpha'}
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl bg-slate-950 border border-slate-800 p-4 max-h-64 overflow-auto">
                                 {manifestData ? (
                                     <pre className="text-xs text-cyan-300 font-mono leading-relaxed">
                                         {JSON.stringify(manifestData, null, 2)}
@@ -1119,9 +1204,18 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                         Copied!
                                     </>
                                 ) : (
-                                    'Copy Manifest'
+                                    'Copy Manifest JSON'
                                 )}
                             </button>
+                            <a
+                                href={`${process.env.NEXT_PUBLIC_API_URL || 'https://api.trende.famile.xyz'}/api/agent/alpha/${queryId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-3 rounded-2xl border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-all flex items-center gap-2 text-sm font-bold"
+                            >
+                                <ExternalLink className="w-4 h-4" />
+                                Live
+                            </a>
                         </div>
                     </div>
                 </div>

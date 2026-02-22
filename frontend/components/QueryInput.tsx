@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { Send, Sparkles, Loader2, Compass, Layers, Zap, Shield, BarChart3, Settings2 } from 'lucide-react';
+import { Sparkles, Loader2, Compass, Layers, Zap, Shield, BarChart3, Settings2, Rocket, Activity } from 'lucide-react';
 import { QueryRequest } from '@/lib/types';
 import { estimateMissionRuntime } from '@/lib/runtimeEstimate';
 import { Card, Button, Input, Badge, Tooltip } from './DesignSystem';
@@ -171,16 +171,16 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                 )}
               </div>
               <div>
-                <h3 className="text-base font-black uppercase tracking-[0.2em] text-white">Mission Objective</h3>
+                <h3 className="text-base font-black uppercase tracking-[0.2em] text-white">Agent Briefing</h3>
                 <p className="text-[10px] font-mono text-white/30 uppercase tracking-[0.3em]">
-                  {activeProfile ? `PROFILE: ${activeProfile.label}` : 'CUSTOM CONFIGURATION'}
+                  {activeProfile ? `PROFILE: ${activeProfile.label}` : 'CUSTOM DIRECTIVE'}
                 </p>
               </div>
             </div>
             <div className="hidden sm:flex items-center gap-3">
               <div className="px-3 py-1 flex items-center gap-2 rounded-full glass border-emerald-500/20 text-[10px] font-black uppercase text-emerald-400 tracking-widest">
-                <Shield className="w-3 h-3" />
-                TEE Enclave Ready
+                <Activity className="w-3 h-3 animate-pulse" />
+                Agent Online
               </div>
             </div>
           </div>
@@ -190,7 +190,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400 opacity-60" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Select Intelligence Profile</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Select Agent Profile</span>
               </div>
               <button
                 type="button"
@@ -247,7 +247,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
               <textarea
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
-                placeholder="Describe your research thesis... e.g., 'Analyze the intersection of DePIN and AI compute market narratives across tech communities.'"
+                placeholder="Brief your agent... e.g., 'Investigate DePIN + AI compute convergence. Identify where builder momentum diverges from market narrative across HN, CoinGecko, and Web sources.'"
                 disabled={disabled}
                 rows={4}
                 className="w-full bg-black/40 glass border-white/10 rounded-2xl p-6 text-base font-medium text-white placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-all resize-none shadow-inner"
@@ -264,12 +264,12 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   {isLoading ? (
                     <div className="flex items-center gap-3">
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="font-black uppercase tracking-widest text-xs">Processing</span>
+                      <span className="font-black uppercase tracking-widest text-xs">Agent Running</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-3">
-                      <Zap className="w-4 h-4 fill-white" />
-                      <span className="font-black uppercase tracking-widest text-xs">Execute Mission</span>
+                      <Rocket className="w-4 h-4" />
+                      <span className="font-black uppercase tracking-widest text-xs">Deploy Agent</span>
                     </div>
                   )}
                 </Button>

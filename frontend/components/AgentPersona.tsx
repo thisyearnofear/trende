@@ -17,6 +17,8 @@ interface AgentPersonaProps {
   progress?: number;
   currentStage?: string;
   message?: string;
+  agreementScore?: number;  // 0-1, used for proactive suggestion
+  onSuggestOracle?: () => void;  // called when agent suggests oracle staging
 }
 
 // Trende's personality-driven messages based on state
@@ -88,7 +90,9 @@ function NeuralFlux() {
 export function AgentPersona({
   status,
   progress = 0,
-  message
+  message,
+  agreementScore = 0,
+  onSuggestOracle,
 }: AgentPersonaProps) {
   const { isSoft } = useTheme();
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -100,6 +104,9 @@ export function AgentPersona({
   const [isHovered, setIsHovered] = useState(false);
   const [messageTick, setMessageTick] = useState(0);
   const lastTargetMessageRef = useRef('');
+  const [decisionLog, setDecisionLog] = useState<{ text: string; ts: string }[]>([]);
+  const [showDecisionLog, setShowDecisionLog] = useState(false);
+  const [suggestShown, setSuggestShown] = useState(false);
 
   useEffect(() => {
     if (status !== 'processing') return;
@@ -108,6 +115,20 @@ export function AgentPersona({
     const interval = setInterval(() => setMessageTick((n) => n + 1), intervalMs);
     return () => clearInterval(interval);
   }, [status, prefersReducedMotion]);
+
+  // Build decision log from processing messages
+  useEffect(() => {
+    if (status !== 'processing' || !displayMessage || displayMessage === decisionLog[decisionLog.length - 1]?.text) return;
+    const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setDecisionLog(prev => [...prev.slice(-19), { text: displayMessage, ts }]);
+  }, [displayMessage, status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Proactive oracle suggestion on completion
+  useEffect(() => {
+    if (status === 'complete' && agreementScore >= 0.7 && onSuggestOracle && !suggestShown) {
+      setSuggestShown(true);
+    }
+  }, [status, agreementScore, onSuggestOracle, suggestShown]);
 
   // Animate avatar based on status
   useEffect(() => {
@@ -259,7 +280,53 @@ export function AgentPersona({
               ))}
             </div>
           )}
+          {decisionLog.length > 0 && (
+            <button
+              onClick={() => setShowDecisionLog(s => !s)}
+              className="ml-auto text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-cyan-400/60 transition-colors"
+            >
+              {showDecisionLog ? 'Hide Log' : `Decision Log (${decisionLog.length})`}
+            </button>
+          )}
         </div>
+
+        {/* Proactive suggestion — agent speaks first */}
+        {suggestShown && onSuggestOracle && (
+          <div className="mt-3 flex items-start gap-3 p-3 rounded-xl bg-cyan-500/5 border border-cyan-500/20 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <p className="text-[10px] font-mono text-cyan-300 leading-relaxed">
+                High signal consensus detected ({Math.round(agreementScore * 100)}% agreement). Should I stage this on-chain for verifiable settlement?
+              </p>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => { onSuggestOracle(); setSuggestShown(false); }}
+                  className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors"
+                >
+                  Yes, Stage Oracle
+                </button>
+                <button
+                  onClick={() => setSuggestShown(false)}
+                  className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg text-white/20 hover:text-white/40 transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Scrollable decision log */}
+        {showDecisionLog && decisionLog.length > 0 && (
+          <div className="mt-3 max-h-32 overflow-y-auto space-y-1 font-mono text-[9px] border-t border-white/5 pt-3">
+            {decisionLog.map((entry, i) => (
+              <div key={i} className="flex gap-2 text-white/30 hover:text-white/50 transition-colors">
+                <span className="text-cyan-400/40 shrink-0">{entry.ts}</span>
+                <span>{entry.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
