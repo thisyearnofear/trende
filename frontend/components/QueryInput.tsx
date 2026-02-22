@@ -185,12 +185,12 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
             </div>
           </div>
 
-          {/* Profile Selectors */}
+          {/* Starter Missions */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400 opacity-60" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Select Agent Profile</span>
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400 opacity-60" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Starter Missions</span>
               </div>
               <button
                 type="button"
@@ -202,42 +202,22 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {MISSION_PROFILES.map((profile) => {
-                const active = activeProfile?.id === profile.id;
-                return (
+            {!showAdvanced && (
+              <div className="flex flex-col sm:flex-row gap-3">
+                {SUGGESTIONS.slice(0, 3).map((suggestion) => (
                   <button
-                    key={profile.id}
+                    key={suggestion}
                     type="button"
-                    onClick={() => applyProfile(profile.id)}
+                    onClick={() => setIdea(suggestion)}
                     disabled={disabled}
-                    className={cn(
-                      "flex flex-col text-left p-5 transition-all duration-500 glass relative overflow-hidden group/card rounded-2xl",
-                      active ? "border-white/30" : "border-white/5 opacity-60 hover:opacity-100 hover:border-white/10"
-                    )}
+                    className="flex-1 text-xs font-mono px-4 py-3 rounded-2xl glass border-white/10 text-white/50 hover:text-white/90 hover:border-cyan-400/50 hover:bg-white/10 transition-all text-left flex flex-col justify-between min-h-[80px]"
                   >
-                    {active && <div className="absolute inset-0 bg-white/[0.03] animate-pulse" />}
-                    <div className="flex items-center gap-3 mb-3 relative z-10">
-                      <div className={cn(
-                        "w-8 h-8 rounded-lg flex items-center justify-center border transition-all duration-500",
-                        active ? "bg-white/10 border-white/20" : "bg-white/5 border-white/10"
-                      )}>
-                        <profile.icon className="w-4 h-4" style={{ color: active ? profile.accent : 'rgba(255,255,255,0.3)' }} />
-                      </div>
-                      <span className={cn(
-                        "text-xs font-black uppercase tracking-widest transition-colors duration-500",
-                        active ? "text-white" : "text-white/40"
-                      )}>{profile.label}</span>
-                    </div>
-                    <p className="text-[10px] leading-relaxed font-mono text-white/30 relative z-10">{profile.description}</p>
-
-                    {active && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: profile.accent }} />
-                    )}
+                    <span className="text-cyan-400 font-black uppercase tracking-[0.2em] text-[10px] block mb-2 opacity-60">One-Click</span>
+                    <span className="line-clamp-3 leading-relaxed">{suggestion}</span>
                   </button>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Input Area */}
@@ -279,7 +259,50 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
 
           {showAdvanced && (
             <div className="space-y-8 pt-6 border-t border-white/5 animate-in fade-in slide-in-from-top-4 duration-500">
-              {/* Platform Selectors omitted for brevity in this replacement chunk, but I will make sure fixed ones aren't lost */}
+
+              {/* Profile Selectors moved here */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 opacity-60" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Select Agent Profile</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {MISSION_PROFILES.map((profile) => {
+                    const active = activeProfile?.id === profile.id;
+                    return (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        onClick={() => applyProfile(profile.id)}
+                        disabled={disabled}
+                        className={cn(
+                          "flex flex-col text-left p-4 transition-all duration-500 glass relative overflow-hidden group/card rounded-2xl",
+                          active ? "border-white/30" : "border-white/5 opacity-60 hover:opacity-100 hover:border-white/10"
+                        )}
+                      >
+                        {active && <div className="absolute inset-0 bg-white/[0.03] animate-pulse" />}
+                        <div className="flex items-center gap-3 mb-2 relative z-10">
+                          <div className={cn(
+                            "w-6 h-6 rounded-lg flex items-center justify-center border transition-all duration-500",
+                            active ? "bg-white/10 border-white/20" : "bg-white/5 border-white/10"
+                          )}>
+                            <profile.icon className="w-3 h-3" style={{ color: active ? profile.accent : 'rgba(255,255,255,0.3)' }} />
+                          </div>
+                          <span className={cn(
+                            "text-[10px] font-black uppercase tracking-widest transition-colors duration-500",
+                            active ? "text-white" : "text-white/40"
+                          )}>{profile.label}</span>
+                        </div>
+                        <p className="text-[9px] leading-relaxed font-mono text-white/30 relative z-10">{profile.description}</p>
+                        {active && (
+                          <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: profile.accent }} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded bg-cyan-500/10 flex items-center justify-center">
@@ -399,35 +422,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
             </div>
           )}
 
-          {/* Suggestions - Collapsible */}
-          <div className="pt-4 border-t border-white/5">
-            <button
-              type="button"
-              onClick={() => setShowSuggestions(!showSuggestions)}
-              className="flex items-center gap-3 text-white/20 hover:text-white/40 transition-colors group/suggest"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest underline underline-offset-4">
-                {showSuggestions ? 'Collapse Exploration Paths' : 'Explore Sample Theses'}
-              </span>
-            </button>
 
-            {showSuggestions && (
-              <div className="flex flex-wrap gap-2 mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                {SUGGESTIONS.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => setIdea(suggestion)}
-                    disabled={disabled}
-                    className="text-[10px] font-mono px-3 py-1.5 rounded-lg glass border-white/5 text-white/40 hover:text-white hover:border-white/10 transition-all hover:bg-white/5"
-                  >
-                    {suggestion.slice(0, 50)}...
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
         </form>
       </Card>
     </div>

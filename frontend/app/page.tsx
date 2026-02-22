@@ -60,7 +60,7 @@ export default function Home() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showForgeInline, setShowForgeInline] = useState(false);
   const [briefOpen, setBriefOpen] = useState(true);
-  const [showCommons, setShowCommons] = useState(false);
+  const [showCommons, setShowCommons] = useState(true);
   const [commonsSearch, setCommonsSearch] = useState("");
   const [commonsVisibleCount, setCommonsVisibleCount] = useState(6);
   const { showToast } = useToast();
@@ -703,7 +703,7 @@ export default function Home() {
 
               <p className="text-[var(--text-secondary)] font-mono text-sm max-w-2xl mb-4">
                 <ScrambleText
-                  text="Run multi-platform research through verifiable TEE execution. Cross-reference signals, validate consensus, generate cryptographic attestations."
+                  text="Trende is an autonomous AI agent that investigates crypto narratives across the web and delivers verifiable market intelligence. Click a community report below to see what it can do, or deploy your own agent."
                   delay={0.8}
                   className="text-[var(--text-secondary)] font-mono text-sm max-w-2xl mb-4"
                 />
@@ -738,13 +738,6 @@ export default function Home() {
             </div>
           </Card>
         )}
-
-        {/* Query Input */}
-        <QueryInput
-          onSubmit={handleSubmit}
-          isLoading={isProcessing}
-          disabled={isProcessing}
-        />
 
         {/* Commons Snapshot */}
         <Card accent="emerald" className="p-4 sm:p-5">
@@ -885,6 +878,13 @@ export default function Home() {
             </div>
           )}
         </Card>
+
+        {/* Query Input */}
+        <QueryInput
+          onSubmit={handleSubmit}
+          isLoading={isProcessing}
+          disabled={isProcessing}
+        />
 
         {/* Processing Status */}
         {(isProcessing || status === "processing") && (
