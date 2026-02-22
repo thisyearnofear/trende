@@ -52,7 +52,7 @@
   --status-warning: #ffaa00;
   --status-error: #ff4444;
   --status-info: #00ffff;
-  
+
   /* Neumorphism / Soft UI */
   --soft-shadow-out: 6px 6px 12px #050505, -6px -6px 12px #0f0f0f;
   --soft-shadow-in: inset 6px 6px 12px #050505, inset -6px -6px 12px #0f0f0f;
@@ -70,8 +70,8 @@
 
   /* Text - Using HSL for better opacity support with Tailwind */
   --text-primary: hsl(0 0% 0%);
-  --text-secondary: hsl(0 0% 32%);
-  --text-muted: hsl(0 0% 64%);
+  --text-secondary: hsl(0 0% 20%);
+  --text-muted: hsl(0 0% 40%);
 
   /* Borders & Shadows */
   --border-color: #000000;
@@ -103,7 +103,8 @@
 }
 
 /* Override Tailwind's white/black for light mode */
-.light, .light body {
+.light,
+.light body {
   --tw-bg-opacity: 1;
   background-color: rgb(250 250 250 / var(--tw-bg-opacity));
 }
@@ -118,14 +119,14 @@
   --bg-tertiary: #d1d1d1;
 
   /* Text */
-  --text-primary: #444444;
-  --text-secondary: #666666;
-  --text-muted: #999999;
+  --text-primary: #1a1a1a;
+  --text-secondary: #333333;
+  --text-muted: #555555;
 
   /* Borders & Shadows */
   --border-color: transparent;
   --border-width: 0px;
-  --shadow-color: rgba(0,0,0,0.1);
+  --shadow-color: rgba(0, 0, 0, 0.1);
   --shadow-offset: 0px;
 
   /* Accents - Darker for soft theme to ensure good contrast on badges/buttons */
@@ -265,54 +266,66 @@ body {
 
 /* Glow animation for text - uses CSS variables for theme adaptation */
 @keyframes glow-pulse-cyan {
-  0%, 100% {
+
+  0%,
+  100% {
     text-shadow: 0 0 5px var(--accent-cyan),
-                 0 0 10px var(--accent-cyan),
-                 0 0 20px var(--accent-cyan);
+      0 0 10px var(--accent-cyan),
+      0 0 20px var(--accent-cyan);
   }
+
   50% {
     text-shadow: 0 0 10px var(--accent-cyan),
-                 0 0 20px var(--accent-cyan),
-                 0 0 40px var(--accent-cyan);
+      0 0 20px var(--accent-cyan),
+      0 0 40px var(--accent-cyan);
   }
 }
 
 @keyframes glow-pulse-emerald {
-  0%, 100% {
+
+  0%,
+  100% {
     text-shadow: 0 0 5px var(--accent-emerald),
-                 0 0 10px var(--accent-emerald),
-                 0 0 20px var(--accent-emerald);
+      0 0 10px var(--accent-emerald),
+      0 0 20px var(--accent-emerald);
   }
+
   50% {
     text-shadow: 0 0 10px var(--accent-emerald),
-                 0 0 20px var(--accent-emerald),
-                 0 0 40px var(--accent-emerald);
+      0 0 20px var(--accent-emerald),
+      0 0 40px var(--accent-emerald);
   }
 }
 
 @keyframes glow-pulse-amber {
-  0%, 100% {
+
+  0%,
+  100% {
     text-shadow: 0 0 5px var(--accent-amber),
-                 0 0 10px var(--accent-amber),
-                 0 0 20px var(--accent-amber);
+      0 0 10px var(--accent-amber),
+      0 0 20px var(--accent-amber);
   }
+
   50% {
     text-shadow: 0 0 10px var(--accent-amber),
-                 0 0 20px var(--accent-amber),
-                 0 0 40px var(--accent-amber);
+      0 0 20px var(--accent-amber),
+      0 0 40px var(--accent-amber);
   }
 }
 
 @keyframes glow-pulse-violet {
-  0%, 100% {
+
+  0%,
+  100% {
     text-shadow: 0 0 5px var(--accent-violet),
-                 0 0 10px var(--accent-violet),
-                 0 0 20px var(--accent-violet);
+      0 0 10px var(--accent-violet),
+      0 0 20px var(--accent-violet);
   }
+
   50% {
     text-shadow: 0 0 10px var(--accent-violet),
-                 0 0 20px var(--accent-violet),
-                 0 0 40px var(--accent-violet);
+      0 0 20px var(--accent-violet),
+      0 0 40px var(--accent-violet);
   }
 }
 
@@ -385,21 +398,21 @@ body {
   0% {
     box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4);
   }
+
   70% {
     box-shadow: 0 0 0 6px rgba(0, 255, 136, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(0, 255, 136, 0);
   }
 }
 
 .animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.05),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.05),
+      transparent);
   background-size: 200% 100%;
   animation: shimmer 3s infinite;
 }
@@ -408,6 +421,7 @@ body {
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
