@@ -48,6 +48,7 @@ export interface TrendItem {
   timestamp: string;
   relevanceScore?: number;
   embedHtml?: string;
+  isVerified?: boolean;
 }
 
 export interface TrendSummary {

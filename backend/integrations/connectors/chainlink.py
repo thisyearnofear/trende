@@ -38,8 +38,12 @@ return Functions.encodeString(JSON.stringify({
         timestamp = datetime.datetime.now(datetime.timezone.utc)
 
         tx_hash = request.get("tx_hash")
+        chain_info = chainlink_service.chain_info
+        explorer_url = chain_info.get("explorer", "https://sepolia.arbiscan.io")
+        chain_label = chain_info.get("label", "Arbitrum Sepolia" if chainlink_service.active_chain == "arbitrum-sepolia" else "Base Sepolia")
+
         details = (
-            f"On-chain Chainlink Functions request submitted: {tx_hash}"
+            f"On-chain verification request submitted to {chain_label}: {tx_hash}"
             if tx_hash
             else request.get("status", "Chainlink request not submitted.")
         )
@@ -52,7 +56,7 @@ return Functions.encodeString(JSON.stringify({
                 content=details,
                 author="Trende Chainlink Connector",
                 author_handle="chainlink",
-                url=f"https://sepolia.basescan.org/tx/{tx_hash}" if tx_hash else "https://functions.chain.link/base-sepolia",
+                url=f"{explorer_url}/tx/{tx_hash}" if tx_hash else f"https://functions.chain.link/{chainlink_service.active_chain}",
                 timestamp=timestamp,
                 metrics={},
                 raw_data=request,

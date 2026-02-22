@@ -4,9 +4,9 @@ import { useRef, useEffect, useState } from 'react';
 import { gsap } from 'gsap';
 import { useTheme } from './ThemeProvider';
 import { usePrefersReducedMotion } from './Motion';
-import { 
-  Bot, 
-  Shield, 
+import {
+  Bot,
+  Shield,
   Lock,
   Sparkles,
   Radio
@@ -76,10 +76,19 @@ function getProcessingMessage(progress: number): string {
   return messages[index];
 }
 
-export function AgentPersona({ 
-  status, 
-  progress = 0, 
-  message 
+function NeuralFlux() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20 z-0">
+      <div className="absolute -top-10 -left-10 w-40 h-40 bg-cyan-500 rounded-full blur-[60px] animate-pulse" />
+      <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-violet-500 rounded-full blur-[60px] animate-pulse" style={{ animationDelay: '1s' }} />
+    </div>
+  );
+}
+
+export function AgentPersona({
+  status,
+  progress = 0,
+  message
 }: AgentPersonaProps) {
   const { isSoft } = useTheme();
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -147,19 +156,19 @@ export function AgentPersona({
       message ||
       (status === 'processing'
         ? personaMessages.processing[
-            (Math.floor((progress / 100) * personaMessages.processing.length) + messageTick) %
-              personaMessages.processing.length
-          ] || getProcessingMessage(progress)
+        (Math.floor((progress / 100) * personaMessages.processing.length) + messageTick) %
+        personaMessages.processing.length
+        ] || getProcessingMessage(progress)
         : personaMessages[status][
-            Math.floor(Math.random() * personaMessages[status].length)
-          ]);
+        Math.floor(Math.random() * personaMessages[status].length)
+        ]);
 
     if (!targetMessage || targetMessage === lastTargetMessageRef.current) return;
     lastTargetMessageRef.current = targetMessage;
 
     setIsTyping(true);
     let currentIndex = 0;
-    
+
     // Smooth transition between messages if not empty
     const charMs = prefersReducedMotion ? 42 : 26;
     const typeInterval = setInterval(() => {
@@ -188,64 +197,65 @@ export function AgentPersona({
   const StatusIcon = config.icon;
 
   return (
-    <div 
-      ref={containerRef} 
-      className="flex flex-col items-center sm:flex-row sm:items-start gap-4 p-4 sm:p-6 bg-[var(--bg-secondary)] border-2 border-[var(--border-color)] transition-all duration-300" 
-      style={{ 
+    <div
+      ref={containerRef}
+      className="flex flex-col items-center sm:flex-row sm:items-start gap-4 p-5 sm:p-7 glass border-white/10 relative overflow-hidden transition-all duration-300 group"
+      style={{
         boxShadow: isSoft
           ? (isHovered ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
-          : (isHovered ? '8px 8px 0px 0px var(--accent-cyan)' : '4px 4px 0px 0px var(--shadow-color)'),
-        transform: !isSoft && isHovered ? 'translate(-2px, -2px)' : 'none'
+          : (isHovered ? '0 0 30px rgba(6, 182, 212, 0.15)' : 'none'),
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {status === 'processing' && <NeuralFlux />}
+
       {/* Avatar Container */}
-      <div className="relative shrink-0">
-        <div 
+      <div className="relative shrink-0 z-10">
+        <div
           ref={avatarRef}
-          className="w-16 h-16 sm:w-20 sm:h-20 bg-[var(--bg-tertiary)] border-2 border-[var(--border-color)] overflow-hidden flex items-center justify-center relative group"
+          className="w-20 h-20 sm:w-24 sm:h-24 bg-black/40 border border-white/10 rounded-2xl overflow-hidden flex items-center justify-center relative shadow-2xl transition-transform group-hover:scale-105"
         >
-          <div className="absolute inset-0 bg-gradient-to-tr from-[var(--accent-cyan)]/20 to-transparent" />
-          <Bot className="w-10 h-10 sm:w-12 h-12 text-[var(--accent-cyan)] z-10" />
-          
-          {/* Status badge on avatar */}
-          <div className={`absolute bottom-0 right-0 w-4 h-4 sm:w-5 sm:h-5 ${config.color} border-2 border-[var(--border-color)] z-20`} />
+          <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/20 via-transparent to-violet-500/20" />
+          <Bot className="w-12 h-12 sm:w-14 h-14 text-cyan-400 z-10 fill-cyan-400/5" />
+
+          {/* Status glow circle */}
+          <div className={`absolute bottom-2 right-2 w-4 h-4 rounded-full ${config.color} shadow-[0_0_12px_rgba(0,0,0,0.5)] border-2 border-white/20 z-20`} />
         </div>
       </div>
 
       {/* Message Content */}
-      <div className="flex-1 min-w-0 space-y-2">
+      <div className="flex-1 min-w-0 space-y-3 z-10">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-black uppercase tracking-widest text-[var(--accent-cyan)]">Agent // Trende</span>
-          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[10px] font-mono">
+          <span className="text-xs font-black uppercase tracking-[0.2em] text-cyan-400">Agent // Trende</span>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-white/60">
             <div className={`w-1.5 h-1.5 rounded-full ${config.color} animate-pulse`} />
-            <span className="text-[var(--text-secondary)]">{config.label.toUpperCase()}</span>
+            {config.label}
           </div>
           {status === 'processing' && (
-            <div className="text-[10px] font-mono text-[var(--accent-emerald)] bg-[var(--bg-primary)] px-2 py-0.5 border border-[var(--accent-emerald)]/30">
-              {progress}%
+            <div className="text-[10px] font-mono text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/20">
+              {progress}% SYNC
             </div>
           )}
         </div>
 
         <div className="relative">
-          <p 
+          <p
             ref={messageRef}
-            className="text-sm sm:text-base font-mono leading-relaxed text-[var(--text-primary)] min-h-[3em]"
+            className="text-sm sm:text-base font-mono leading-relaxed text-white/90 min-h-[3em] selection:bg-cyan-500/30"
           >
             {displayMessage}
-            {isTyping && <span className={`inline-block w-2 h-4 ml-1 bg-[var(--accent-cyan)] ${prefersReducedMotion ? '' : 'animate-pulse'} align-middle`} />}
+            {isTyping && <span className={`inline-block w-2 h-4 ml-1 bg-cyan-400 ${prefersReducedMotion ? '' : 'animate-pulse text-shadow-cyan'} align-middle`} />}
           </p>
         </div>
 
         {/* Action icons */}
-        <div className="flex items-center gap-3 pt-2">
-          <StatusIcon className={`w-4 h-4 ${config.color.replace('bg-', 'text-')}`} />
+        <div className="flex items-center gap-4 pt-2">
+          <StatusIcon className={`w-4 h-4 ${config.color.replace('bg-', 'text-')} opacity-80`} />
           {status === 'processing' && (
-            <div className="flex gap-1">
-              {[1, 2, 3].map(i => (
-                <div key={i} className={`w-1 h-1 bg-[var(--accent-cyan)] ${prefersReducedMotion ? '' : 'sm:animate-bounce'}`} style={{ animationDelay: `${i * 0.1}s` }} />
+            <div className="flex gap-1.5">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className={`w-1 h-1 rounded-full bg-cyan-400/60 ${prefersReducedMotion ? '' : 'animate-bounce'}`} style={{ animationDelay: `${i * 0.1}s` }} />
               ))}
             </div>
           )}

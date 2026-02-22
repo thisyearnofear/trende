@@ -25,20 +25,21 @@ class TwitterConnector(AbstractPlatformConnector):
             print(f"Rate limit hit for {self.platform}")
             return []
 
-        # 1. Try AIsa first
+        # 1. Try AIsa Search (Unified discovery)
         if self.aisa_key:
             results = await aisa_service.twitter_search(query, limit)
             if results:
-                print(f"[Twitter] AIsa returned {len(results)} results")
+                print(f"[Twitter] AIsa discovery returned {len(results)} results")
                 items = []
                 for tweet in results:
+                    # Map back from AIsa/Tabstack dict format
                     items.append(TrendItem(
-                        id=tweet.get('id', 'unknown'),
+                        id=tweet.get('id', tweet.get('url', 'unknown')),
                         platform=self.platform,
-                        title=f"Tweet by {tweet.get('author_name', 'unknown')}",
-                        content=tweet.get('text', ''),
-                        author=tweet.get('author_name', 'unknown'),
-                        author_handle=tweet.get('author_handle', 'unknown'),
+                        title=tweet.get('title', f"Trending on Twitter"),
+                        content=tweet.get('content', tweet.get('snippet', '')),
+                        author=tweet.get('author', 'Twitter User'),
+                        author_handle=tweet.get('author_handle', 'twitter'),
                         url=tweet.get('url', ''),
                         timestamp=datetime.datetime.now(datetime.timezone.utc),
                         metrics=tweet.get('metrics', {}),

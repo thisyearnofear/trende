@@ -48,6 +48,12 @@ class TrendItem(BaseModel):
         description="AI-generated relevance score",
     )
 
+    # Verification
+    is_verified: bool = Field(
+        default=False,
+        description="Whether this item is verified by an oracle or official source",
+    )
+
     def to_search_result(self) -> dict:
         """Convert to frontend-friendly format."""
         return {
@@ -62,6 +68,7 @@ class TrendItem(BaseModel):
             "timestamp": self.timestamp.isoformat(),
             "relevanceScore": self.relevance_score,
             "embedHtml": self.embed_html,
+            "isVerified": self.is_verified,
         }
 
     class Config:

@@ -1,5 +1,12 @@
 # Chainlink Deployment & Configuration Guide
 
+Trende deploys on **two L2 testnets** to prove chain-agnostic capability:
+
+| Network | Chain ID | Router | DON ID |
+|---------|----------|--------|--------|
+| Base Sepolia | 84532 | `0xf9B8fc078197181C841c296C876945aaa425B278` | `fun-base-sepolia-1` |
+| Arbitrum Sepolia | 421614 | `0x234a5fb5Bd614a7AA2FfAB244D603abFA0Ac5C5C` | `fun-arbitrum-sepolia-1` |
+
 ## 1. Environment Setup
 
 Ensure your `.env` file (based on `.env.example`) has the following:
@@ -8,55 +15,91 @@ Ensure your `.env` file (based on `.env.example`) has the following:
 PRIVATE_KEY=0x...                     # Foundry deploy key
 CHAINLINK_SUBSCRIPTION_ID=...         # Chainlink Functions subscription ID
 CHAINLINK_RPC_URL=https://sepolia.base.org
-CHAINLINK_WALLET_PRIVATE_KEY=0x...    # Runtime sender key for backend-triggered requests
+CHAINLINK_WALLET_PRIVATE_KEY=0x...    # Runtime sender key
+CHAINLINK_ACTIVE_CHAIN=base-sepolia   # or "arbitrum-sepolia"
+
+# Foundry RPC endpoints
+BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
+ARBITRUM_SEPOLIA_RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
 ```
 
-## 2. Create Chainlink Subscription
+## 2. Create Chainlink Subscriptions
 
-1. Go to [functions.chain.link](https://functions.chain.link/base-sepolia).
+You need a **separate subscription per network**.
+
+### Base Sepolia
+1. Go to [functions.chain.link/base-sepolia](https://functions.chain.link/base-sepolia).
 2. Connect your wallet (Base Sepolia).
-3. Click "Create Subscription".
-4. Fund it with at least 2-3 LINK (get faucet LINK from [faucets.chain.link](https://faucets.chain.link)).
-5. Copy the **Subscription ID** and add it to your `.env` as `CHAINLINK_SUBSCRIPTION_ID`.
+3. Click "Create Subscription" → Fund with 2-3 LINK.
+4. Copy the **Subscription ID**.
+
+### Arbitrum Sepolia
+1. Go to [functions.chain.link/arbitrum-sepolia](https://functions.chain.link/arbitrum-sepolia).
+2. Connect your wallet (Arbitrum Sepolia).
+3. Click "Create Subscription" → Fund with 2-3 LINK.
+4. Copy the **Subscription ID**.
+
+Get testnet LINK from [faucets.chain.link](https://faucets.chain.link).
 
 ## 3. Deploy Contracts
 
-Run the deployment script using Foundry:
+The deploy script auto-detects the network from the RPC chain ID.
+
+### Deploy to Base Sepolia
 
 ```bash
 cd contracts
-source .env
-forge script script/DeployTrende.s.sol:DeployTrende --rpc-url https://sepolia.base.org --broadcast --verify --etherscan-api-key <BASESCAN_API_KEY>
+source ../.env
+forge script script/DeployTrende.s.sol:DeployTrende \
+  --rpc-url base-sepolia \
+  --broadcast \
+  --verify --etherscan-api-key $BASESCAN_API_KEY
 ```
 
-*(Note: If you don't have a Basescan API key, remove `--verify`)*
+### Deploy to Arbitrum Sepolia
+
+```bash
+cd contracts
+source ../.env
+CHAINLINK_SUBSCRIPTION_ID=<arb-sub-id> \
+forge script script/DeployTrende.s.sol:DeployTrende \
+  --rpc-url arbitrum-sepolia \
+  --broadcast \
+  --verify --etherscan-api-key $ARBISCAN_API_KEY
+```
+
+*(Remove `--verify` if you don't have an explorer API key)*
 
 ## 4. Add Consumer to Subscription
 
-**CRITICAL STEP**: After deployment, you must authorize your new `TrendeFunctionsConsumer` contract to use your subscription.
+**CRITICAL**: After each deployment, authorize the `TrendeFunctionsConsumer` contract address on the corresponding network's subscription:
 
-1. Go back to [functions.chain.link](https://functions.chain.link/base-sepolia).
+1. Go to [functions.chain.link](https://functions.chain.link) and select the correct network.
 2. Select your subscription.
-3. Click "Add Consumer".
-4. Paste the address of the deployed `TrendeFunctionsConsumer` (check the deployment logs).
-5. Confirm the transaction.
+3. Click "Add Consumer" → paste the deployed `TrendeFunctionsConsumer` address.
+4. Confirm the transaction.
 
 ## 5. Backend Configuration
 
-Update your backend `.env` with the deployed addresses:
+Update your `.env` with the deployed addresses for your **active chain**:
 
 ```bash
-CHAINLINK_ORACLE_ADDRESS=0x...
+CHAINLINK_ACTIVE_CHAIN=base-sepolia   # Switch to "arbitrum-sepolia" as needed
+CHAINLINK_RPC_URL=https://sepolia.base.org
 CHAINLINK_CONSUMER_ADDRESS=0x...
+CHAINLINK_ORACLE_ADDRESS=0x...
 CHAINLINK_SUBSCRIPTION_ID=...
 ```
 
+To switch chains at runtime, change `CHAINLINK_ACTIVE_CHAIN` and the corresponding `CHAINLINK_RPC_URL` / addresses.
+
 ## 6. Verification
 
-Your backend can now trigger real on-chain verification requests whenever `ChainlinkConnector` is selected in a run.
+Your backend can now trigger on-chain verification requests on either chain. The `ChainlinkService` automatically selects the correct DON ID based on `CHAINLINK_ACTIVE_CHAIN`.
 
 ## Troubleshooting
 
-- **Missing Results**: If Chainlink queries return 0 results despite successful logs, ensure your connector is returning valid `TrendItem` objects with **string IDs**. The backend validation pipeline drops items with `null` IDs (Fixed in `0de9ab9`).
-- **Gas Failures**: Ensure your subscription is funded with LINK (at least 2-3 LINK for testing).
-- **Unauthorized Consumer**: If transactions revert, double-check that you added the consumer contract address to your subscription in the Chainlink Functions UI.
+- **Missing Results**: Ensure your connector returns valid `TrendItem` objects with **string IDs**. The backend drops items with `null` IDs.
+- **Gas Failures**: Ensure your subscription is funded with LINK (at least 2-3 LINK per network).
+- **Unauthorized Consumer**: Double-check that you added the consumer contract address to your subscription in the Chainlink Functions UI.
+- **Wrong DON ID**: The deploy script auto-selects based on chain ID. If deploying manually, verify the DON ID matches the network.

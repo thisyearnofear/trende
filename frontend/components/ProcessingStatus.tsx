@@ -17,6 +17,8 @@ import { AgentPersona } from "./AgentPersona";
 import { Card, Progress, Badge } from "./DesignSystem";
 import { useTheme } from "./ThemeProvider";
 import { usePrefersReducedMotion } from "./Motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 import { ScrambleText } from "./ScrambleText";
 
 interface ProcessingStatusProps {
@@ -110,6 +112,38 @@ interface StageCardProps {
   softMode: boolean;
 }
 
+function NeuralFlux() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+      <motion.div
+        animate={{
+          scale: [1, 1.2, 1],
+          x: [0, 50, 0],
+          y: [0, -30, 0],
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+        className="absolute -top-20 -left-20 w-64 h-64 bg-cyan-500 rounded-full blur-[80px]"
+      />
+      <motion.div
+        animate={{
+          scale: [1, 1.3, 1],
+          x: [0, -40, 0],
+          y: [0, 60, 0],
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+        className="absolute -bottom-20 -right-20 w-80 h-80 bg-violet-600 rounded-full blur-[100px]"
+      />
+      <motion.div
+        animate={{
+          opacity: [0.1, 0.3, 0.1],
+        }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--accent-cyan)_0%,transparent_70%)] opacity-10"
+      />
+    </div>
+  );
+}
+
 function StageCard({
   stage,
   band,
@@ -126,59 +160,66 @@ function StageCard({
   const iconSize = isRail ? "w-3 h-3" : "w-3.5 h-3.5";
 
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onSelect}
       data-stage-id={stage.id}
-      className={`text-left bg-[var(--bg-primary)] border-2 transition-all duration-200 ${
-        isRail ? "w-44 shrink-0 snap-center p-2.5" : "p-3"
-      }`}
+      whileHover={{ scale: 1.02, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      className={cn(
+        'text-left transition-all duration-300 relative overflow-hidden',
+        isRail ? "w-44 shrink-0 snap-center p-3" : "p-4",
+        'glass border-white/10'
+      )}
       style={{
         borderColor: isComplete
           ? "var(--accent-emerald)"
           : isActive
             ? "var(--accent-cyan)"
-            : isExpanded
-              ? "var(--accent-violet)"
-              : (softMode ? "var(--text-secondary)" : "var(--border-color)"),
-        boxShadow: isComplete
-          ? "2px 2px 0px 0px var(--accent-emerald)"
-          : isActive
-            ? "0px 0px 14px rgba(0,255,255,0.45)"
-            : isExpanded
-              ? "2px 2px 0px 0px var(--accent-violet)"
-              : "none",
+            : "rgba(255,255,255,0.1)",
+        boxShadow: isActive
+          ? "0 0 20px rgba(0,255,255,0.2)"
+          : "none"
       }}
       aria-expanded={isExpanded}
     >
-      <div className="flex items-center gap-1.5 mb-1">
+      {isActive && (
+        <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
+      )}
+
+      <div className="flex items-center gap-2 mb-2 relative z-10">
         {isComplete ? (
-          <CheckCircle2 className={`${iconSize} text-[var(--accent-emerald)]`} />
+          <CheckCircle2 className={`${iconSize} text-emerald-400`} />
         ) : isActive ? (
-          <div className={`${iconSize} bg-[var(--accent-cyan)] ${reducedMotion ? "" : "animate-pulse"}`} />
+          <div className={`${iconSize} bg-cyan-400 rounded-full shadow-[0_0_8px_var(--accent-cyan)] ${reducedMotion ? "" : "animate-pulse"}`} />
         ) : (
-          <Circle className={`${iconSize} ${softMode ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)]"}`} />
+          <Circle className={`${iconSize} text-white/20`} />
         )}
-        {isActive && !reducedMotion ? (
-          <ScrambleText
-            text={stage.label}
-            trigger={activationTick}
-            duration={0.4}
-            className="text-[10px] font-black uppercase tracking-wider"
-          />
-        ) : (
-          <span className="text-[10px] font-black uppercase tracking-wider">
-            {stage.label}
-          </span>
-        )}
+        <span className={cn(
+          "text-[10px] font-black uppercase tracking-wider",
+          isActive ? "text-cyan-400" : isComplete ? "text-emerald-400" : "text-white/40"
+        )}>
+          {stage.label}
+        </span>
       </div>
-      <p className={`text-[10px] ${softMode ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)]"} font-mono ${isRail ? "line-clamp-2" : "mb-1"}`}>
+
+      <p className={cn(
+        "text-[10px] font-mono relative z-10",
+        isActive ? "text-white/90" : "text-white/40",
+        isRail ? "line-clamp-2" : "mb-2"
+      )}>
         {stage.description}
       </p>
-      <p className="text-[10px] font-mono text-[var(--accent-violet)]">
-        ~{band.min}s - {band.max}s
-      </p>
-    </button>
+
+      {!isRail && (
+        <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5 relative z-10">
+          <span className="text-[9px] font-black uppercase text-white/20">Est. Window</span>
+          <span className="text-[10px] font-mono text-violet-400/70">
+            {band.min}s - {band.max}s
+          </span>
+        </div>
+      )}
+    </motion.button>
   );
 }
 
@@ -310,9 +351,9 @@ export function ProcessingStatus({
     const interval = setInterval(() => {
       setActiveHash(
         "0x" +
-          Array.from({ length: 12 }, () =>
-            Math.floor(Math.random() * 16).toString(16),
-          ).join(""),
+        Array.from({ length: 12 }, () =>
+          Math.floor(Math.random() * 16).toString(16),
+        ).join(""),
       );
     }, intervalMs);
     return () => clearInterval(interval);

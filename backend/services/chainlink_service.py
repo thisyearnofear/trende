@@ -5,11 +5,27 @@ from web3 import Web3
 from eth_account import Account
 
 
+CHAIN_CONFIG = {
+    "base-sepolia": {
+        "don_id": "0x66756e2d626173652d7365706f6c69612d310000000000000000000000000000",
+        "chain_id": 84532,
+        "explorer": "https://sepolia.basescan.org",
+    },
+    "arbitrum-sepolia": {
+        "don_id": "0x66756e2d617262697472756d2d7365706f6c69612d3100000000000000000000",
+        "chain_id": 421614,
+        "explorer": "https://sepolia.arbiscan.io",
+    },
+}
+
+
 class ChainlinkService:
     def __init__(self):
-        self.rpc_url = os.getenv("CHAINLINK_RPC_URL")
         self.private_key = os.getenv("CHAINLINK_WALLET_PRIVATE_KEY")
-        # Keep NEXT_PUBLIC fallbacks for compatibility with existing deploy envs.
+        self.active_chain = os.getenv("CHAINLINK_ACTIVE_CHAIN", "base-sepolia")
+
+        # Primary chain config
+        self.rpc_url = os.getenv("CHAINLINK_RPC_URL")
         self.consumer_address = (
             os.getenv("CHAINLINK_CONSUMER_ADDRESS")
             or os.getenv("NEXT_PUBLIC_TRENDE_CONSUMER_ADDRESS")
@@ -58,6 +74,10 @@ class ChainlinkService:
             }
         ]
 
+    @property
+    def chain_info(self) -> dict:
+        return CHAIN_CONFIG.get(self.active_chain, CHAIN_CONFIG["base-sepolia"])
+
     def is_configured(self) -> bool:
         return bool(
             self.w3
@@ -71,12 +91,15 @@ class ChainlinkService:
         source: str,
         args: list[str],
         subscription_id: int,
-        don_id_hex: str = "0x66756e2d626173652d7365706f6c69612d310000000000000000000000000000"
+        don_id_hex: Optional[str] = None,
     ) -> Optional[str]:
         """
         Sends a Chainlink Functions request to the TrendeFunctionsConsumer contract.
+        Uses the active chain's DON ID by default.
         Returns the transaction hash.
         """
+        if don_id_hex is None:
+            don_id_hex = self.chain_info["don_id"]
         if not self.is_configured():
             print("⚠️ ChainlinkService not configured. Skipping request.")
             return None

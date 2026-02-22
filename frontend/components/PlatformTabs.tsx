@@ -19,6 +19,8 @@ const PLATFORM_CONFIG: Record<string, { icon: string; color: string; label: stri
   facebook: { icon: 'f', color: '#1877F2', label: 'Facebook' },
   newsapi: { icon: '📰', color: '#FF6B35', label: 'News' },
   web: { icon: '🌐', color: '#6366F1', label: 'Web' },
+  gdelt: { icon: '🗞️', color: '#0EA5E9', label: 'GDELT' },
+  tiktok: { icon: '🎵', color: '#000000', label: 'TikTok' },
 };
 
 export function PlatformTabs({ results, isLoading, sourceIndexById = {} }: PlatformTabsProps) {
@@ -63,11 +65,11 @@ export function PlatformTabs({ results, isLoading, sourceIndexById = {} }: Platf
   const stats = useMemo(() => {
     const items = activeItems;
     if (items.length === 0) return null;
-    
+
     const avgRelevance = items.reduce((acc, item) => acc + (item.relevanceScore || 0), 0) / items.length;
-    const totalEngagement = items.reduce((acc, item) => 
+    const totalEngagement = items.reduce((acc, item) =>
       acc + (item.metrics.likes || 0) + (item.metrics.shares || 0), 0);
-      
+
     return {
       avgRelevance: Math.round(avgRelevance * 100),
       totalEngagement,
@@ -179,22 +181,21 @@ export function PlatformTabs({ results, isLoading, sourceIndexById = {} }: Platf
                 aria-selected={isActive}
                 aria-controls={`tabpanel-${tab.id}`}
                 tabIndex={isActive ? 0 : -1}
-                className={`px-4 py-2.5 text-sm font-black uppercase whitespace-nowrap transition-all border-2 snap-start min-h-[44px] flex items-center justify-center ${
-                  isActive
+                className={`px-4 py-2.5 text-sm font-black uppercase whitespace-nowrap transition-all border-2 snap-start min-h-[44px] flex items-center justify-center ${isActive
                     ? (isSoft ? 'border-transparent' : 'text-[var(--bg-primary)] border-transparent')
                     : (isSoft ? 'soft-ui-button border-0 opacity-60' : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] border-[var(--border-color)]')
-                }`}
+                  }`}
                 style={
                   isActive
-                    ? { 
-                        backgroundColor: isSoft ? 'var(--soft-bg)' : (config?.color || 'var(--accent-cyan)'),
-                        boxShadow: isSoft ? 'var(--soft-shadow-in)' : 'none',
-                        borderRadius: isSoft ? '12px' : '0',
-                        color: isSoft ? (config?.color || 'var(--accent-cyan)') : 'var(--bg-primary)'
-                      }
+                    ? {
+                      backgroundColor: isSoft ? 'var(--soft-bg)' : (config?.color || 'var(--accent-cyan)'),
+                      boxShadow: isSoft ? 'var(--soft-shadow-in)' : 'none',
+                      borderRadius: isSoft ? '12px' : '0',
+                      color: isSoft ? (config?.color || 'var(--accent-cyan)') : 'var(--bg-primary)'
+                    }
                     : {
-                        borderRadius: isSoft ? '12px' : '0'
-                      }
+                      borderRadius: isSoft ? '12px' : '0'
+                    }
                 }
               >
                 {tab.id === 'all' ? (

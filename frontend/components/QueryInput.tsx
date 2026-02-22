@@ -5,6 +5,7 @@ import { Send, Sparkles, Loader2, Compass, Layers, Zap, Shield, BarChart3, Setti
 import { QueryRequest } from '@/lib/types';
 import { estimateMissionRuntime } from '@/lib/runtimeEstimate';
 import { Card, Button, Input, Badge, Tooltip } from './DesignSystem';
+import { cn } from '@/lib/utils';
 
 interface QueryInputProps {
   onSubmit: (request: QueryRequest) => void;
@@ -148,297 +149,287 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const metricKey = `${estimatedSeconds}-${Math.round(avgQuality)}-${totalCost.toFixed(4)}`;
 
   return (
-    <Card accent={activeProfile ? 'cyan' : 'violet'} shadow="lg" className="p-4 sm:p-8">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 flex items-center justify-center transition-all duration-500"
-              style={{
-                backgroundColor: activeProfile ? activeProfile.accent : 'var(--accent-violet)',
-                boxShadow: `3px 3px 0px 0px var(--shadow-color)`
-              }}
-            >
-              {activeProfile ? <activeProfile.icon className="w-5 h-5 text-[var(--bg-primary)]" /> : <Compass className="w-5 h-5 text-[var(--bg-primary)]" />}
+    <div className="relative group">
+      {/* Background glow effects */}
+      <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/10 via-violet-500/10 to-emerald-500/10 rounded-[2rem] blur-xl opacity-50 group-hover:opacity-75 transition-opacity" />
+
+      <Card accent="white" shadow="none" className="p-5 sm:p-8 glass border-white/10 rounded-[2rem] overflow-hidden relative">
+        <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
+          {/* Header */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 glass border-white/20 shadow-xl"
+                style={{
+                  backgroundColor: activeProfile ? `${activeProfile.accent}33` : 'rgba(255,255,255,0.05)',
+                }}
+              >
+                {activeProfile ? (
+                  <activeProfile.icon className="w-6 h-6" style={{ color: activeProfile.accent }} />
+                ) : (
+                  <Compass className="w-6 h-6 text-white/40" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-base font-black uppercase tracking-[0.2em] text-white">Mission Objective</h3>
+                <p className="text-[10px] font-mono text-white/30 uppercase tracking-[0.3em]">
+                  {activeProfile ? `PROFILE: ${activeProfile.label}` : 'CUSTOM CONFIGURATION'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-black uppercase tracking-wider">Mission Brief</p>
-              <p className="text-xs text-[var(--text-muted)] font-mono">
-                {activeProfile ? `PROFILE: ${activeProfile.label.toUpperCase()}` : 'CUSTOM CONFIGURATION'}
-                {" // SECURE"}
-              </p>
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="px-3 py-1 flex items-center gap-2 rounded-full glass border-emerald-500/20 text-[10px] font-black uppercase text-emerald-400 tracking-widest">
+                <Shield className="w-3 h-3" />
+                TEE Enclave Ready
+              </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Badge variant={activeProfile ? 'cyan' : 'violet'}>TEE-ACTIVE</Badge>
-          </div>
-        </div>
 
-        {/* Profile Selectors */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[var(--accent-amber)]" />
-              <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Select Mission Profile</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-[10px] font-mono flex items-center gap-1.5 uppercase hover:text-[var(--accent-cyan)] transition-colors"
-              style={{ color: showAdvanced ? 'var(--accent-cyan)' : 'var(--text-muted)' }}
-            >
-              <Settings2 className="w-3 h-3" />
-              Advanced Toggles {showAdvanced ? '[ - ]' : '[ + ]'}
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {MISSION_PROFILES.map((profile) => {
-              const active = activeProfile?.id === profile.id;
-              return (
-                <button
-                  key={profile.id}
-                  type="button"
-                  onClick={() => applyProfile(profile.id)}
-                  disabled={disabled}
-                  className="flex flex-col text-left p-4 bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 relative overflow-hidden group"
-                  style={{
-                    borderColor: active ? profile.accent : 'var(--bg-tertiary)',
-                    boxShadow: active ? `4px 4px 0px 0px ${profile.accent}` : '2px 2px 0px 0px var(--bg-tertiary)',
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <profile.icon className="w-4 h-4" style={{ color: active ? profile.accent : 'var(--text-muted)' }} />
-                    <span className="text-xs font-black uppercase tracking-tight" style={{ color: active ? profile.accent : 'var(--text-primary)' }}>{profile.label}</span>
-                  </div>
-                  <p className="text-[10px] text-[var(--text-muted)] leading-tight">{profile.description}</p>
-
-                  {/* Visual Background indicator */}
-                  <div
-                    className="absolute -right-2 -bottom-2 opacity-[0.03] transition-transform duration-500 group-hover:scale-125"
-                    style={{ color: profile.accent }}
-                  >
-                    <profile.icon size={64} />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Input Area */}
-        <div className="relative pt-2">
-          <Input
-            value={idea}
-            onChange={setIdea}
-            placeholder="EXAMPLE: Identify sectors where viral consumer attention and professional optimism both point to a near-term breakout."
-            disabled={disabled}
-            rows={4}
-          />
-
-          {/* Submit button */}
-          <div className="absolute bottom-4 right-4">
-            <Button type="submit" disabled={!idea.trim() || isLoading || disabled || !hasPlatforms || !hasModels}>
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  PROCESSING...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Send className="w-4 h-4" />
-                  EXECUTE MISSION
-                </span>
-              )}
-            </Button>
-          </div>
-        </div>
-
-        {showAdvanced && (
-          <div className="space-y-6 pt-4 border-t-2 border-dashed border-[var(--bg-tertiary)] animate-in fade-in slide-in-from-top-4 duration-300">
-            {/* Platform Selectors */}
-            <div className="space-y-4">
+          {/* Profile Selectors */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-[var(--accent-cyan)]" />
-                <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Advanced: World Selectors</span>
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 opacity-60" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Select Intelligence Profile</span>
               </div>
-
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {PLATFORM_OPTIONS.map((platform) => {
-                  const active = platforms.includes(platform.id);
-                  const unavailable = !platform.enabled;
-                  const isPremium = platform.isPremium;
-                  
-                  return (
-                    <button
-                      key={platform.id}
-                      type="button"
-                      onClick={() => togglePlatform(platform.id, platform.enabled)}
-                      disabled={disabled || unavailable}
-                      className="text-left p-3 min-h-[60px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed relative"
-                      style={{
-                        borderColor: unavailable
-                          ? 'var(--accent-violet)'
-                          : active
-                            ? 'var(--accent-cyan)'
-                            : 'var(--text-muted)',
-                        boxShadow: unavailable
-                          ? '2px 2px 0px 0px var(--accent-violet)'
-                          : active
-                            ? '4px 4px 0px 0px var(--accent-cyan)'
-                            : '4px 4px 0px 0px var(--text-muted)',
-                      }}
-                      title={unavailable ? platform.reason : platform.hint}
-                    >
-                      {/* Premium indicator */}
-                      {isPremium && (
-                        <div className="absolute -top-1 -right-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-md">
-                          🤖 AI Agent
-                        </div>
-                      )}
-                      <p className="text-[11px] font-black uppercase" style={{ color: unavailable ? 'var(--accent-violet)' : active ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
-                        {platform.label}
-                      </p>
-                      {active && <Badge variant="cyan" className="mt-1 transform scale-75 origin-left">ACTIVE</Badge>}
-                      {unavailable && <Badge variant="violet" className="mt-1 transform scale-75 origin-left">COMING SOON</Badge>}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {!hasPlatforms && (
-                <p className="text-xs font-mono text-[var(--accent-rose)]">[!] SELECT AT LEAST ONE SOURCE</p>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="text-[10px] font-black tracking-widest flex items-center gap-2 uppercase transition-all hover:text-cyan-400 text-white/40 group/btn"
+              >
+                <Settings2 className={cn("w-3.5 h-3.5 transition-transform duration-500", showAdvanced ? "rotate-180" : "")} />
+                Advanced Controls
+              </button>
             </div>
 
-            {/* Model Selectors */}
-            <div className="space-y-4 pt-4 border-t-2 border-[var(--bg-tertiary)]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[var(--accent-amber)]" />
-                  <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Advanced: Consensus Routes</span>
-                </div>
-                  <div className="flex gap-2 text-center">
-                  <div
-                    key={`cost-${metricKey}`}
-                    className="flex flex-col justify-center px-3 py-1 border-2 border-[var(--bg-tertiary)] transition-transform duration-200 animate-in fade-in"
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {MISSION_PROFILES.map((profile) => {
+                const active = activeProfile?.id === profile.id;
+                return (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    onClick={() => applyProfile(profile.id)}
+                    disabled={disabled}
+                    className={cn(
+                      "flex flex-col text-left p-5 transition-all duration-500 glass relative overflow-hidden group/card rounded-2xl",
+                      active ? "border-white/30" : "border-white/5 opacity-60 hover:opacity-100 hover:border-white/10"
+                    )}
                   >
-                    <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase">Cost</span>
-                    <span className="text-xs font-black text-[var(--accent-amber)]">{totalCost.toFixed(4)} MON</span>
-                  </div>
-                  <Tooltip content="Mitigation Power estimates how well your selected model mix reduces single-model bias and improves consensus reliability.">
-                    <div
-                      key={`mitigation-${metricKey}`}
-                      className="flex flex-col justify-center px-3 py-1 border-2 border-[var(--bg-tertiary)] transition-transform duration-200 animate-in fade-in cursor-help"
-                    >
-                      <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase inline-flex items-center justify-center gap-1">
-                        Mitigation Power
-                      </span>
-                      <span className="text-xs font-black text-[var(--accent-cyan)]">{Math.round(avgQuality)}%</span>
+                    {active && <div className="absolute inset-0 bg-white/[0.03] animate-pulse" />}
+                    <div className="flex items-center gap-3 mb-3 relative z-10">
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center border transition-all duration-500",
+                        active ? "bg-white/10 border-white/20" : "bg-white/5 border-white/10"
+                      )}>
+                        <profile.icon className="w-4 h-4" style={{ color: active ? profile.accent : 'rgba(255,255,255,0.3)' }} />
+                      </div>
+                      <span className={cn(
+                        "text-xs font-black uppercase tracking-widest transition-colors duration-500",
+                        active ? "text-white" : "text-white/40"
+                      )}>{profile.label}</span>
                     </div>
-                  </Tooltip>
-                  <div
-                    key={`eta-${metricKey}`}
-                    className="flex flex-col justify-center px-3 py-1 border-2 border-[var(--bg-tertiary)] transition-transform duration-200 animate-in fade-in"
-                  >
-                    <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase">ETA</span>
-                    <span className="text-xs font-black text-[var(--accent-emerald)]">~{Math.round(estimatedSeconds / 60)}m</span>
-                  </div>
-                </div>
-              </div>
+                    <p className="text-[10px] leading-relaxed font-mono text-white/30 relative z-10">{profile.description}</p>
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {MODEL_OPTIONS.map((model) => {
-                  const active = models.includes(model.id);
-                  const unavailable = model.enabled === false;
-                  return (
-                    <button
-                      key={model.id}
-                      type="button"
-                      onClick={() => toggleModel(model.id, model.enabled !== false)}
-                      disabled={disabled || unavailable}
-                      className="text-left p-2.5 min-h-[50px] bg-[var(--bg-primary)] border-2 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed relative"
-                      style={{
-                        borderColor: unavailable
-                          ? 'var(--accent-violet)'
-                          : active
-                            ? 'var(--accent-amber)'
-                            : 'var(--text-muted)',
-                        boxShadow: unavailable
-                          ? '2px 2px 0px 0px var(--accent-violet)'
-                          : active
-                            ? '4px 4px 0px 0px var(--accent-amber)'
-                            : '4px 4px 0px 0px var(--text-muted)',
-                        backgroundColor: active ? 'rgba(255, 170, 0, 0.08)' : undefined,
-                      }}
-                      title={unavailable ? model.reason : model.hint}
-                    >
-                      <p className="text-[10px] font-black uppercase" style={{ color: unavailable ? 'var(--accent-violet)' : active ? 'var(--accent-amber)' : 'var(--text-primary)' }}>
-                        {model.label}
-                      </p>
-                      {unavailable && (
-                        <Badge variant="violet" className="mt-1 transform scale-75 origin-left">
-                          COMING SOON
-                        </Badge>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Relevance Threshold */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">Relevance Threshold</span>
-                <Badge variant="cyan">{Math.round(relevanceThreshold * 100)}%</Badge>
-              </div>
-              <input
-                type="range"
-                min="0.2"
-                max="0.95"
-                step="0.05"
-                value={relevanceThreshold}
-                onChange={(e) => setRelevanceThreshold(Number(e.target.value))}
-                disabled={disabled}
-                className="w-full"
-                style={{ accentColor: 'var(--accent-cyan)' }}
-              />
+                    {active && (
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: profile.accent }} />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
-        )}
 
-        {/* Suggestions - Collapsible */}
-        <div className="pt-2 border-t-2 border-[var(--text-muted)]">
-          <button
-            type="button"
-            onClick={() => setShowSuggestions(!showSuggestions)}
-            className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--accent-cyan)] transition-colors"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="text-xs font-mono">
-              {showSuggestions ? '[-] Hide Example Queries' : '[+] Show Example Queries'}
-            </span>
-          </button>
-          
-          {showSuggestions && (
-            <div className="flex flex-wrap gap-2 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-              {SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => setIdea(suggestion)}
-                  disabled={disabled}
-                  className="text-xs px-2 py-1 border font-mono transition-colors hover:bg-[var(--accent-cyan)] hover:text-[var(--bg-primary)]"
-                  style={{ color: 'var(--accent-cyan)', borderColor: 'var(--accent-cyan)' }}
+          {/* Input Area */}
+          <div className="relative group/input">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/20 to-violet-500/20 rounded-[1.5rem] blur opacity-0 group-focus-within/input:opacity-100 transition-opacity" />
+            <div className="relative">
+              <textarea
+                value={idea}
+                onChange={(e) => setIdea(e.target.value)}
+                placeholder="Describe your research thesis... e.g., 'Analyze the intersection of DePIN and AI compute market narratives across tech communities.'"
+                disabled={disabled}
+                rows={4}
+                className="w-full bg-black/40 glass border-white/10 rounded-2xl p-6 text-base font-medium text-white placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-all resize-none shadow-inner"
+              />
+
+              <div className="absolute bottom-4 right-4 flex items-center gap-4">
+                {/* Character count or similar could go here */}
+                <Button
+                  type="submit"
+                  className="rounded-xl px-8 shadow-2xl transition-all active:scale-95"
+                  variant="primary"
+                  disabled={!idea.trim() || isLoading || disabled || !hasPlatforms || !hasModels}
                 >
-                  {suggestion.slice(0, 40)}...
-                </button>
-              ))}
+                  {isLoading ? (
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="font-black uppercase tracking-widest text-xs">Processing</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <Zap className="w-4 h-4 fill-white" />
+                      <span className="font-black uppercase tracking-widest text-xs">Execute Mission</span>
+                    </div>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {showAdvanced && (
+            <div className="space-y-8 pt-6 border-t border-white/5 animate-in fade-in slide-in-from-top-4 duration-500">
+              {/* Platform Selectors omitted for brevity in this replacement chunk, but I will make sure fixed ones aren't lost */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded bg-cyan-500/10 flex items-center justify-center">
+                    <Layers className="w-3.5 h-3.5 text-cyan-400" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Source Matrix Selection</span>
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {PLATFORM_OPTIONS.map((platform) => {
+                    const active = platforms.includes(platform.id);
+                    const unavailable = !platform.enabled;
+
+                    return (
+                      <button
+                        key={platform.id}
+                        type="button"
+                        onClick={() => togglePlatform(platform.id, platform.enabled)}
+                        disabled={disabled || unavailable}
+                        className={cn(
+                          "text-left p-4 rounded-xl glass border transition-all duration-300 relative group/plat",
+                          active ? "border-cyan-500/50 bg-cyan-500/5" : "border-white/5 hover:border-white/20 opacity-40 hover:opacity-100"
+                        )}
+                        title={unavailable ? platform.reason : platform.hint}
+                      >
+                        <p className={cn(
+                          "text-[10px] font-black uppercase tracking-widest mb-1",
+                          active ? "text-cyan-400" : "text-white"
+                        )}>
+                          {platform.label}
+                        </p>
+                        {active && <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_var(--accent-cyan)]" />}
+                        {unavailable && <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter">Planned</span>}
+                        {platform.isPremium && (
+                          <div className="absolute top-2 right-2">
+                            <Sparkles className="w-3 h-3 text-amber-400 opacity-50" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Model Selectors */}
+              <div className="space-y-4 pt-6 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded bg-amber-500/10 flex items-center justify-center">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Neural Consensus Routes</span>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex flex-col items-end">
+                      <span className="text-[8px] font-black uppercase text-white/20 tracking-widest">Est. Cost</span>
+                      <span className="text-xs font-black text-amber-400 tabular-nums">{totalCost.toFixed(4)} MON</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-[8px] font-black uppercase text-white/20 tracking-widest">Confidence Power</span>
+                      <span className="text-xs font-black text-cyan-400 tabular-nums">{Math.round(avgQuality)}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {MODEL_OPTIONS.map((model) => {
+                    const active = models.includes(model.id);
+                    const unavailable = model.enabled === false;
+                    return (
+                      <button
+                        key={model.id}
+                        type="button"
+                        onClick={() => toggleModel(model.id, model.enabled !== false)}
+                        disabled={disabled || unavailable}
+                        className={cn(
+                          "text-left p-3 rounded-xl glass border transition-all duration-300",
+                          active ? "border-amber-500/50 bg-amber-500/5 shadow-inner" : "border-white/5 hover:border-white/20 opacity-40 hover:opacity-100"
+                        )}
+                      >
+                        <p className={cn(
+                          "text-[10px] font-black uppercase tracking-widest",
+                          active ? "text-amber-400" : "text-white"
+                        )}>
+                          {model.label}
+                        </p>
+                        {unavailable && <span className="text-[8px] font-bold text-white/20 uppercase">Testing</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Relevance Threshold */}
+              <div className="space-y-4 pt-6 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Intelligence Saliency Threshold</span>
+                  <span className="text-xs font-black text-cyan-400">{Math.round(relevanceThreshold * 100)}%</span>
+                </div>
+                <div className="relative flex items-center px-4">
+                  <div className="absolute inset-x-0 h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-cyan-400" style={{ width: `${relevanceThreshold * 100}%` }} />
+                  </div>
+                  <input
+                    type="range"
+                    min="0.2"
+                    max="0.95"
+                    step="0.05"
+                    value={relevanceThreshold}
+                    onChange={(e) => setRelevanceThreshold(Number(e.target.value))}
+                    disabled={disabled}
+                    className="relative w-full h-6 appearance-none bg-transparent cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-cyan-400"
+                  />
+                </div>
+              </div>
             </div>
           )}
-        </div>
-      </form>
-    </Card>
+
+          {/* Suggestions - Collapsible */}
+          <div className="pt-4 border-t border-white/5">
+            <button
+              type="button"
+              onClick={() => setShowSuggestions(!showSuggestions)}
+              className="flex items-center gap-3 text-white/20 hover:text-white/40 transition-colors group/suggest"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-widest underline underline-offset-4">
+                {showSuggestions ? 'Collapse Exploration Paths' : 'Explore Sample Theses'}
+              </span>
+            </button>
+
+            {showSuggestions && (
+              <div className="flex flex-wrap gap-2 mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                {SUGGESTIONS.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => setIdea(suggestion)}
+                    disabled={disabled}
+                    className="text-[10px] font-mono px-3 py-1.5 rounded-lg glass border-white/5 text-white/40 hover:text-white hover:border-white/10 transition-all hover:bg-white/5"
+                  >
+                    {suggestion.slice(0, 50)}...
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </form>
+      </Card>
+    </div>
   );
 }

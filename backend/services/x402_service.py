@@ -61,12 +61,13 @@ EIP712_TYPES = {
 
 
 class X402Service:
-    """Service for X402 payment verification on Monad."""
+    """Service for X402 payment verification on Monad and Arbitrum."""
 
     def __init__(self):
-        self.chain_id = int(os.getenv("MONAD_CHAIN_ID", "10143"))
+        self.chain_id = int(os.getenv("X402_CHAIN_ID") or os.getenv("MONAD_CHAIN_ID") or "10143")
         self.recipient = os.getenv("X402_RECIPIENT_ADDRESS", "")
         self.default_amount = os.getenv("X402_PAYMENT_AMOUNT", "0.001")
+        self.network_name = os.getenv("X402_NETWORK", "monad-testnet")
 
     def verify_payment(self, payment_payload: X402Payment) -> bool:
         """
@@ -172,9 +173,9 @@ class X402Service:
             "X-402-Amount": amount or self.default_amount,
             "X-402-Recipient": recipient or self.recipient,
             "X-402-Chain-ID": str(chain_id or self.chain_id),
-            "X-402-Token-Type": "native",  # MON is native token
+            "X-402-Token-Type": "native",
             "X-402-Scheme": "EIP-712",
-            "X-402-Network": "monad-testnet",
+            "X-402-Network": self.network_name,
         }
 
     def create_authorization_template(

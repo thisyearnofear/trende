@@ -35,7 +35,7 @@ interface CardProps {
   children: ReactNode;
   className?: string;
   accent?: 'cyan' | 'emerald' | 'amber' | 'rose' | 'violet' | 'white';
-  shadow?: 'sm' | 'md' | 'lg' | 'xl';
+  shadow?: 'sm' | 'md' | 'lg' | 'xl' | 'none';
   interactive?: boolean;
   style?: CSSProperties;
 }
@@ -65,6 +65,7 @@ export function Card({
     md: '4px',
     lg: '6px',
     xl: '8px',
+    none: '0px',
   };
 
   return (
@@ -235,7 +236,7 @@ interface BadgeProps {
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
   const { isSoft } = useTheme();
-  
+
   // For soft theme, use white text for better contrast on darker accent backgrounds
   // For dark/light themes, use bg-primary (which is dark in dark mode, light in light mode)
   const getTextColor = (variant: string) => {
@@ -325,21 +326,31 @@ export function Progress({ value, max = 100, accent = 'cyan', className }: Progr
   return (
     <div
       className={cn(
-        'w-full h-6 bg-[var(--bg-primary)] border-2',
-        !isSoft && 'border-[var(--border-color)]',
+        'w-full h-3 bg-[var(--bg-primary)] border',
+        !isSoft && 'border-[var(--border-color)] overflow-hidden',
         isSoft ? 'soft-ui-in border-0 rounded-full' : 'rounded-none',
         className
       )}
-      style={{ boxShadow: isSoft ? 'var(--soft-shadow-in)' : '2px 2px 0px 0px var(--shadow-color)' }}
+      style={{
+        boxShadow: isSoft ? 'var(--soft-shadow-in)' : 'none',
+        background: isSoft ? undefined : 'rgba(0,0,0,0.2)'
+      }}
     >
-      <div
+      <motion.div
+        initial={{ width: 0 }}
+        animate={{ width: `${percentage}%` }}
+        transition={{ duration: 1, ease: "easeOut" }}
         className={cn(
-          'h-full transition-all duration-300',
-          !isSoft && 'border-r-2 border-[var(--border-color)]',
+          'h-full relative transition-all duration-300',
           isSoft ? 'rounded-full' : ''
         )}
-        style={{ width: `${percentage}%`, backgroundColor: accentColor }}
-      />
+        style={{
+          backgroundColor: accentColor,
+          boxShadow: `0 0 15px ${accentColor}44`
+        }}
+      >
+        <div className="absolute inset-0 animate-shimmer" />
+      </motion.div>
     </div>
   );
 }

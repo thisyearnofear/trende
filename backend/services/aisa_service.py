@@ -68,11 +68,20 @@ class AIsaService:
         ]
 
     async def twitter_search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        # FEATURE COMING SOON - Returning empty to avoid 404
-        return []
+        """Search Twitter/X trends via Tabstack discovery."""
+        search_query = f"{query} site:x.com OR site:twitter.com"
+        return await self.web_search(search_query, limit)
             
     async def web_search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        # FEATURE COMING SOON - Returning empty to avoid 404
-        return []
+        """General web search via Tabstack."""
+        try:
+            from backend.integrations.connectors.tabstack import TabstackConnector
+            connector = TabstackConnector()
+            items = await connector.search(query, limit)
+            # Convert TrendItem back to dict as expected by current AIsa service consumers
+            return [item.raw_data if item.raw_data else item.to_dict() for item in items]
+        except Exception as e:
+            print(f"AIsa web_search failed: {e}")
+            return []
 
 aisa_service = AIsaService()
