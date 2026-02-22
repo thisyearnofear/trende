@@ -539,7 +539,7 @@ export default function Home() {
       {showHistory && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div
-            className="absolute inset-0 bg-black/80"
+            className="absolute inset-0 bg-[var(--bg-primary)]/80"
             onClick={() => setShowHistory(false)}
           />
           <Card

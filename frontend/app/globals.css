@@ -68,10 +68,10 @@
   --bg-secondary: #ffffff;
   --bg-tertiary: #f0f0f0;
 
-  /* Text */
-  --text-primary: #000000;
-  --text-secondary: #525252;
-  --text-muted: #a3a3a3;
+  /* Text - Using HSL for better opacity support with Tailwind */
+  --text-primary: hsl(0 0% 0%);
+  --text-secondary: hsl(0 0% 32%);
+  --text-muted: hsl(0 0% 64%);
 
   /* Borders & Shadows */
   --border-color: #000000;
@@ -96,6 +96,16 @@
   --soft-shadow-out: 6px 6px 12px #d9d9d9, -6px -6px 12px #ffffff;
   --soft-shadow-in: inset 6px 6px 12px #d9d9d9, inset -6px -6px 12px #ffffff;
   --soft-bg: #fafafa;
+
+  /* Opacity support - enables Tailwind's white/XX to work in light mode */
+  --color-white: 0 0% 100%;
+  --color-black: 0 0% 0%;
+}
+
+/* Override Tailwind's white/black for light mode */
+.light, .light body {
+  --tw-bg-opacity: 1;
+  background-color: rgb(250 250 250 / var(--tw-bg-opacity));
 }
 
 /* ----------------------------------------
@@ -353,7 +363,7 @@ body {
 }
 
 .light .glass {
-  background: rgba(0, 0, 0, 0.02);
+  background: rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
