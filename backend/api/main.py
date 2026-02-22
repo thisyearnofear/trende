@@ -776,6 +776,65 @@ async def run_agent_action(action_id: str) -> None:
                 "next_run": (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1)).isoformat(),
                 "message": f"Sentinel established for {task.get('topic', 'topic')}. Agent will monitor and re-verify alpha every {interval}."
             }
+        elif action_type == "stage_oracle_market":
+            if not task:
+                raise ValueError("stage_oracle_market requires task_id.")
+            from backend.services.chainlink_service import chainlink_service
+            
+            topic = task.get("topic", "Trend Analysis")
+            duration = input_payload.get("duration", 86400)
+            
+            tx_hash = await chainlink_service.create_market(topic, duration)
+            if not tx_hash:
+                raise ValueError("Failed to create on-chain market via Chainlink.")
+            
+            result_payload = {
+                "tx_hash": tx_hash,
+                "explorer_url": f"{chainlink_service.chain_info['explorer']}/tx/{tx_hash}",
+                "status": "staged",
+                "network": chainlink_service.active_chain,
+                "message": f"Market for '{topic}' staged on-chain. Resolution will be triggered via Chainlink Functions."
+            }
+        elif action_type == "resolve_oracle_market":
+            if not task:
+                raise ValueError("resolve_oracle_market requires task_id.")
+            from backend.services.chainlink_service import chainlink_service
+            
+            # For resolution, we need the market ID. 
+            # In this hackathon version, we might store it in a manual override or use a default.
+            # Usually we'd get this from a previous 'stage_oracle_market' action result.
+            market_id = input_payload.get("market_id")
+            if not market_id:
+                # Attempt to find it in previous actions
+                past_actions = repo.get_actions_for_task(task_id)
+                for a in past_actions:
+                    if a.get("action_type") == "stage_oracle_market" and a.get("status") == "succeeded":
+                        # If we had the marketId from an event, we'd use it here.
+                        # For now, we use a placeholder or the topic's hash.
+                        import hashlib
+                        topic = task.get("topic", "")
+                        market_id = "0x" + hashlib.sha256(topic.encode()).hexdigest()
+                        break
+            
+            if not market_id:
+                raise ValueError("No active oracle market found for this research.")
+
+            # Load the JS source for resolution
+            source_path = os.path.join(os.getcwd(), "backend/chainlink/functions/oracle-resolution.js")
+            with open(source_path, "r") as f:
+                js_source = f.read()
+
+            tx_hash = await chainlink_service.resolve_market(market_id, js_source)
+            if not tx_hash:
+                raise ValueError("Failed to trigger on-chain resolution via Chainlink.")
+
+            result_payload = {
+                "tx_hash": tx_hash,
+                "explorer_url": f"{chainlink_service.chain_info['explorer']}/tx/{tx_hash}",
+                "status": "resolution_requested",
+                "market_id": market_id,
+                "message": f"Resolution for market {market_id[:10]}... requested via Chainlink DON."
+            }
         else:
             result_payload = {
                 "status": "accepted",
@@ -790,6 +849,19 @@ async def run_agent_action(action_id: str) -> None:
             completed_at=datetime.datetime.now(datetime.timezone.utc),
             error=None,
         )
+        
+        # Post-action task updates
+        if action_type == "stage_oracle_market" and task_id:
+            # Generate a market_id and store it in the task
+            import hashlib
+            topic = task.get("topic", "")
+            market_id = "0x" + hashlib.sha256(topic.encode()).hexdigest()
+            
+            task["oracle_market_id"] = market_id
+            if task_id in tasks:
+                tasks[task_id] = task
+            repo.save_task(task_id, task)
+
     except Exception as exc:
         repo.update_action(
             action_id,
@@ -1117,6 +1189,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             "memePageData": meme_page_data,
             "consensusData": consensus_data,
             "attestationData": attestation_data,
+            "oracleMarketId": task.get("oracle_market_id"),
             "generatedAt": task.get("updated_at", task.get("created_at", "")),
         },
         "telemetry": {

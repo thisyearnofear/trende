@@ -2,10 +2,15 @@
 
 Trende deploys on **two L2 testnets** to prove chain-agnostic capability:
 
-| Network | Chain ID | Router | DON ID |
-|---------|----------|--------|--------|
-| Base Sepolia | 84532 | `0xf9B8fc078197181C841c296C876945aaa425B278` | `fun-base-sepolia-1` |
-| Arbitrum Sepolia | 421614 | `0x234a5fb5Bd614a7AA2FfAB244D603abFA0Ac5C5C` | `fun-arbitrum-sepolia-1` |
+| Network | Chain ID | Router | DON ID | Status |
+|---------|----------|--------|--------|--------|
+| Base Sepolia | 84532 | `0xf9B8fc078197181C841c296C876945aaa425B278` | `fun-base-sepolia-1` | 🟡 Pending |
+| Arbitrum Sepolia | 421614 | `0x234a5fb5Bd614a7AA2FfAB244D603abFA0Ac5C5C` | `fun-arbitrum-sepolia-1` | ✅ **Live** |
+
+### 🟢 Active Deployment: Arbitrum Sepolia
+- **TrendeFunctionsConsumer**: `0x95fa0c32181d073FA9b07F0eC3961C845d00bE21`
+- **TrendeOracle**: `0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b`
+- **Subscription ID**: `558` (Funded)
 
 ## 1. Environment Setup
 
@@ -93,9 +98,14 @@ CHAINLINK_SUBSCRIPTION_ID=...
 
 To switch chains at runtime, change `CHAINLINK_ACTIVE_CHAIN` and the corresponding `CHAINLINK_RPC_URL` / addresses.
 
-## 6. Verification
+## 6. Market Resolution Logic
 
-Your backend can now trigger on-chain verification requests on either chain. The `ChainlinkService` automatically selects the correct DON ID based on `CHAINLINK_ACTIVE_CHAIN`.
+Trende uses a specialized `TrendeOracle` contract and a JavaScript resolution script to settle prediction markets:
+
+1. **Market Creation**: `ChainlinkService.create_market(topic, duration)` deploys a `Market` struct on-chain.
+2. **Resolution Request**: Triggered via `ChainlinkService.resolve_market(marketId, js_source)`.
+3. **Automated AI Consensus**: The `oracle-resolution.js` script fetches the consensus from the Trende API, verifies the agreement score, and returns it to the oracle.
+4. **On-Chain Settlement**: `TrendeOracle.fulfillRequest` decodes the result and updates the market status to `resolved=true`.
 
 ## Troubleshooting
 

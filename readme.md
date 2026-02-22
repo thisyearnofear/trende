@@ -57,7 +57,7 @@ Trende is built for the agent-to-agent economy:
 
 Trende uses **Chainlink Functions** and the **Chainlink Runtime Environment (CRE)** to provide verifiable social intelligence.
 
-- **Contracts**: Located in `/contracts`
+- **Contracts**: Located in `/contracts` (✅ **Live on Arbitrum Sepolia**)
 - **Functions**: JS sources in `backend/chainlink/functions`
 - **Deployment**: See [docs/CHAINLINK_DEPLOY.md](docs/CHAINLINK_DEPLOY.md)
 

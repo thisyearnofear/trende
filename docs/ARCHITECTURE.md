@@ -169,6 +169,32 @@ curl -X POST https://api.trende.famile.xyz/api/attest/verify \
 
 ---
 
+## Chainlink Oracle System
+
+### Architecture
+
+```
+┌─────────────────┐     ┌────────────────────────┐
+│  Trende Backend │     │  TrendeOracle          │
+│   (Port 8000)   │────►│  (Smart Contract)      │
+└────────┬────────┘     └──────────┬─────────────┘
+         │                         │ request
+         │ HTTPS consensus API     ▼
+         │              ┌────────────────────────┐
+         └─────────────►│ Chainlink Functions DON│
+                        │ (oracle-resolution.js) │
+                        └────────────────────────┘
+```
+
+### Market Resolution Flow
+
+1. **Market Creation**: An agent stages a prediction market on-chain via the `ChainlinkService` by calling `createMarket`.
+2. **Resolution Trigger**: When the trend's designated duration ends, the backend agent initiates settlement by calling `resolveMarket`.
+3. **Decentralized Evaluation**: The Chainlink Decentralized Oracle Network (DON) executes the `oracle-resolution.js` script. This script independently queries Trende's API for the final aggregated AI consensus score.
+4. **On-Chain Settlement**: The DON returns a structured `score|summary` string. The `TrendeOracle` contract decodes this payload using `splitResponse` and irrevocably settles the on-chain market.
+
+---
+
 ## Configuration
 
 ### Environment Variables

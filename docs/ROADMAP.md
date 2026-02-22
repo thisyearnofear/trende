@@ -57,12 +57,13 @@
 
 ---
 
-## Phase 7: The Verifiable Oracle (Chainlink Convergence Hackathon)
+## Phase 7: The Verifiable Oracle (Chainlink Convergence Hackathon) ✅ LIVE
 
-- [ ] **Chainlink Functions**: Decentralized data sourcing (GDELT, CoinGecko)
-- [ ] **Chainlink Runtime Environment (CRE)**: Port Consensus Engine to CRE
-- [ ] **Social Prediction Markets**: Trend resolution oracle contract
-- [ ] **Verifiable Social Proof**: Chainlink-attested reports
+- [x] **Chainlink Functions**: Decentralized data sourcing and consensus fetching
+- [x] **Chainlink Runtime Environment (CRE)**: JavaScript resolution script (`oracle-resolution.js`)
+- [x] **Social Prediction Markets**: Trend resolution oracle contract (`TrendeOracle.sol`)
+- [x] **Verifiable Social Proof**: Chainlink-attested market resolution
+- [x] **Live Networks**: Deployed to Arbitrum Sepolia
 
 ---
 

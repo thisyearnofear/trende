@@ -74,6 +74,50 @@ class ChainlinkService:
             }
         ]
 
+        self.oracle_abi = [
+            {
+                "inputs": [
+                    {"internalType": "string", "name": "topic", "type": "string"},
+                    {"internalType": "uint256", "name": "duration", "type": "uint256"}
+                ],
+                "name": "createMarket",
+                "outputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "bytes32", "name": "marketId", "type": "bytes32"},
+                    {"internalType": "string", "name": "source", "type": "string"},
+                    {"internalType": "bytes", "name": "encryptedSecretsUrls", "type": "bytes"}
+                ],
+                "name": "resolveMarket",
+                "outputs": [{"internalType": "bytes32", "name": "requestId", "type": "bytes32"}],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "anonymous": False,
+                "inputs": [
+                    {"indexed": True, "internalType": "bytes32", "name": "marketId", "type": "bytes32"},
+                    {"indexed": False, "internalType": "string", "name": "topic", "type": "string"},
+                    {"indexed": False, "internalType": "uint256", "name": "endTime", "type": "uint256"}
+                ],
+                "name": "MarketCreated",
+                "type": "event"
+            },
+            {
+                "anonymous": False,
+                "inputs": [
+                    {"indexed": True, "internalType": "bytes32", "name": "marketId", "type": "bytes32"},
+                    {"indexed": False, "internalType": "uint256", "name": "score", "type": "uint256"},
+                    {"indexed": False, "internalType": "string", "name": "summary", "type": "string"}
+                ],
+                "name": "MarketResolved",
+                "type": "event"
+            }
+        ]
+
     @property
     def chain_info(self) -> dict:
         return CHAIN_CONFIG.get(self.active_chain, CHAIN_CONFIG["base-sepolia"])
@@ -139,6 +183,75 @@ class ChainlinkService:
 
         except Exception as e:
             print(f"❌ Chainlink Request Failed: {e}")
+            return None
+
+    async def create_market(self, topic: str, duration_seconds: int = 86400) -> Optional[str]:
+        """
+        Creates a new prediction market on the TrendeOracle contract.
+        Returns the transaction hash.
+        """
+        if not self.is_configured() or not self.oracle_address:
+            print("⚠️ ChainlinkService or Oracle address not configured. Skipping market creation.")
+            return None
+
+        try:
+            contract = self.w3.eth.contract(
+                address=self.oracle_address, abi=self.oracle_abi
+            )
+            nonce = self.w3.eth.get_transaction_count(self.account.address)
+            tx = contract.functions.createMarket(
+                topic, duration_seconds
+            ).build_transaction({
+                'chainId': self.w3.eth.chain_id,
+                'gas': 300000,
+                'gasPrice': self.w3.eth.gas_price,
+                'nonce': nonce,
+            })
+            signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=self.private_key)
+            tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+            print(f"🏛️ Market Created! Tx Hash: {self.w3.to_hex(tx_hash)}")
+            return self.w3.to_hex(tx_hash)
+        except Exception as e:
+            print(f"❌ Market Creation Failed: {e}")
+            return None
+
+    async def resolve_market(self, market_id_hex: str, js_source: str) -> Optional[str]:
+        """
+        Submits a resolution request for a market on TrendeOracle.
+        Returns the transaction hash.
+        """
+        if not self.is_configured() or not self.oracle_address:
+            print("⚠️ ChainlinkService or Oracle address not configured. Skipping market resolution.")
+            return None
+
+        try:
+            contract = self.w3.eth.contract(
+                address=self.oracle_address, abi=self.oracle_abi
+            )
+            
+            # Ensure hex format for market_id
+            if market_id_hex.startswith("0x"):
+                market_id_bytes = self.w3.to_bytes(hexstr=market_id_hex)
+            else:
+                market_id_bytes = self.w3.to_bytes(hexstr="0x" + market_id_hex)
+
+            nonce = self.w3.eth.get_transaction_count(self.account.address)
+            tx = contract.functions.resolveMarket(
+                market_id_bytes,
+                js_source,
+                b""  # secrets
+            ).build_transaction({
+                'chainId': self.w3.eth.chain_id,
+                'gas': 500000,
+                'gasPrice': self.w3.eth.gas_price,
+                'nonce': nonce,
+            })
+            signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=self.private_key)
+            tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+            print(f"⚖️ Market Resolution Requested! Tx Hash: {self.w3.to_hex(tx_hash)}")
+            return self.w3.to_hex(tx_hash)
+        except Exception as e:
+            print(f"❌ Market Resolution Request Failed: {e}")
             return None
 
 chainlink_service = ChainlinkService()

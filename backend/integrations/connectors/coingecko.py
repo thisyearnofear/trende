@@ -28,7 +28,10 @@ class CoinGeckoConnector(AbstractPlatformConnector):
             headers["x-cg-demo-api-key"] = self.api_key
         return headers
 
-    async def search(self, query: str, limit: int = 10) -> List[TrendItem]:
+    async def search(self, query: str, limit: int = 10, use_oracle: bool = False) -> List[TrendItem]:
+        if use_oracle:
+            return await self._search_via_oracle(query, limit)
+            
         cache_key = build_cache_key("coingecko.search", query=query, limit=limit)
         cached = await request_cache.get(cache_key)
         if cached is not None:
@@ -115,6 +118,49 @@ class CoinGeckoConnector(AbstractPlatformConnector):
                 return []
             finally:
                 await request_cache.clear_inflight(cache_key)
+
+    async def _search_via_oracle(self, query: str, limit: int = 10) -> List[TrendItem]:
+        import os
+        from backend.integrations.connectors.chainlink import ChainlinkConnector
+        cl = ChainlinkConnector()
+        
+        # Use the specialized CoinGecko source script
+        cg_source_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+            "chainlink", "functions", "coingecko-source.js"
+        )
+        
+        source_code = cl.default_source
+        if os.path.exists(cg_source_path):
+            try:
+                with open(cg_source_path, "r") as f:
+                    source_code = f.read()
+            except Exception as e:
+                print(f"Warning: Could not read CoinGecko source script: {e}")
+        
+        # Chainlink Functions search
+        cl_results = await cl.fetch_verifiable_data(query, source_code)
+        
+        # Wrap the result as a TrendItem
+        import datetime
+        timestamp = datetime.datetime.now(datetime.timezone.utc)
+        tx_hash = cl_results.get("tx_hash")
+        
+        return [
+            TrendItem(
+                id=cl_results.get("request_id") or f"cg-oracle-{int(timestamp.timestamp())}",
+                platform=self.platform,
+                title=f"CoinGecko Oracle Search: {query}",
+                content=f"Verifiable market data request submitted via Chainlink Functions. Status: {cl_results.get('status')}",
+                author="Chainlink DON",
+                author_handle="oracle",
+                url=f"https://functions.chain.link/{cl_results.get('network', 'base-sepolia')}" if not tx_hash else f"https://sepolia.arbiscan.io/tx/{tx_hash}",
+                timestamp=timestamp,
+                metrics={},
+                raw_data=cl_results,
+                is_verified=True,
+            )
+        ]
 
     async def get_item_details(self, item_id: str) -> Optional[TrendItem]:
         return None

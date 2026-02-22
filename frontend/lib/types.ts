@@ -104,6 +104,7 @@ export interface TrendSummary {
     provider_count?: number;
     generated_at?: string;
   };
+  oracleMarketId?: string;
   generatedAt: string;
 }
 

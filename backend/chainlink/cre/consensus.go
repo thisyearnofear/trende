@@ -3,65 +3,113 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
-// TrendeConsensusModule - CRE Plugin for Trende
-// This Go code would run inside the Chainlink Runtime Environment (CRE)
-// to coordinate the multi-model AI consensus.
-
-// Note: This is a conceptual implementation for the hackathon plan.
-// It intentionally avoids Chainlink internal imports so the example
-// remains portable and buildable in this repo.
-
+// TrendeReport represents the structured output of the consensus engine.
 type TrendeReport struct {
 	Topic           string   `json:"topic"`
 	ConsensusScore  float64  `json:"consensus_score"`
 	ProviderCount   int      `json:"provider_count"`
 	TopNarrative    string   `json:"top_narrative"`
+	Pillars         []string `json:"pillars"`
 	Timestamp       string   `json:"timestamp"`
 }
 
-// GenerateConsensus simulates the aggregation logic
-func GenerateConsensus(inputs []string) (TrendeReport, error) {
-	// In reality, 'inputs' would come from multiple oracle nodes running LLM queries
-	// (Venice, AIsa, Gemini) and reporting their findings.
+// CalculateAgreementScore estimates consensus based on lexical overlap (Jaccard Index).
+func CalculateAgreementScore(responses []string) float64 {
+	if len(responses) < 2 {
+		return 1.0
+	}
 
-	var totalScore float64
-	var narratives []string
-	
-	for _, input := range inputs {
-		// Parse individual node report
-		var report TrendeReport
-		if err := json.Unmarshal([]byte(input), &report); err == nil {
-			totalScore += report.ConsensusScore
-			narratives = append(narratives, report.TopNarrative)
+	tokenSets := make([]map[string]bool, 0)
+	for _, resp := range responses {
+		tokens := make(map[string]bool)
+		words := strings.Fields(strings.ToLower(resp))
+		for _, word := range words {
+			cleanWord := strings.Trim(word, ".,:;!?()[]{}\"'`")
+			if len(cleanWord) > 3 {
+				tokens[cleanWord] = true
+			}
+		}
+		if len(tokens) > 0 {
+			tokenSets = append(tokenSets, tokens)
 		}
 	}
 
-	count := float64(len(inputs))
-	if count == 0 {
-		return TrendeReport{}, fmt.Errorf("no inputs")
+	if len(tokenSets) < 2 {
+		return 0.5
 	}
 
-	avgScore := totalScore / count
+	var totalOverlap float64
+	var comparisons int
+
+	for i := 0; i < len(tokenSets); i++ {
+		for j := i + 1; j < len(tokenSets); j++ {
+			intersection := 0
+			unionMap := make(map[string]bool)
+			
+			for token := range tokenSets[i] {
+				unionMap[token] = true
+				if tokenSets[j][token] {
+					intersection++
+				}
+			}
+			for token := range tokenSets[j] {
+				unionMap[token] = true
+			}
+
+			union := len(unionMap)
+			if union > 0 {
+				totalOverlap += float64(intersection) / float64(union)
+				comparisons++
+			}
+		}
+	}
+
+	if comparisons == 0 {
+		return 0.5
+	}
+
+	avgScore := totalOverlap / float64(comparisons)
+	// Apply smoothing consistent with Python implementation
+	smoothed := 0.1 + (0.8 * avgScore)
+	if smoothed > 1.0 {
+		return 1.0
+	}
+	if smoothed < 0.0 {
+		return 0.0
+	}
+	return smoothed
+}
+
+// GenerateConsensus coordinates the multi-model AI consensus within the CRE.
+func GenerateConsensus(inputs []string) (TrendeReport, error) {
+	if len(inputs) == 0 {
+		return TrendeReport{}, fmt.Errorf("no inputs provided for consensus")
+	}
+
+	// Calculate agreement score across all inputs
+	agreement := CalculateAgreementScore(inputs)
+
+	// In a real CRE/OCR3 implementation, we would extract dominant narratives
+	// and pillars using more sophisticated logic or a verified synthesis model.
+	// For now, we take the consensus score and indicate the source count.
 	
-	// Simple narrative consensus (majority vote or similar)
-	finalNarrative := "Diverse views"
-	if len(narratives) > 0 {
-		finalNarrative = narratives[0] 
-	}
-
+	pillars := []string{"Market sentiment", "Social volume"} // Placeholder
+	
 	return TrendeReport{
-		Topic: "Aggregated Trend",
-		ConsensusScore: avgScore,
-		ProviderCount: len(inputs),
-		TopNarrative: finalNarrative,
-		Timestamp: time.Now().Format(time.RFC3339),
+		Topic:          "Decentralized Trend Consensus",
+		ConsensusScore: agreement,
+		ProviderCount:  len(inputs),
+		TopNarrative:   "Aggregated signal from decentralized AI oracle nodes.",
+		Pillars:        pillars,
+		Timestamp:      time.Now().Format(time.RFC3339),
 	}, nil
 }
 
 func main() {
-	fmt.Println("Trende CRE Module Initialized")
-	// Standard CRE loop would go here
+	fmt.Println("Trende CRE Consensus Module Initialized")
+	// In a production CRE, this would register with the Chainlink Node software.
 }

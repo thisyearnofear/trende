@@ -762,6 +762,68 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                             </div>
                             <Sparkles className="w-4 h-4 text-slate-700 group-hover:text-emerald-500 transition-colors" />
                         </button>
+
+                        <button
+                            onClick={async () => {
+                                showToast('Staging on-chain oracle market...', 'info');
+                                try {
+                                    const response = await api.submitAction({
+                                        action_type: 'stage_oracle_market',
+                                        task_id: queryId,
+                                        input: {
+                                            duration: 86400 * 7 // 1 week duration for prediction
+                                        }
+                                    });
+                                    addOrUpdateAction(response.action);
+                                    showToast('Oracle market production sequence initiated.', 'success');
+                                } catch {
+                                    showToast('Failed to stage oracle market.', 'error');
+                                }
+                            }}
+                            className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all group lg:col-span-1"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 group-hover:scale-110 transition-transform">
+                                    <ShieldCheck className="w-5 h-5 text-cyan-500" />
+                                </div>
+                                <div className="text-left">
+                                    <div className="text-xs font-bold text-slate-100 uppercase tracking-wider">Oracle Settlement</div>
+                                    <div className="text-[10px] text-slate-500">Stage on-chain prediction for Base/Arb</div>
+                                </div>
+                            </div>
+                            <TrendingUp className="w-4 h-4 text-slate-700 group-hover:text-cyan-500 transition-colors" />
+                        </button>
+
+                        {/* If already staged, show resolution button */}
+                        {actions.find(a => a.action_type === 'stage_oracle_market' && a.status === 'succeeded') && (
+                            <button
+                                onClick={async () => {
+                                    showToast('Requesting on-chain resolution...', 'info');
+                                    try {
+                                        const response = await api.submitAction({
+                                            action_type: 'resolve_oracle_market',
+                                            task_id: queryId,
+                                        });
+                                        addOrUpdateAction(response.action);
+                                        showToast('Final settlement request sent to DID/DON.', 'success');
+                                    } catch {
+                                        showToast('Failed to trigger resolution.', 'error');
+                                    }
+                                }}
+                                className="flex items-center justify-between p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/10 transition-all group lg:col-span-1 animate-pulse"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                                        <Zap className="w-5 h-5 text-emerald-500" />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="text-xs font-bold text-slate-100 uppercase tracking-wider">Finalize Oracle</div>
+                                        <div className="text-[10px] text-slate-500">Trigger final settlement consensus</div>
+                                    </div>
+                                </div>
+                                <ShieldCheck className="w-4 h-4 text-emerald-500 transition-colors" />
+                            </button>
+                        )}
                     </div>
 
                     <div className="pt-6 border-t border-white/5">
@@ -862,13 +924,12 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                         </div>
 
                         <div
-                            className={`mb-4 rounded-xl border px-3 py-2 text-sm font-semibold ${
-                                verified === null
-                                    ? 'border-slate-700 bg-slate-800/50 text-slate-300'
-                                    : verified
-                                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                                      : 'border-rose-500/40 bg-rose-500/10 text-rose-300'
-                            }`}
+                            className={`mb-4 rounded-xl border px-3 py-2 text-sm font-semibold ${verified === null
+                                ? 'border-slate-700 bg-slate-800/50 text-slate-300'
+                                : verified
+                                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                                    : 'border-rose-500/40 bg-rose-500/10 text-rose-300'
+                                }`}
                         >
                             Verification Result:{' '}
                             {verified === null ? 'Not yet verified' : verified ? 'Verified' : 'Failed'}
@@ -944,8 +1005,8 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                     {attestation?.generated_at
                                         ? new Date(attestation.generated_at).toUTCString()
                                         : summary.generatedAt
-                                          ? new Date(summary.generatedAt).toUTCString()
-                                          : 'n/a'}
+                                            ? new Date(summary.generatedAt).toUTCString()
+                                            : 'n/a'}
                                 </span>
                             </div>
                         </div>
