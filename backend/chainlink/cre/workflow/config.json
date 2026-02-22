@@ -1,0 +1,11 @@
+{
+  "evms": [
+    {
+      "chainSelectorName": "ethereum-testnet-arbitrum-sepolia",
+      "oracleAddress": "0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b",
+      "gasLimit": "500000"
+    }
+  ],
+  "trendeApiUrl": "https://api.trende.famile.xyz",
+  "consensusThreshold": 0.5
+}

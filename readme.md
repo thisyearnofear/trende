@@ -59,14 +59,15 @@ Trende is built for the agent-to-agent economy:
 
 Trende uses **Chainlink Functions** and the **Chainlink Runtime Environment (CRE)** to provide verifiable social intelligence.
 
-- **Contracts**: Located in `/contracts` (✅ **Live on Arbitrum Sepolia**)
+- **Contracts**: Located in `/contracts` (✅ **Live on Arbitrum Sepolia + Base Sepolia**)
 - **Functions**: JS sources in `backend/chainlink/functions`
 - **Deployment**: See [docs/CHAINLINK_DEPLOY.md](docs/CHAINLINK_DEPLOY.md)
 
 ### Verifiable Features
 1. **Data Sourcing**: GDELT & CoinGecko data fetched via Chainlink Functions.
 2. **Oracle**: `TrendeOracle` contract for on-chain trend resolution.
-3. **Autonomous Settlement**: Sentinel loop scans staged markets and triggers resolution requests without additional user clicks.
+3. **CRE Workflow**: Decentralized multi-model AI consensus via Chainlink Runtime Environment (`backend/chainlink/cre/workflow/`).
+4. **Autonomous Settlement**: Sentinel loop scans staged markets and triggers resolution requests without additional user clicks.
 
 ## ✅ Production Ops
 

@@ -1,0 +1,280 @@
+/**
+ * AI Provider & Data Source HTTP fetchers for the CRE workflow.
+ *
+ * Each function uses the CRE HTTPClient capability so that every node in the
+ * DON independently fetches the data and reaches BFT consensus on the result.
+ *
+ * Provider priority: Venice (primary) → OpenRouter variants → OpenAI (fallback)
+ */
+
+import cre, { type Runtime, type HTTPSendRequester } from "@chainlink/cre-sdk";
+import { consensusIdenticalAggregation } from "@chainlink/cre-sdk";
+import type {
+  Config,
+  AIProviderResponse,
+  GDELTArticle,
+  CoinGeckoData,
+} from "./types.js";
+
+// ─── Helpers ────────────────────────────────────────────────────────────
+
+function ok(resp: { statusCode: number }): boolean {
+  return resp.statusCode >= 200 && resp.statusCode < 300;
+}
+
+function encodeBody(data: unknown): string {
+  return Buffer.from(
+    new TextEncoder().encode(JSON.stringify(data))
+  ).toString("base64");
+}
+
+function decodeBody(body: Uint8Array): string {
+  return new TextDecoder().decode(body);
+}
+
+// ─── System prompt shared by all AI providers ───────────────────────────
+
+const SYSTEM_PROMPT =
+  "You are an expert trend analyst. Analyze the topic using the provided data. " +
+  "Return a concise analysis covering: sentiment (bullish/bearish/neutral), " +
+  "key narratives, social momentum, and a confidence score from 0 to 100. " +
+  "Be specific and data-driven. Output valid JSON: " +
+  '{"score":0-100,"narrative":"...","pillars":["..."],"summary":"..."}';
+
+// ─── Data Sources ───────────────────────────────────────────────────────
+
+/**
+ * Fetch the top GDELT article for a topic.
+ * Provides verifiable news context for AI analysis.
+ */
+export function fetchGDELT(
+  runtime: Runtime<Config>,
+  topic: string
+): GDELTArticle | null {
+  const httpClient = new cre.capabilities.HTTPClient();
+
+  const fetcher = (sendRequester: HTTPSendRequester, _config: Config) => {
+    const url =
+      `https://api.gdeltproject.org/api/v2/doc/doc` +
+      `?query=${encodeURIComponent(topic)}&mode=ArtList&format=json&maxrecords=1&sort=DateDesc`;
+
+    const resp = sendRequester
+      .sendRequest({ url, method: "GET" as const, headers: {} })
+      .result();
+
+    if (!ok(resp)) return null;
+
+    const data = JSON.parse(decodeBody(resp.body));
+    if (!data?.articles?.length) return null;
+
+    const article = data.articles[0];
+    return {
+      title: article.title,
+      url: article.url,
+      source: article.domain,
+      timestamp: article.seendate,
+    } as GDELTArticle;
+  };
+
+  return httpClient
+    .sendRequest(runtime, fetcher, consensusIdenticalAggregation<GDELTArticle | null>())
+    (runtime.config)
+    .result();
+}
+
+/**
+ * Fetch market data from CoinGecko for a coin ID.
+ * Provides verifiable on-chain market context.
+ */
+export function fetchCoinGecko(
+  runtime: Runtime<Config>,
+  coinId: string
+): CoinGeckoData | null {
+  const httpClient = new cre.capabilities.HTTPClient();
+
+  const fetcher = (sendRequester: HTTPSendRequester, _config: Config) => {
+    const url =
+      `https://api.coingecko.com/api/v3/coins/markets` +
+      `?vs_currency=usd&ids=${encodeURIComponent(coinId)}&order=market_cap_desc&per_page=1&page=1&sparkline=false`;
+
+    const resp = sendRequester
+      .sendRequest({ url, method: "GET" as const, headers: {} })
+      .result();
+
+    if (!ok(resp)) return null;
+
+    const data = JSON.parse(decodeBody(resp.body));
+    if (!data?.length) return null;
+
+    const coin = data[0];
+    return {
+      name: coin.name,
+      symbol: coin.symbol,
+      price_usd: coin.current_price,
+      market_cap: coin.market_cap,
+      price_change_24h: coin.price_change_percentage_24h,
+    } as CoinGeckoData;
+  };
+
+  return httpClient
+    .sendRequest(runtime, fetcher, consensusIdenticalAggregation<CoinGeckoData | null>())
+    (runtime.config)
+    .result();
+}
+
+// ─── AI Providers ───────────────────────────────────────────────────────
+
+/**
+ * Query Venice AI (Llama 3.3 70B) — Primary provider.
+ * Venice routes through privacy-preserving inference.
+ */
+export function askVenice(
+  runtime: Runtime<Config>,
+  topic: string,
+  context: string
+): AIProviderResponse {
+  const apiKey = runtime.getSecret({ id: "VENICE_API_KEY" }).result();
+  const httpClient = new cre.capabilities.HTTPClient();
+
+  const fetcher = (sendRequester: HTTPSendRequester, _config: Config): AIProviderResponse => {
+    const body = encodeBody({
+      model: "llama-3.3-70b",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: `Topic: ${topic}\n\nContext:\n${context}` },
+      ],
+    });
+
+    const resp = sendRequester
+      .sendRequest({
+        url: "https://api.venice.ai/api/v1/chat/completions",
+        method: "POST" as const,
+        body,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey.value}`,
+        },
+      })
+      .result();
+
+    if (!ok(resp)) {
+      return { provider: "venice", analysis: "", statusCode: resp.statusCode };
+    }
+
+    const data = JSON.parse(decodeBody(resp.body));
+    return {
+      provider: "venice",
+      analysis: data.choices?.[0]?.message?.content ?? "",
+      statusCode: resp.statusCode,
+    };
+  };
+
+  return httpClient
+    .sendRequest(runtime, fetcher, consensusIdenticalAggregation<AIProviderResponse>())
+    (runtime.config)
+    .result();
+}
+
+/**
+ * Query OpenRouter (Llama 3.3 70B free tier) — Secondary provider.
+ * Provides model diversity via different inference infrastructure.
+ */
+export function askOpenRouter(
+  runtime: Runtime<Config>,
+  topic: string,
+  context: string
+): AIProviderResponse {
+  const apiKey = runtime.getSecret({ id: "OPENROUTER_API_KEY" }).result();
+  const httpClient = new cre.capabilities.HTTPClient();
+
+  const fetcher = (sendRequester: HTTPSendRequester, _config: Config): AIProviderResponse => {
+    const body = encodeBody({
+      model: "meta-llama/llama-3.3-70b-instruct:free",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: `Topic: ${topic}\n\nContext:\n${context}` },
+      ],
+    });
+
+    const resp = sendRequester
+      .sendRequest({
+        url: "https://openrouter.ai/api/v1/chat/completions",
+        method: "POST" as const,
+        body,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey.value}`,
+          "HTTP-Referer": "https://trende.famile.xyz",
+          "X-Title": "Trende CRE Workflow",
+        },
+      })
+      .result();
+
+    if (!ok(resp)) {
+      return { provider: "openrouter", analysis: "", statusCode: resp.statusCode };
+    }
+
+    const data = JSON.parse(decodeBody(resp.body));
+    return {
+      provider: "openrouter",
+      analysis: data.choices?.[0]?.message?.content ?? "",
+      statusCode: resp.statusCode,
+    };
+  };
+
+  return httpClient
+    .sendRequest(runtime, fetcher, consensusIdenticalAggregation<AIProviderResponse>())
+    (runtime.config)
+    .result();
+}
+
+/**
+ * Query the Trende API itself for a pre-computed consensus.
+ * Acts as a third independent voice — the API runs its own multi-model pipeline
+ * (Venice + AIsa + OpenRouter variants) with TEE attestation.
+ */
+export function askTrendeAPI(
+  runtime: Runtime<Config>,
+  topic: string
+): AIProviderResponse {
+  const httpClient = new cre.capabilities.HTTPClient();
+
+  const fetcher = (sendRequester: HTTPSendRequester, config: Config): AIProviderResponse => {
+    const url =
+      `${config.trendeApiUrl}/api/consensus/resolve` +
+      `?topic=${encodeURIComponent(topic)}`;
+
+    const resp = sendRequester
+      .sendRequest({
+        url,
+        method: "GET" as const,
+        headers: { "Content-Type": "application/json" },
+      })
+      .result();
+
+    if (!ok(resp)) {
+      return { provider: "trende-api", analysis: "", statusCode: resp.statusCode };
+    }
+
+    const data = JSON.parse(decodeBody(resp.body));
+    // Map the Trende API response format to our standard format
+    const score = Math.round((data.agreement_score ?? 0.5) * 100);
+    const analysis = JSON.stringify({
+      score,
+      narrative: data.top_narrative ?? "",
+      pillars: data.pillars ?? [],
+      summary: data.consensus_report ?? data.top_narrative ?? "",
+    });
+
+    return {
+      provider: "trende-api",
+      analysis,
+      statusCode: resp.statusCode,
+    };
+  };
+
+  return httpClient
+    .sendRequest(runtime, fetcher, consensusIdenticalAggregation<AIProviderResponse>())
+    (runtime.config)
+    .result();
+}

@@ -4,13 +4,18 @@ Trende deploys on **two L2 testnets** to prove chain-agnostic capability:
 
 | Network | Chain ID | Router | DON ID | Status |
 |---------|----------|--------|--------|--------|
-| Base Sepolia | 84532 | `0xf9B8fc078197181C841c296C876945aaa425B278` | `fun-base-sepolia-1` | 🟡 Pending |
+| Base Sepolia | 84532 | `0xf9B8fc078197181C841c296C876945aaa425B278` | `fun-base-sepolia-1` | ✅ **Live** |
 | Arbitrum Sepolia | 421614 | `0x234a5fb5Bd614a7AA2FfAB244D603abFA0Ac5C5C` | `fun-arbitrum-sepolia-1` | ✅ **Live** |
 
 ### 🟢 Active Deployment: Arbitrum Sepolia
 - **TrendeFunctionsConsumer**: `0x95fa0c32181d073FA9b07F0eC3961C845d00bE21`
 - **TrendeOracle**: `0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b`
 - **Subscription ID**: `558` (Funded)
+
+### 🟢 Base Sepolia Deployment
+- **TrendeFunctionsConsumer**: `0x95fa0c32181d073FA9b07F0eC3961C845d00bE21`
+- **TrendeOracle**: `0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b`
+- **Subscription ID**: `587` (Funded with 3 LINK)
 
 ## 1. Environment Setup
 

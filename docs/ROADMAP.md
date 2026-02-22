@@ -65,10 +65,10 @@
 ## Phase 7: The Verifiable Oracle (Chainlink Convergence Hackathon) ✅ LIVE
 
 - [x] **Chainlink Functions**: Decentralized data sourcing and consensus fetching
-- [x] **Chainlink Runtime Environment (CRE)**: JavaScript resolution script (`oracle-resolution.js`)
+- [x] **Chainlink Runtime Environment (CRE)**: Decentralized multi-model consensus workflow (`backend/chainlink/cre/workflow/`)
 - [x] **Social Prediction Markets**: Trend resolution oracle contract (`TrendeOracle.sol`)
 - [x] **Verifiable Social Proof**: Chainlink-attested market resolution
-- [x] **Live Networks**: Deployed to Arbitrum Sepolia
+- [x] **Live Networks**: Deployed to Arbitrum Sepolia + Base Sepolia
 
 ---
 

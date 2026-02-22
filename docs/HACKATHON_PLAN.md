@@ -21,9 +21,11 @@
 - **Hackathon Goal**: Port the `ConsensusEngine` logic to the **Chainlink Runtime Environment**.
 - **Benefit**: Moves "Reasoning" from a single server to a decentralized network of nodes, making the "Intelligence" truly sovereign and tamper-proof.
 - **Implementation**:
-    - Rewrite `analyzer_node` logic into a CRE-compatible module.
-    - Use CRE to orchestrate calls to Venice, AI.SA, and Gemini.
-    - Aggregate results within the CRE to produce a single "Consensus Report".
+    - CRE TypeScript workflow in `backend/chainlink/cre/workflow/`.
+    - EVM Log Trigger on `MarketCreated` events from TrendeOracle.
+    - HTTP capability fetches from Venice AI, OpenRouter (Llama 3.3 70B), and Trende API.
+    - Jaccard agreement scoring + score averaging produces a signed consensus report.
+    - `runtime.report()` + `evmClient.writeReport()` settles on-chain.
 
 ### 3. The "Meme Oracle" (On-Chain Resolution)
 - **Current State**: Reports are stored in a database and displayed on a web dashboard.
@@ -39,15 +41,15 @@
 |------|-----------|-------------|--------|
 | **Feb 21** | **Planning & Setup** | Finalize architecture and register for the hackathon. | ✅ Done |
 | **Feb 22-23** | **Functions Integration** | Implement Chainlink Functions for GDELT and CoinGecko. | ✅ Backend Live |
-| **Feb 24-25** | **CRE Migration** | Port `ConsensusEngine` to Chainlink Runtime Environment. | 🚧 In Progress |
-| **Feb 26** | **Oracle Contract** | Deploy the "Meme Oracle" Solidity contract on Base/Monad Testnet. | ⏳ Pending |
+| **Feb 24-25** | **CRE Migration** | Port `ConsensusEngine` to Chainlink Runtime Environment. | ✅ Done |
+| **Feb 26** | **Oracle Contract** | Deploy the "Meme Oracle" Solidity contract on Base/Monad Testnet. | ✅ Live (Base Sepolia + Arbitrum Sepolia) |
 | **Feb 27-28** | **E2E Testing** | Connect the frontend to the on-chain oracle data. | ⏳ Pending |
 | **Mar 1** | **Submission** | Finalize video demo and technical documentation. | ⏳ Pending |
 
 ## Success Metrics for Hackathon
 - [x] Backend Integration for Chainlink Functions (Connectors wired & verified).
 - [ ] 100% Verifiable Data Sourcing for at least 2 platforms (On-chain tx confirmation).
-- [ ] Consensus Report generated and signed within CRE.
+- [x] Consensus Report generated and signed within CRE.
 - [ ] At least one successful prediction market resolution via Trende Oracle.
 - [ ] Technical post-mortem/guide on "Building Verifiable AI Agents with CRE".
 

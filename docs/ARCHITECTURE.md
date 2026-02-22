@@ -194,6 +194,17 @@ curl -X POST https://api.trende.famile.xyz/api/attest/verify \
 3. **Decentralized Evaluation**: The Chainlink Decentralized Oracle Network (DON) executes the `oracle-resolution.js` script. This script independently queries Trende's API for the final aggregated AI consensus score.
 4. **On-Chain Settlement**: The DON returns a structured `score|summary` string. The `TrendeOracle` contract decodes this payload using `splitResponse` and irrevocably settles the on-chain market.
 
+### CRE Workflow (Decentralized Consensus)
+
+The `backend/chainlink/cre/workflow/` module ports the consensus engine to the **Chainlink Runtime Environment**. Instead of running on a single server, AI analysis runs across a decentralized DON:
+
+1. **EVM Log Trigger** watches for `MarketCreated` events on TrendeOracle.
+2. **Data fetch** from GDELT + CoinGecko via CRE HTTP capability (BFT consensus per call).
+3. **Multi-model AI consensus** across Venice, OpenRouter, and the Trende API.
+4. **Signed report** submitted on-chain via `runtime.report()` + `evmClient.writeReport()`.
+
+This ensures the "Intelligence" is tamper-proof — no single node can fabricate a consensus result.
+
 ### Agentic UX Surface
 
 The frontend exposes this autonomous flow directly:
