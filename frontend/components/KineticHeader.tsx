@@ -188,7 +188,7 @@ export function SectionHeader({ title, subtitle, icon: Icon, accent = 'cyan' }: 
   );
 }
 
-// Monad/Eigen themed hero text
+// Multi-chain / Eigen themed hero text
 export function HeroText({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   const textRef = useRef<HTMLDivElement>(null);
 

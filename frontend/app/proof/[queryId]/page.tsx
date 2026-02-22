@@ -212,7 +212,7 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Network</p>
-                                    <p className="text-xs text-slate-200">Monad Agentic Layer</p>
+                                    <p className="text-xs text-slate-200">Base Sepolia / Arbitrum Sepolia</p>
                                 </div>
                             </div>
                         </div>

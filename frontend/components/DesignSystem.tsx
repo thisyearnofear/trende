@@ -542,7 +542,7 @@ export function Tooltip({
   children,
   content,
   learnMoreUrl,
-  position = 'top',
+  position = 'bottom',
   className
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -621,9 +621,10 @@ interface InfoIconProps {
   tooltip: string | ReactNode;
   learnMoreUrl?: string;
   size?: 'sm' | 'md' | 'lg';
+  position?: 'top' | 'bottom' | 'left' | 'right';
 }
 
-export function InfoIcon({ tooltip, learnMoreUrl, size = 'sm' }: InfoIconProps) {
+export function InfoIcon({ tooltip, learnMoreUrl, size = 'sm', position = 'top' }: InfoIconProps) {
   const sizeClasses = {
     sm: 'w-3.5 h-3.5',
     md: 'w-4 h-4',
@@ -631,7 +632,7 @@ export function InfoIcon({ tooltip, learnMoreUrl, size = 'sm' }: InfoIconProps) 
   };
 
   return (
-    <Tooltip content={tooltip} learnMoreUrl={learnMoreUrl}>
+    <Tooltip content={tooltip} learnMoreUrl={learnMoreUrl} position={position}>
       <svg
         className={cn(
           sizeClasses[size],

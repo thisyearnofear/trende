@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Terminal, Bot, Shield, Zap } from 'lucide-react';
+import { Terminal, Bot, Shield, Zap, Chain, Layers, Rocket } from 'lucide-react';
 import { Card, Button } from './DesignSystem';
 import { useTheme } from './ThemeProvider';
 
@@ -10,7 +10,8 @@ const BOOT_SEQUENCE = [
   "ESTABLISHING TEE CONNECTION...",
   "VERIFYING EIGENCOMPUTE SIGNATURES...",
   "LOADING CONSENSUS MODELS [VENICE, AISA, OPENROUTER]...",
-  "SYNCING MONAD TESTNET RPC...",
+  "SYNCING BASE SEPOLIA RPC...",
+  "CONNECTING ARBITRUM SEPOLIA...",
   "ENHANCING USER DELIGHT...",
   "TRENDE AGENT ONLINE."
 ];
@@ -87,7 +88,7 @@ export function Onboarding() {
                 </div>
                 <h2 className="text-2xl font-black uppercase tracking-tight mb-2">Trende Agent</h2>
                 <p className="text-[var(--text-secondary)] font-mono text-sm">
-                  The Sovereign AI Oracle for the Monad Economy.
+                  The Sovereign AI Oracle for Onchain Intelligence.
                 </p>
               </div>
 
@@ -112,7 +113,49 @@ export function Onboarding() {
                   <div className="mt-1"><Bot className="w-5 h-5 text-[var(--accent-cyan)]" /></div>
                   <div>
                     <h4 className="font-black text-sm uppercase tracking-wide">Autonomous Agents</h4>
-                    <p className="text-xs text-[var(--text-secondary)] font-mono mt-1">Specialized nodes handle strategy, data harvesting, and architectural synthesis for the Monad economy.</p>
+                    <p className="text-xs text-[var(--text-secondary)] font-mono mt-1">Specialized nodes handle strategy, data harvesting, and architectural synthesis.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Multi-Chain Network Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Chain className="w-4 h-4 text-[var(--accent-cyan)]" />
+                  <h4 className="font-black text-xs uppercase tracking-wide">Supported Networks</h4>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className={`p-2 border-2 ${isSoft ? 'soft-ui-out border-0' : 'border-[var(--border-color)] bg-[var(--bg-secondary)]'}`} style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '2px 2px 0px 0px var(--shadow-color)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-3 h-3 rounded-full bg-blue-500" />
+                      <span className="font-black text-xs uppercase">Base Sepolia</span>
+                    </div>
+                    <p className="text-[10px] text-[var(--text-secondary)] font-mono">Primary testnet • Low fees • Fast finality</p>
+                  </div>
+                  
+                  <div className={`p-2 border-2 ${isSoft ? 'soft-ui-out border-0' : 'border-[var(--border-color)] bg-[var(--bg-secondary)]'}`} style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '2px 2px 0px 0px var(--shadow-color)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-3 h-3 rounded-full bg-purple-500" />
+                      <span className="font-black text-xs uppercase">Arbitrum Sepolia</span>
+                    </div>
+                    <p className="text-[10px] text-[var(--text-secondary)] font-mono">L2 scaling • DeFi ecosystem • High throughput</p>
+                  </div>
+                  
+                  <div className={`p-2 border-2 ${isSoft ? 'soft-ui-out border-0' : 'border-[var(--border-color)] bg-[var(--bg-secondary)]'}`} style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '2px 2px 0px 0px var(--shadow-color)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-3 h-3 rounded-full bg-blue-400" />
+                      <span className="font-black text-xs uppercase">Base Mainnet</span>
+                    </div>
+                    <p className="text-[10px] text-[var(--text-secondary)] font-mono">Paragraph publishing • Consumer apps</p>
+                  </div>
+                  
+                  <div className={`p-2 border-2 ${isSoft ? 'soft-ui-out border-0' : 'border-[var(--border-color)] bg-[var(--bg-secondary)]'}`} style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '2px 2px 0px 0px var(--shadow-color)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                      <span className="font-black text-xs uppercase">BSC</span>
+                    </div>
+                    <p className="text-[10px] text-[var(--text-secondary)] font-mono">Meme token launcher • High volume</p>
                   </div>
                 </div>
               </div>

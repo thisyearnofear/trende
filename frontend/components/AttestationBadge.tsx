@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { ShieldCheck, Info, ExternalLink } from 'lucide-react';
+import { useTheme } from './ThemeProvider';
+import { cn } from '@/lib/utils';
 
 interface AttestationBadgeProps {
     attestation?: {
@@ -21,6 +23,7 @@ interface AttestationBadgeProps {
 
 export function AttestationBadge({ attestation, size = 'md', showDetails = false }: AttestationBadgeProps) {
     const [showTooltip, setShowTooltip] = useState(false);
+    const { isSoft } = useTheme();
 
     if (!attestation || attestation.status !== 'signed') {
         return null;
@@ -44,24 +47,35 @@ export function AttestationBadge({ attestation, size = 'md', showDetails = false
     return (
         <div className="relative inline-block">
             <div
-                className={`inline-flex items-center ${sizeClasses[size]} rounded-full bg-emerald-500/10 border border-emerald-500/30 font-bold text-emerald-400 uppercase tracking-wider cursor-help transition-all hover:bg-emerald-500/20`}
+                className={cn(
+                    `inline-flex items-center ${sizeClasses[size]} rounded-full border font-bold uppercase tracking-wider cursor-help transition-all`,
+                    isSoft 
+                        ? "soft-ui-button border-0 text-[var(--accent-emerald)]" 
+                        : "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
+                )}
                 onMouseEnter={() => setShowTooltip(true)}
                 onMouseLeave={() => setShowTooltip(false)}
             >
                 <ShieldCheck className={iconSizes[size]} />
                 <span>{isTEE ? 'TEE Verified' : 'Attested'}</span>
-                <Info className={`${iconSizes[size]} opacity-60`} />
+                <Info className={cn(iconSizes[size], isSoft ? "text-[var(--text-muted)]" : "opacity-60")} />
             </div>
 
             {showTooltip && (
-                <div className="absolute z-50 w-80 p-4 mt-2 left-0 bg-slate-900 border-2 border-emerald-500/30 rounded-xl shadow-2xl animate-fade-in">
+                <div className={cn(
+                    "absolute z-50 w-80 p-4 mt-2 left-0 rounded-xl shadow-2xl animate-fade-in",
+                    isSoft ? "soft-ui-out border-0" : "bg-slate-900 border-2 border-emerald-500/30"
+                )}>
                     <div className="flex items-start gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                            <ShieldCheck className="w-6 h-6 text-emerald-400" />
+                        <div className={cn(
+                            "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                            isSoft ? "soft-ui-in" : "bg-emerald-500/20"
+                        )}>
+                            <ShieldCheck className={cn("w-6 h-6", isSoft ? "text-[var(--accent-emerald)]" : "text-emerald-400")} />
                         </div>
                         <div>
-                            <h4 className="text-sm font-bold text-white mb-1">TEE Attestation</h4>
-                            <p className="text-xs text-slate-400 leading-relaxed">
+                            <h4 className={cn("text-sm font-bold mb-1", isSoft ? "text-[var(--text-primary)]" : "text-white")}>TEE Attestation</h4>
+                            <p className={cn("text-xs leading-relaxed", isSoft ? "text-[var(--text-secondary)]" : "text-slate-400")}>
                                 This report is cryptographically signed by a Trusted Execution Environment (TEE),
                                 providing verifiable proof that the consensus was generated securely.
                             </p>
@@ -69,41 +83,47 @@ export function AttestationBadge({ attestation, size = 'md', showDetails = false
                     </div>
 
                     {showDetails && (
-                        <div className="space-y-2 pt-3 border-t border-slate-700">
+                        <div className={cn(
+                            "space-y-2 pt-3 border-t",
+                            isSoft ? "border-[var(--text-muted)]/10" : "border-slate-700"
+                        )}>
                             <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-500">Method:</span>
-                                <span className="text-slate-300 font-mono">{attestation.method}</span>
+                                <span className={isSoft ? "text-[var(--text-muted)]" : "text-slate-500"}>Method:</span>
+                                <span className={cn("font-mono", isSoft ? "text-[var(--text-secondary)]" : "text-slate-300")}>{attestation.method}</span>
                             </div>
                             <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-500">Attestation ID:</span>
-                                <span className="text-slate-300 font-mono text-[10px]">
+                                <span className={isSoft ? "text-[var(--text-muted)]" : "text-slate-500"}>Attestation ID:</span>
+                                <span className={cn("font-mono text-[10px]", isSoft ? "text-[var(--text-secondary)]" : "text-slate-300")}>
                                     {attestation.attestation_id?.slice(0, 20)}...
                                 </span>
                             </div>
                             <div className="flex items-start justify-between text-xs gap-2">
-                                <span className="text-slate-500 flex-shrink-0">Signer:</span>
+                                <span className={cn("flex-shrink-0", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Signer:</span>
                                 {signerAddress ? (
                                     <a
                                         href={`https://etherscan.io/address/${signerAddress}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-emerald-400 hover:text-emerald-300 font-mono text-[10px] flex items-center gap-1 break-all"
+                                        className={cn("hover:opacity-80 font-mono text-[10px] flex items-center gap-1 break-all", isSoft ? "text-[var(--accent-emerald)]" : "text-emerald-400")}
                                     >
                                         {signerAddress.slice(0, 10)}...{signerAddress.slice(-8)}
                                         <ExternalLink className="w-3 h-3 flex-shrink-0" />
                                     </a>
                                 ) : (
-                                    <span className="text-slate-400 font-mono text-[10px]">n/a</span>
+                                    <span className={cn("font-mono text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-400")}>n/a</span>
                                 )}
                             </div>
                         </div>
                     )}
 
-                    <div className="mt-3 pt-3 border-t border-slate-700">
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-1">
+                    <div className={cn(
+                        "mt-3 pt-3 border-t",
+                        isSoft ? "border-[var(--text-muted)]/10" : "border-slate-700"
+                    )}>
+                        <p className={cn("text-[10px] uppercase tracking-wider font-bold mb-1", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>
                             What is TEE?
                         </p>
-                        <p className="text-xs text-slate-400">
+                        <p className={cn("text-xs", isSoft ? "text-[var(--text-secondary)]" : "text-slate-400")}>
                             A secure area of a processor that guarantees code and data are protected with respect to
                             confidentiality and integrity.
                         </p>

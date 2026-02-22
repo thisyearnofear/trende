@@ -169,17 +169,17 @@ function StageCard({
       className={cn(
         'text-left transition-all duration-300 relative overflow-hidden',
         isRail ? "w-44 shrink-0 snap-center p-3" : "p-4",
-        'glass border-white/10'
+        softMode ? "soft-ui-out border-0" : "glass border-white/10"
       )}
       style={{
-        borderColor: isComplete
+        borderColor: !softMode ? (isComplete
           ? "var(--accent-emerald)"
           : isActive
             ? "var(--accent-cyan)"
-            : "rgba(255,255,255,0.1)",
+            : "rgba(255,255,255,0.1)") : undefined,
         boxShadow: isActive
-          ? "0 0 20px rgba(0,255,255,0.2)"
-          : "none"
+          ? (softMode ? "var(--soft-shadow-in)" : "0 0 20px rgba(0,255,255,0.2)")
+          : (softMode ? "var(--soft-shadow-out)" : "none")
       }}
       aria-expanded={isExpanded}
     >
@@ -189,15 +189,15 @@ function StageCard({
 
       <div className="flex items-center gap-2 mb-2 relative z-10">
         {isComplete ? (
-          <CheckCircle2 className={`${iconSize} text-emerald-400`} />
+          <CheckCircle2 className={cn(iconSize, "text-[var(--accent-emerald)]")} />
         ) : isActive ? (
-          <div className={`${iconSize} bg-cyan-400 rounded-full shadow-[0_0_8px_var(--accent-cyan)] ${reducedMotion ? "" : "animate-pulse"}`} />
+          <div className={cn(iconSize, "bg-[var(--accent-cyan)] rounded-full", !softMode && "shadow-[0_0_8px_var(--accent-cyan)]", !reducedMotion && "animate-pulse")} />
         ) : (
-          <Circle className={`${iconSize} text-white/20`} />
+          <Circle className={cn(iconSize, softMode ? "text-[var(--text-muted)]" : "text-white/20")} />
         )}
         <span className={cn(
           "text-[10px] font-black uppercase tracking-wider",
-          isActive ? "text-cyan-400" : isComplete ? "text-emerald-400" : "text-white/40"
+          isActive ? "text-[var(--accent-cyan)]" : isComplete ? "text-[var(--accent-emerald)]" : (softMode ? "text-[var(--text-muted)]" : "text-white/40")
         )}>
           {stage.label}
         </span>
@@ -205,16 +205,19 @@ function StageCard({
 
       <p className={cn(
         "text-[10px] font-mono relative z-10",
-        isActive ? "text-white/90" : "text-white/40",
+        isActive ? (softMode ? "text-[var(--text-primary)]" : "text-white/90") : (softMode ? "text-[var(--text-muted)]" : "text-white/40"),
         isRail ? "line-clamp-2" : "mb-2"
       )}>
         {stage.description}
       </p>
 
       {!isRail && (
-        <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5 relative z-10">
-          <span className="text-[9px] font-black uppercase text-white/20">Est. Window</span>
-          <span className="text-[10px] font-mono text-violet-400/70">
+        <div className={cn(
+          "flex items-center justify-between mt-auto pt-2 relative z-10",
+          softMode ? "border-t border-[var(--text-muted)]/10" : "border-t border-white/5"
+        )}>
+          <span className={cn("text-[9px] font-black uppercase", softMode ? "text-[var(--text-muted)]" : "text-white/20")}>Est. Window</span>
+          <span className="text-[10px] font-mono text-[var(--accent-violet)]/70">
             {band.min}s - {band.max}s
           </span>
         </div>
@@ -526,7 +529,7 @@ export function ProcessingStatus({
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2">
                 <Clock3 className="w-4 h-4 text-[var(--accent-violet)]" />
-                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider">
+                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">
                   Mission Timeline
                 </h3>
               </div>
@@ -587,18 +590,24 @@ export function ProcessingStatus({
             </div>
 
             {/* Active narrative panel */}
-            <div className="mt-3 sm:mt-4 border-2 border-[var(--border-color)] bg-[var(--bg-primary)] p-3 sm:p-4">
+            <div className={cn(
+              "mt-3 sm:mt-4 p-3 sm:p-4",
+              isSoft ? "soft-ui-in" : "border-2 border-[var(--border-color)] bg-[var(--bg-primary)]"
+            )}>
               <p className="text-[10px] font-black uppercase tracking-wider text-[var(--accent-violet)]">
                 Active Narrative
               </p>
-              <h4 className="text-sm font-black uppercase mt-0.5">
+              <h4 className="text-sm font-black uppercase mt-0.5 text-[var(--text-primary)]">
                 {expandedStage.label}{" // "}{expandedStage.description}
               </h4>
               <p className="mt-2 text-xs font-mono text-[var(--text-secondary)]">
                 {expandedStage.detail}
               </p>
               <div className="flex flex-wrap gap-2 mt-2 text-[10px] font-mono">
-                <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                <span className={cn(
+                  "px-2 py-1",
+                  isSoft ? "soft-ui-out text-[var(--text-secondary)]" : "border border-[var(--border-color)] bg-[var(--bg-secondary)]"
+                )}>
                   Stage: ~{expandedBand?.min ?? 0}s - {expandedBand?.max ?? 0}s
                 </span>
               </div>
@@ -662,8 +671,10 @@ export function ProcessingStatus({
                   style={{ borderColor: isSoft ? "var(--text-secondary)" : "var(--text-muted)" }}
                 >
                   <div
-                    className="flex items-center justify-between px-3 py-2 border-b-2 bg-[var(--bg-secondary)]"
-                    style={{ borderColor: isSoft ? "var(--text-secondary)" : "var(--text-muted)" }}
+                    className={cn(
+                      "flex items-center justify-between px-3 py-2 border-b-2",
+                      isSoft ? "bg-[var(--bg-tertiary)] border-[var(--text-muted)]/10" : "bg-[var(--bg-secondary)] border-[var(--text-muted)]"
+                    )}
                   >
                     <div className="flex items-center gap-2">
                       <Terminal className={`w-3.5 h-3.5 ${isSoft ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`} />
@@ -672,9 +683,9 @@ export function ProcessingStatus({
                       </span>
                     </div>
                     <div className="flex gap-1">
-                      <div className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${prefersReducedMotion ? "" : "animate-pulse"}`} />
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/20" />
+                      <div className={`w-1.5 h-1.5 rounded-full bg-[var(--status-success)] ${prefersReducedMotion ? "" : "animate-pulse"}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full ${isSoft ? "bg-[var(--status-success)]/40" : "bg-emerald-500/40"}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full ${isSoft ? "bg-[var(--status-success)]/20" : "bg-emerald-500/20"}`} />
                     </div>
                   </div>
                   <div className="p-3">

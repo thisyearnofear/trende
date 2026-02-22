@@ -220,7 +220,10 @@ export function AgentPersona({
   return (
     <div
       ref={containerRef}
-      className="flex flex-col items-center sm:flex-row sm:items-start gap-4 p-5 sm:p-7 glass border-white/10 relative overflow-hidden transition-all duration-300 group"
+      className={cn(
+        "flex flex-col items-center sm:flex-row sm:items-start gap-4 p-5 sm:p-7 glass border-white/10 relative overflow-hidden transition-all duration-300 group",
+        isSoft ? "soft-ui-out border-0" : "border-white/10"
+      )}
       style={{
         boxShadow: isSoft
           ? (isHovered ? 'var(--soft-shadow-in)' : 'var(--soft-shadow-out)')
@@ -235,26 +238,38 @@ export function AgentPersona({
       <div className="relative shrink-0 z-10">
         <div
           ref={avatarRef}
-          className="w-20 h-20 sm:w-24 sm:h-24 bg-black/40 border border-white/10 rounded-2xl overflow-hidden flex items-center justify-center relative shadow-2xl transition-transform group-hover:scale-105"
+          className={cn(
+            "w-20 h-20 sm:w-24 sm:h-24 bg-black/40 border border-white/10 rounded-2xl overflow-hidden flex items-center justify-center relative shadow-2xl transition-transform group-hover:scale-105",
+            isSoft ? "soft-ui-out border-0" : "bg-black/40 border-white/10 shadow-2xl"
+          )}
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/20 via-transparent to-violet-500/20" />
-          <Bot className="w-12 h-12 sm:w-14 h-14 text-cyan-400 z-10 fill-cyan-400/5" />
+          <Bot className="w-12 h-12 sm:w-14 h-14 text-[var(--accent-cyan)] z-10 fill-cyan-400/5" />
 
           {/* Status glow circle */}
-          <div className={`absolute bottom-2 right-2 w-4 h-4 rounded-full ${config.color} shadow-[0_0_12px_rgba(0,0,0,0.5)] border-2 border-white/20 z-20`} />
+          <div className={cn(
+            `absolute bottom-2 right-2 w-4 h-4 rounded-full ${config.color} z-20`,
+            !isSoft && "shadow-[0_0_12px_rgba(0,0,0,0.5)] border-2 border-white/20"
+          )} />
         </div>
       </div>
 
       {/* Message Content */}
       <div className="flex-1 min-w-0 space-y-3 z-10">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-black uppercase tracking-[0.2em] text-cyan-400">Agent // Trende</span>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-white/60">
+          <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--accent-cyan)]">Agent // Trende</span>
+          <div className={cn(
+            "flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
+            isSoft ? "soft-ui-in text-[var(--text-secondary)]" : "bg-white/5 border border-white/10 text-white/60"
+          )}>
             <div className={`w-1.5 h-1.5 rounded-full ${config.color} animate-pulse`} />
             {config.label}
           </div>
           {status === 'processing' && (
-            <div className="text-[10px] font-mono text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/20">
+            <div className={cn(
+              "text-[10px] font-mono px-2 py-0.5 rounded border",
+              isSoft ? "text-[var(--accent-emerald)] bg-[var(--accent-emerald)]/5 border-[var(--accent-emerald)]/20" : "text-emerald-400 bg-emerald-500/5 border-emerald-500/20"
+            )}>
               {progress}% SYNC
             </div>
           )}
@@ -263,10 +278,16 @@ export function AgentPersona({
         <div className="relative">
           <p
             ref={messageRef}
-            className="text-sm sm:text-base font-mono leading-relaxed text-white/90 min-h-[3em] selection:bg-cyan-500/30"
+            className={cn(
+              "text-sm sm:text-base font-mono leading-relaxed min-h-[3em] selection:bg-cyan-500/30",
+              isSoft ? "text-[var(--text-primary)]" : "text-white/90"
+            )}
           >
             {displayMessage}
-            {isTyping && <span className={`inline-block w-2 h-4 ml-1 bg-cyan-400 ${prefersReducedMotion ? '' : 'animate-pulse text-shadow-cyan'} align-middle`} />}
+            {isTyping && <span className={cn(
+              `inline-block w-2 h-4 ml-1 bg-[var(--accent-cyan)] align-middle`,
+              !prefersReducedMotion && (isSoft ? "animate-pulse" : "animate-pulse text-shadow-cyan")
+            )} />}
           </p>
         </div>
 
@@ -276,14 +297,17 @@ export function AgentPersona({
           {status === 'processing' && (
             <div className="flex gap-1.5">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className={`w-1 h-1 rounded-full bg-cyan-400/60 ${prefersReducedMotion ? '' : 'animate-bounce'}`} style={{ animationDelay: `${i * 0.1}s` }} />
+                <div key={i} className={`w-1 h-1 rounded-full bg-[var(--accent-cyan)]/60 ${prefersReducedMotion ? '' : 'animate-bounce'}`} style={{ animationDelay: `${i * 0.1}s` }} />
               ))}
             </div>
           )}
           {decisionLog.length > 0 && (
             <button
               onClick={() => setShowDecisionLog(s => !s)}
-              className="ml-auto text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-cyan-400/60 transition-colors"
+              className={cn(
+                "ml-auto text-[9px] font-black uppercase tracking-widest transition-colors",
+                isSoft ? "text-[var(--text-muted)] hover:text-[var(--accent-cyan)]" : "text-white/20 hover:text-cyan-400/60"
+              )}
             >
               {showDecisionLog ? 'Hide Log' : `Decision Log (${decisionLog.length})`}
             </button>
@@ -292,22 +316,34 @@ export function AgentPersona({
 
         {/* Proactive suggestion — agent speaks first */}
         {suggestShown && onSuggestOracle && (
-          <div className="mt-3 flex items-start gap-3 p-3 rounded-xl bg-cyan-500/5 border border-cyan-500/20 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400 mt-0.5 shrink-0" />
+          <div className={cn(
+            "mt-3 flex items-start gap-3 p-3 rounded-xl animate-in fade-in slide-in-from-bottom-2 duration-500",
+            isSoft ? "soft-ui-in" : "bg-cyan-500/5 border border-cyan-500/20"
+          )}>
+            <Sparkles className="w-3.5 h-3.5 text-[var(--accent-cyan)] mt-0.5 shrink-0" />
             <div className="flex-1">
-              <p className="text-[10px] font-mono text-cyan-300 leading-relaxed">
+              <p className={cn(
+                "text-[10px] font-mono leading-relaxed",
+                isSoft ? "text-[var(--text-primary)]" : "text-cyan-300"
+              )}>
                 High signal consensus detected ({Math.round(agreementScore * 100)}% agreement). Should I stage this on-chain for verifiable settlement?
               </p>
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={() => { onSuggestOracle(); setSuggestShown(false); }}
-                  className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors"
+                  className={cn(
+                    "text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg transition-colors",
+                    isSoft ? "soft-ui-out text-[var(--accent-cyan)] hover:bg-[var(--accent-cyan)]/5" : "bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30"
+                  )}
                 >
                   Yes, Stage Oracle
                 </button>
                 <button
                   onClick={() => setSuggestShown(false)}
-                  className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg text-white/20 hover:text-white/40 transition-colors"
+                  className={cn(
+                    "text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg transition-colors",
+                    isSoft ? "text-[var(--text-muted)] hover:text-[var(--text-primary)]" : "text-white/20 hover:text-white/40"
+                  )}
                 >
                   Dismiss
                 </button>
@@ -318,10 +354,19 @@ export function AgentPersona({
 
         {/* Scrollable decision log */}
         {showDecisionLog && decisionLog.length > 0 && (
-          <div className="mt-3 max-h-32 overflow-y-auto space-y-1 font-mono text-[9px] border-t border-white/5 pt-3">
+          <div className={cn(
+            "mt-3 max-h-32 overflow-y-auto space-y-1 font-mono text-[9px] pt-3",
+            isSoft ? "border-t border-[var(--text-muted)]/10" : "border-t border-white/5"
+          )}>
             {decisionLog.map((entry, i) => (
-              <div key={i} className="flex gap-2 text-white/30 hover:text-white/50 transition-colors">
-                <span className="text-cyan-400/40 shrink-0">{entry.ts}</span>
+              <div key={i} className={cn(
+                "flex gap-2 transition-colors",
+                isSoft ? "text-[var(--text-secondary)] hover:text-[var(--text-primary)]" : "text-white/30 hover:text-white/50"
+              )}>
+                <span className={cn(
+                  "shrink-0",
+                  isSoft ? "text-[var(--accent-cyan)]/60" : "text-cyan-400/40"
+                )}>{entry.ts}</span>
                 <span>{entry.text}</span>
               </div>
             ))}
@@ -347,11 +392,14 @@ export function AgentBadge({ status }: { status: AgentPersonaProps['status'] }) 
   const config = statusConfig[status];
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800">
-      <Bot className="w-4 h-4 text-cyan-400" />
-      <span className="text-xs font-medium text-slate-300">Trende</span>
+    <div className={cn(
+      "flex items-center gap-2 px-3 py-1.5 rounded-full",
+      isSoft ? "soft-ui-out" : "bg-slate-900 border border-slate-800"
+    )}>
+      <Bot className="w-4 h-4 text-[var(--accent-cyan)]" />
+      <span className={cn("text-xs font-medium", isSoft ? "text-[var(--text-primary)]" : "text-slate-300")}>Trende</span>
       <div className={`w-2 h-2 rounded-full ${config.color} ${status === 'processing' ? 'animate-pulse' : ''}`} />
-      <span className="text-[10px] text-slate-500 uppercase">{config.label}</span>
+      <span className={cn("text-[10px] uppercase", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>{config.label}</span>
     </div>
   );
 }

@@ -1236,12 +1236,12 @@ export default function Home() {
 
               <div className="flex flex-col items-center text-center mb-12 relative z-10">
                 <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 mb-4">
-                  <Sparkles className="w-6 h-6 text-cyan-400" />
+                  <Sparkles className="w-6 h-6 text-[var(--accent-cyan)]" />
                 </div>
-                <h3 className="text-2xl font-black uppercase tracking-[0.2em] text-white">
+                <h3 className="text-2xl font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">
                   The Intelligence Engine
                 </h3>
-                <p className="text-xs font-mono text-white/40 mt-2 uppercase tracking-widest">
+                <p className="text-xs font-mono text-[var(--text-muted)] mt-2 uppercase tracking-widest">
                   Verifiable analysis via decentralized AI consensus
                 </p>
               </div>
@@ -1252,12 +1252,12 @@ export default function Home() {
                 <div className="flex flex-col items-center text-center p-4 rounded-2xl transition-all hover:bg-white/5">
                   <div className="relative mb-6">
                     <div className="w-16 h-16 rounded-2xl glass border-cyan-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.2)]">
-                      <Zap className="w-8 h-8 text-cyan-400" />
+                      <Zap className="w-8 h-8 text-[var(--accent-cyan)]" />
                     </div>
-                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-lg bg-black border border-white/10 flex items-center justify-center text-[10px] font-black text-cyan-400">01</div>
+                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-lg bg-black border border-white/10 flex items-center justify-center text-[10px] font-black text-[var(--accent-cyan)]">01</div>
                   </div>
-                  <h4 className="text-sm font-black uppercase mb-2 text-white">Thesis Entry</h4>
-                  <p className="text-[11px] leading-relaxed text-white/40 font-mono">Define your research scope and platform selection.</p>
+                  <h4 className="text-sm font-black uppercase mb-2 text-[var(--text-primary)]">Thesis Entry</h4>
+                  <p className="text-[11px] leading-relaxed text-[var(--text-muted)] font-mono">Define your research scope and platform selection.</p>
                 </div>
 
                 {/* Step 2 */}
@@ -1265,12 +1265,12 @@ export default function Home() {
                   <div className="hidden lg:block absolute top-8 -left-10 w-20 h-px bg-gradient-to-r from-white/10 to-transparent" />
                   <div className="relative mb-6">
                     <div className="w-16 h-16 rounded-2xl glass border-amber-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-                      <Search className="w-8 h-8 text-amber-500" />
+                      <Search className="w-8 h-8 text-[var(--accent-amber)]" />
                     </div>
-                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-lg bg-black border border-white/10 flex items-center justify-center text-[10px] font-black text-amber-500">02</div>
+                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-lg bg-black border border-white/10 flex items-center justify-center text-[10px] font-black text-[var(--accent-amber)]">02</div>
                   </div>
-                  <h4 className="text-sm font-black uppercase mb-2 text-white">Agent Harvest</h4>
-                  <p className="text-[11px] leading-relaxed text-white/40 font-mono">Distributed agents collect cross-platform signal clusters.</p>
+                  <h4 className="text-sm font-black uppercase mb-2 text-[var(--text-primary)]">Agent Harvest</h4>
+                  <p className="text-[11px] leading-relaxed text-[var(--text-muted)] font-mono">Distributed agents collect cross-platform signal clusters.</p>
                 </div>
 
                 {/* Step 3 */}
@@ -1278,12 +1278,12 @@ export default function Home() {
                   <div className="hidden lg:block absolute top-8 -left-10 w-20 h-px bg-gradient-to-r from-white/10 to-transparent" />
                   <div className="relative mb-6">
                     <div className="w-16 h-16 rounded-2xl glass border-emerald-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-                      <Shield className="w-8 h-8 text-emerald-400" />
+                      <Shield className="w-8 h-8 text-[var(--accent-emerald)]" />
                     </div>
-                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-lg bg-black border border-white/10 flex items-center justify-center text-[10px] font-black text-emerald-400">03</div>
+                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-lg bg-black border border-white/10 flex items-center justify-center text-[10px] font-black text-[var(--accent-emerald)]">03</div>
                   </div>
-                  <h4 className="text-sm font-black uppercase mb-2 text-white">TEE Consensus</h4>
-                  <div className="text-[11px] leading-relaxed text-white/40 font-mono">Multi-model validation with hardware-secured proof.</div>
+                  <h4 className="text-sm font-black uppercase mb-2 text-[var(--text-primary)]">TEE Consensus</h4>
+                  <div className="text-[11px] leading-relaxed text-[var(--text-muted)] font-mono">Multi-model validation with hardware-secured proof.</div>
                 </div>
 
                 {/* Step 4 */}
@@ -1291,12 +1291,12 @@ export default function Home() {
                   <div className="hidden lg:block absolute top-8 -left-10 w-20 h-px bg-gradient-to-r from-white/10 to-transparent" />
                   <div className="relative mb-6">
                     <div className="w-16 h-16 rounded-2xl glass border-violet-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.2)]">
-                      <FileCheck className="w-8 h-8 text-violet-400" />
+                      <FileCheck className="w-8 h-8 text-[var(--accent-violet)]" />
                     </div>
-                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-lg bg-black border border-white/10 flex items-center justify-center text-[10px] font-black text-violet-400">04</div>
+                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-lg bg-black border border-white/10 flex items-center justify-center text-[10px] font-black text-[var(--accent-violet)]">04</div>
                   </div>
-                  <h4 className="text-sm font-black uppercase mb-2 text-white">Verified Intel</h4>
-                  <p className="text-[11px] leading-relaxed text-white/40 font-mono">Final conviction brief with cryptographic attestation.</p>
+                  <h4 className="text-sm font-black uppercase mb-2 text-[var(--text-primary)]">Verified Intel</h4>
+                  <p className="text-[11px] leading-relaxed text-[var(--text-muted)] font-mono">Final conviction brief with cryptographic attestation.</p>
                 </div>
               </div>
             </div>

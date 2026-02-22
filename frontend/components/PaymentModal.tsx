@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useAccount, useSignTypedData } from 'wagmi';
 import { X, Zap, Loader2, CheckCircle, AlertCircle, Wallet } from 'lucide-react';
-import { formatAddress, MONAD_CHAIN_ID } from '@/lib/wallet';
+import { formatAddress, BASE_SEPOLIA_CHAIN_ID } from '@/lib/wallet';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 
 interface PaymentModalProps {
@@ -75,7 +75,7 @@ export function PaymentModal({ isOpen, onClose, onPaymentComplete, paymentInfo }
     setErrorMessage('');
 
     try {
-      const chainId = parseInt(paymentInfo.chainId) || MONAD_CHAIN_ID;
+      const chainId = parseInt(paymentInfo.chainId) || BASE_SEPOLIA_CHAIN_ID;
       const amountWei = BigInt(Math.floor(parseFloat(paymentInfo.amount) * 1e18));
       const now = Math.floor(Date.now() / 1000);
       const nonce = generateNonce();
@@ -145,7 +145,7 @@ export function PaymentModal({ isOpen, onClose, onPaymentComplete, paymentInfo }
             </div>
             <div>
               <h2 className="text-lg font-black uppercase text-white">Unlock Research</h2>
-              <p className="text-xs font-mono text-[#00ffff]">MONAD PAYMENT</p>
+              <p className="text-xs font-mono text-[#00ffff]">BASE SEPOLIA PAYMENT</p>
             </div>
           </div>
           <button
@@ -160,14 +160,14 @@ export function PaymentModal({ isOpen, onClose, onPaymentComplete, paymentInfo }
         <div className="space-y-4">
           <div className="bg-[#141414] border-2 border-gray-800 p-4">
             <p className="text-xs font-mono text-gray-500 mb-1">PAYMENT_AMOUNT</p>
-            <p className="text-2xl font-black text-[#00ffff]">{paymentInfo.amount} MON</p>
+            <p className="text-2xl font-black text-[#00ffff]">{paymentInfo.amount} ETH</p>
             <p className="text-xs text-gray-500 mt-1">≈ Unlimited searches for this session</p>
           </div>
 
           <div className="bg-[#141414] border-2 border-gray-800 p-4 space-y-2">
             <div className="flex justify-between text-xs">
               <span className="text-gray-500 font-mono">NETWORK</span>
-              <span className="text-white font-mono">Monad Testnet</span>
+              <span className="text-white font-mono">Base Sepolia</span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-gray-500 font-mono">RECIPIENT</span>

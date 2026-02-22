@@ -71,7 +71,7 @@ class ApiError extends Error {
         chainId: response.headers.get('X-402-Chain-ID') || '10143',
         tokenType: response.headers.get('X-402-Token-Type') || 'native',
         scheme: response.headers.get('X-402-Scheme') || 'EIP-712',
-        network: response.headers.get('X-402-Network') || 'monad-testnet',
+        network: response.headers.get('X-402-Network') || 'base-sepolia',
       };
     }
   }

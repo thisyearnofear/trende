@@ -56,7 +56,10 @@ export function ContentCard({ item, sourceIndex, onClick, animationDelayMs = 0 }
       accent="white"
       shadow="sm"
       interactive={!!onClick}
-      className="p-0 overflow-hidden glass border-white/10 group transition-all duration-300 hover:border-white/20 hover:bg-white/[0.05] animate-fade-up"
+      className={cn(
+        "p-0 overflow-hidden group transition-all duration-300 animate-fade-up",
+        isSoft ? "soft-ui-out border-0" : "glass border-white/10 hover:border-white/20 hover:bg-white/[0.05]"
+      )}
       style={{ animationDelay: `${animationDelayMs}ms` }}
     >
       {/* Platform Tint Overlay */}
@@ -82,25 +85,40 @@ export function ContentCard({ item, sourceIndex, onClick, animationDelayMs = 0 }
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <h4 className="font-black uppercase tracking-widest text-[10px] text-white/90 truncate">{item.author}</h4>
+                <h4 className={cn(
+                  "font-black uppercase tracking-widest text-[10px] truncate",
+                  isSoft ? "text-[var(--text-primary)]" : "text-white/90"
+                )}>{item.author}</h4>
                 {sourceIndex !== undefined && (
                   <span
-                    className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                    className={cn(
+                      "text-[9px] font-black px-1.5 py-0.5 rounded border",
+                      isSoft ? "bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)] border-[var(--accent-cyan)]/20" : "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+                    )}
                     title={`Validation reference S${sourceIndex}`}
                   >
                     S{sourceIndex}
                   </span>
                 )}
               </div>
-              <p className="text-[10px] font-mono text-white/40 truncate">{handle ? `@${handle}` : 'source profile'}</p>
+              <p className={cn(
+                "text-[10px] font-mono truncate",
+                isSoft ? "text-[var(--text-muted)]" : "text-white/40"
+              )}>{handle ? `@${handle}` : 'source profile'}</p>
             </div>
           </div>
 
           <div className="flex flex-col items-end gap-1.5">
-            <span className="text-[10px] font-mono text-white/30 shrink-0">{formatDate(item.timestamp)}</span>
+            <span className={cn(
+              "text-[10px] font-mono shrink-0",
+              isSoft ? "text-[var(--text-muted)]" : "text-white/30"
+            )}>{formatDate(item.timestamp)}</span>
             {isVerified && (
               <div
-                className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 animate-pulse-border"
+                className={cn(
+                  "flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border animate-pulse-border",
+                  isSoft ? "bg-[var(--accent-emerald)]/10 text-[var(--accent-emerald)] border-[var(--accent-emerald)]/30" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                )}
                 title="Verified by Chainlink Oracle"
               >
                 <ShieldCheck className="w-2.5 h-2.5" />
@@ -110,24 +128,39 @@ export function ContentCard({ item, sourceIndex, onClick, animationDelayMs = 0 }
           </div>
         </div>
 
-        <h3 className="text-sm font-black uppercase tracking-wider text-white mb-2 line-clamp-2 leading-tight">
+        <h3 className={cn(
+          "text-sm font-black uppercase tracking-wider mb-2 line-clamp-2 leading-tight",
+          isSoft ? "text-[var(--text-primary)]" : "text-white"
+        )}>
           {item.title}
         </h3>
 
-        <p className="text-xs text-white/60 mb-5 line-clamp-3 leading-relaxed font-light">
+        <p className={cn(
+          "text-xs mb-5 line-clamp-3 leading-relaxed font-light",
+          isSoft ? "text-[var(--text-secondary)]" : "text-white/60"
+        )}>
           {item.content}
         </p>
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 text-[10px] font-mono text-white/40">
+          <div className={cn(
+            "flex items-center gap-4 text-[10px] font-mono",
+            isSoft ? "text-[var(--text-muted)]" : "text-white/40"
+          )}>
             {item.metrics.likes !== undefined && (
-              <span className="flex items-center gap-1 group/stat hover:text-white transition-colors">
+              <span className={cn(
+                "flex items-center gap-1 group/stat transition-colors",
+                isSoft ? "hover:text-[var(--text-primary)]" : "hover:text-white"
+              )}>
                 <Heart className="w-3 h-3 group-hover/stat:fill-rose-500 group-hover/stat:text-rose-500" />
                 {formatNumber(item.metrics.likes)}
               </span>
             )}
             {item.metrics.shares !== undefined && (
-              <span className="flex items-center gap-1 group/stat hover:text-white transition-colors">
+              <span className={cn(
+                "flex items-center gap-1 group/stat transition-colors",
+                isSoft ? "hover:text-[var(--text-primary)]" : "hover:text-white"
+              )}>
                 <Repeat className="w-3 h-3 group-hover/stat:text-emerald-500" />
                 {formatNumber(item.metrics.shares)}
               </span>
@@ -135,20 +168,29 @@ export function ContentCard({ item, sourceIndex, onClick, animationDelayMs = 0 }
           </div>
 
           {item.relevanceScore !== undefined && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 border border-white/5">
-              <Radar className="w-3 h-3 text-cyan-400" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-cyan-400">{relevance}% relevancy</span>
+            <div className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded border",
+              isSoft ? "soft-ui-in border-0" : "bg-white/5 border-white/5"
+            )}>
+              <Radar className="w-3 h-3 text-[var(--accent-cyan)]" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-[var(--accent-cyan)]">{relevance}% relevancy</span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="bg-white/[0.02] border-t border-white/5 p-3 flex items-center justify-between gap-2">
+      <div className={cn(
+        "border-t p-3 flex items-center justify-between gap-2",
+        isSoft ? "bg-black/5 border-[var(--text-muted)]/10" : "bg-white/[0.02] border-white/5"
+      )}>
         {onClick && (
           <button
             type="button"
             onClick={onClick}
-            className="flex-1 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest py-2 rounded bg-white/5 hover:bg-white/10 text-white transition-all border border-white/5 active:scale-95"
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest py-2 rounded transition-all border active:scale-95",
+              isSoft ? "soft-ui-button border-0 text-[var(--text-primary)]" : "bg-white/5 hover:bg-white/10 text-white border-white/5"
+            )}
           >
             Detailed Intel
           </button>
@@ -158,7 +200,10 @@ export function ContentCard({ item, sourceIndex, onClick, animationDelayMs = 0 }
           href={item.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest py-2 rounded text-cyan-400 hover:text-cyan-300 transition-colors"
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest py-2 rounded transition-colors",
+            isSoft ? "text-[var(--accent-cyan)] hover:text-[var(--accent-cyan)]/80" : "text-cyan-400 hover:text-cyan-300"
+          )}
         >
           <ExternalLink className="w-3 h-3" />
           Source

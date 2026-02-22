@@ -79,13 +79,13 @@ const MISSION_PROFILES = [
 ];
 
 const SUGGESTIONS = [
-  'Which Monad ecosystem narratives show simultaneous pickup across news, Hacker News, and CoinGecko this week?',
+  'Which Base and Arbitrum ecosystem narratives show simultaneous pickup across news, Hacker News, and CoinGecko this week?',
   'Identify AI-agent infra projects where technical discussion is rising before mainstream media coverage.',
   'Where does social hype diverge from fundamentals in DePIN + AI compute markets right now?',
   'Find opportunities where TEE attestation and verifiable consensus create a defensible product moat.',
   'Where does EigenLayer/EigenCompute adoption create immediate opportunities for verifiable AI products?',
   'Which privacy-preserving AI narratives are gaining conviction across builders and market signals?',
-  'What Base + BNB Chain narratives are converging and where is momentum diverging by audience?',
+  'What Base + Arbitrum L2 narratives are converging and where is momentum diverging by audience?',
 ];
 
 export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
@@ -171,8 +171,8 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                 )}
               </div>
               <div>
-                <h3 className="text-base font-black uppercase tracking-[0.2em] text-white">Agent Briefing</h3>
-                <p className="text-[10px] font-mono text-white/30 uppercase tracking-[0.3em]">
+                <h3 className="text-base font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">Agent Briefing</h3>
+                <p className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-[0.3em]">
                   {activeProfile ? `PROFILE: ${activeProfile.label}` : 'CUSTOM DIRECTIVE'}
                 </p>
               </div>
@@ -190,12 +190,12 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-cyan-400 opacity-60" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Starter Missions</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Starter Missions</span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="text-[10px] font-black tracking-widest flex items-center gap-2 uppercase transition-all hover:text-cyan-400 text-white/40 group/btn"
+                className="text-[10px] font-black tracking-widest flex items-center gap-2 uppercase transition-all hover:text-cyan-400 text-[var(--text-muted)] group/btn"
               >
                 <Settings2 className={cn("w-3.5 h-3.5 transition-transform duration-500", showAdvanced ? "rotate-180" : "")} />
                 Advanced Controls
@@ -210,9 +210,9 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                     type="button"
                     onClick={() => setIdea(suggestion)}
                     disabled={disabled}
-                    className="flex-1 text-xs font-mono px-4 py-3 rounded-2xl glass border-white/10 text-white/50 hover:text-white/90 hover:border-cyan-400/50 hover:bg-white/10 transition-all text-left flex flex-col justify-between min-h-[80px]"
+                    className="flex-1 text-xs font-mono px-4 py-3 rounded-2xl glass border-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-cyan-400/50 hover:bg-white/10 transition-all text-left flex flex-col justify-between min-h-[80px]"
                   >
-                    <span className="text-cyan-400 font-black uppercase tracking-[0.2em] text-[10px] block mb-2 opacity-60">One-Click</span>
+                    <span className="text-[var(--accent-cyan)] font-black uppercase tracking-[0.2em] text-[10px] block mb-2 opacity-60">One-Click</span>
                     <span className="line-clamp-3 leading-relaxed">{suggestion}</span>
                   </button>
                 ))}
@@ -230,7 +230,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                 placeholder="Brief your agent... e.g., 'Investigate DePIN + AI compute convergence. Identify where builder momentum diverges from market narrative across HN, CoinGecko, and Web sources.'"
                 disabled={disabled}
                 rows={4}
-                className="w-full bg-black/40 glass border-white/10 rounded-2xl p-6 text-base font-medium text-white placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-all resize-none shadow-inner"
+                className="w-full bg-black/40 glass border-white/10 rounded-2xl p-6 text-base font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-white/30 transition-all resize-none shadow-inner"
               />
 
               <div className="absolute bottom-4 right-4 flex items-center gap-4">
@@ -264,7 +264,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-3.5 h-3.5 text-amber-400 opacity-60" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Select Agent Profile</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Select Agent Profile</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {MISSION_PROFILES.map((profile) => {
@@ -290,10 +290,10 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                           </div>
                           <span className={cn(
                             "text-[10px] font-black uppercase tracking-widest transition-colors duration-500",
-                            active ? "text-white" : "text-white/40"
+                            active ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"
                           )}>{profile.label}</span>
                         </div>
-                        <p className="text-[9px] leading-relaxed font-mono text-white/30 relative z-10">{profile.description}</p>
+                        <p className="text-[9px] leading-relaxed font-mono text-[var(--text-muted)] relative z-10">{profile.description}</p>
                         {active && (
                           <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: profile.accent }} />
                         )}
@@ -308,7 +308,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   <div className="w-6 h-6 rounded bg-cyan-500/10 flex items-center justify-center">
                     <Layers className="w-3.5 h-3.5 text-cyan-400" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Source Matrix Selection</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Source Matrix Selection</span>
                 </div>
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -330,12 +330,12 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                       >
                         <p className={cn(
                           "text-[10px] font-black uppercase tracking-widest mb-1",
-                          active ? "text-cyan-400" : "text-white"
+                          active ? "text-cyan-400" : "text-[var(--text-primary)]"
                         )}>
                           {platform.label}
                         </p>
                         {active && <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_var(--accent-cyan)]" />}
-                        {unavailable && <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter">Planned</span>}
+                        {unavailable && <span className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-tighter">Planned</span>}
                         {platform.isPremium && (
                           <div className="absolute top-2 right-2">
                             <Sparkles className="w-3 h-3 text-amber-400 opacity-50" />
@@ -354,16 +354,16 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                     <div className="w-6 h-6 rounded bg-amber-500/10 flex items-center justify-center">
                       <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Neural Consensus Routes</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Neural Consensus Routes</span>
                   </div>
 
                   <div className="flex gap-4">
                     <div className="flex flex-col items-end">
-                      <span className="text-[8px] font-black uppercase text-white/20 tracking-widest">Est. Cost</span>
-                      <span className="text-xs font-black text-amber-400 tabular-nums">{totalCost.toFixed(4)} MON</span>
+                      <span className="text-[8px] font-black uppercase text-[var(--text-muted)] tracking-widest">Est. Cost</span>
+                      <span className="text-xs font-black text-amber-400 tabular-nums">{totalCost.toFixed(4)} ETH</span>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="text-[8px] font-black uppercase text-white/20 tracking-widest">Confidence Power</span>
+                      <span className="text-[8px] font-black uppercase text-[var(--text-muted)] tracking-widest">Confidence Power</span>
                       <span className="text-xs font-black text-cyan-400 tabular-nums">{Math.round(avgQuality)}%</span>
                     </div>
                   </div>
@@ -386,11 +386,11 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                       >
                         <p className={cn(
                           "text-[10px] font-black uppercase tracking-widest",
-                          active ? "text-amber-400" : "text-white"
+                          active ? "text-amber-400" : "text-[var(--text-primary)]"
                         )}>
                           {model.label}
                         </p>
-                        {unavailable && <span className="text-[8px] font-bold text-white/20 uppercase">Testing</span>}
+                        {unavailable && <span className="text-[8px] font-bold text-[var(--text-muted)] uppercase">Testing</span>}
                       </button>
                     );
                   })}
@@ -400,7 +400,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
               {/* Relevance Threshold */}
               <div className="space-y-4 pt-6 border-t border-white/5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Intelligence Saliency Threshold</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Intelligence Saliency Threshold</span>
                   <span className="text-xs font-black text-cyan-400">{Math.round(relevanceThreshold * 100)}%</span>
                 </div>
                 <div className="relative flex items-center px-4">

@@ -242,8 +242,11 @@ export function PlatformTabs({ results, isLoading, sourceIndexById = {} }: Platf
           onClick={() => setSelectedItem(null)}
         >
           <div
-            className="bg-[var(--bg-secondary)] border-2 border-[var(--border-color)] w-full max-w-3xl max-h-[88vh] sm:max-h-[84vh] overflow-y-auto p-5 sm:p-6 animate-scale-in"
-            style={{ boxShadow: '8px 8px 0px 0px var(--shadow-color)' }}
+            className={cn(
+              "bg-[var(--bg-secondary)] w-full max-w-3xl max-h-[88vh] sm:max-h-[84vh] overflow-y-auto p-5 sm:p-6 animate-scale-in",
+              isSoft ? "soft-ui-out border-0" : "border-2 border-[var(--border-color)]"
+            )}
+            style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '8px 8px 0px 0px var(--shadow-color)' }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -254,8 +257,14 @@ export function PlatformTabs({ results, isLoading, sourceIndexById = {} }: Platf
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-3 min-w-0">
                 <span
-                  className="w-10 h-10 flex items-center justify-center text-lg font-bold text-[var(--bg-primary)] shrink-0"
-                  style={{ backgroundColor: PLATFORM_CONFIG[selectedItem.platform]?.color || 'var(--accent-violet)' }}
+                  className={cn(
+                    "w-10 h-10 flex items-center justify-center text-lg font-bold shrink-0",
+                    isSoft ? "soft-ui-out" : "text-[var(--bg-primary)]"
+                  )}
+                  style={{
+                    backgroundColor: isSoft ? 'transparent' : (PLATFORM_CONFIG[selectedItem.platform]?.color || 'var(--accent-violet)'),
+                    color: isSoft ? (PLATFORM_CONFIG[selectedItem.platform]?.color || 'var(--accent-violet)') : 'var(--bg-primary)'
+                  }}
                 >
                   {PLATFORM_CONFIG[selectedItem.platform]?.icon || '🌐'}
                 </span>
@@ -267,7 +276,7 @@ export function PlatformTabs({ results, isLoading, sourceIndexById = {} }: Platf
               <button
                 ref={closeButtonRef}
                 onClick={() => setSelectedItem(null)}
-                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] min-h-[44px] min-w-[44px] flex items-center justify-center -mt-2 -mr-2"
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] min-h-[44px] min-w-[44px] flex items-center justify-center -mt-2 -mr-2 transition-colors"
                 aria-label="Close detail view"
               >
                 ✕
@@ -285,7 +294,7 @@ export function PlatformTabs({ results, isLoading, sourceIndexById = {} }: Platf
               href={selectedItem.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 text-[var(--accent-cyan)] hover:text-[var(--text-primary)] min-h-[44px] w-full sm:w-auto font-black uppercase tracking-wider"
+              className="inline-flex items-center justify-center gap-2 text-[var(--accent-cyan)] hover:text-[var(--accent-cyan)]/80 min-h-[44px] w-full sm:w-auto font-black uppercase tracking-wider transition-colors"
             >
               View original <ArrowUpRight className="w-4 h-4" />
             </a>

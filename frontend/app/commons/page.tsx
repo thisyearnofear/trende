@@ -94,13 +94,13 @@ export default function CommonsPage() {
         <div className="bg-[#141414] border-2 border-white p-6" style={{ boxShadow: '6px 6px 0px 0px #00ff88' }}>
           <div className="flex items-center gap-2 mb-4">
             <Zap className="w-5 h-5 text-[#00ff88]" />
-            <span className="text-xs font-mono text-[#00ff88]">MONAD // RESEARCH COMMONS</span>
+            <span className="text-xs font-mono text-[#00ff88]">MULTI-CHAIN // RESEARCH COMMONS</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white mb-3">
             Verifiable Intelligence for Everyone
           </h2>
           <p className="text-gray-400 font-mono text-sm max-w-2xl">
-            Browse research funded by the Monad community. Every analysis is TEE-attested 
+            Browse research funded by the community across Base Sepolia and Arbitrum Sepolia. Every analysis is TEE-attested 
             and permanently verifiable. Connect your wallet to sponsor new research.
           </p>
         </div>

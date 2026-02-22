@@ -61,7 +61,7 @@ export function WalletButton({ showTier = false, compact = false }: WalletButton
                   >
                     <Wallet className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
                     <span>Connect</span>
-                    <MonadBadge compact={compact} isSoft={isSoft} />
+                    <ChainBadge compact={compact} isSoft={isSoft} />
                   </button>
                 );
               }
@@ -111,8 +111,8 @@ export function WalletButton({ showTier = false, compact = false }: WalletButton
   );
 }
 
-// Monad badge shown on connect button
-function MonadBadge({ compact = false, isSoft = false }: { compact?: boolean; isSoft?: boolean }) {
+// Multi-chain badge shown on connect button
+function ChainBadge({ compact = false, isSoft = false }: { compact?: boolean; isSoft?: boolean }) {
   return (
     <span 
       className={`
@@ -130,7 +130,7 @@ function MonadBadge({ compact = false, isSoft = false }: { compact?: boolean; is
       }}
     >
       <Zap className={compact ? 'w-2 h-2' : 'w-2.5 h-2.5'} />
-      Monad
+      Base
     </span>
   );
 }
