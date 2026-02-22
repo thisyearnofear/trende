@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from 'react';
 import { gsap } from 'gsap';
 import { useTheme } from './ThemeProvider';
 import { usePrefersReducedMotion } from './Motion';
+import { cn } from '@/lib/utils';
 import {
   Bot,
   Shield,
@@ -380,6 +381,7 @@ export function AgentPersona({
 
 // Compact version for inline use
 export function AgentBadge({ status }: { status: AgentPersonaProps['status'] }) {
+  const { isSoft } = useTheme();
   const statusConfig = {
     idle: { color: 'bg-slate-500', label: 'Standby' },
     listening: { color: 'bg-cyan-400', label: 'Listening' },

@@ -474,7 +474,7 @@ export default function Home() {
                   TRENDE
                 </h1>
                 <p className="text-[10px] font-mono text-[var(--accent-cyan)] truncate flex items-center gap-1">
-                  TEE-SECURED
+                  VERIFIED BY CRYPTOGRAPHY
                   <InfoIcon
                     tooltip="Trusted Execution Environment ensures verifiable, tamper-proof analysis with cryptographic attestation."
                     learnMoreUrl="https://en.wikipedia.org/wiki/Trusted_execution_environment"
@@ -683,18 +683,18 @@ export default function Home() {
             <div className="relative">
               <div className="flex items-center gap-2 mb-4">
                 <Fingerprint className="w-5 h-5 text-[var(--accent-cyan)]" />
-                <GlowText text="TEE-SECURED EXECUTION // CRYPTOGRAPHICALLY VERIFIABLE" className="text-xs font-mono" color="cyan" />
+                <GlowText text="VERIFIED BY CRYPTOGRAPHY" className="text-xs font-mono" color="cyan" />
               </div>
 
               <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight mb-3">
                 <ScrambleWords
                   words={[
-                    { text: 'Turn', highlight: false },
-                    { text: 'Social', highlight: true },
-                    { text: 'Signal', highlight: false },
-                    { text: 'Into', highlight: false },
-                    { text: 'Conviction-Ready', highlight: true },
-                    { text: 'Intelligence', highlight: false },
+                    { text: 'What', highlight: false },
+                    { text: 'Is', highlight: false },
+                    { text: 'the', highlight: false },
+                    { text: 'Market', highlight: true },
+                    { text: 'Really', highlight: false },
+                    { text: 'Thinking?', highlight: true },
                   ]}
                   className="text-2xl sm:text-3xl font-black uppercase tracking-tight mb-3"
                   stagger={0.15}
@@ -703,7 +703,7 @@ export default function Home() {
 
               <p className="text-[var(--text-secondary)] font-mono text-sm max-w-2xl mb-4">
                 <ScrambleText
-                  text="Trende is an autonomous AI agent that investigates crypto narratives across the web and delivers verifiable market intelligence. Click a community report below to see what it can do, or deploy your own agent."
+                  text="Cut through the noise. Trende analyzes what's being said across social, on-chain, and forums to give you verified market conviction in seconds. Built with cryptographic proof."
                   delay={0.8}
                   className="text-[var(--text-secondary)] font-mono text-sm max-w-2xl mb-4"
                 />
@@ -711,27 +711,21 @@ export default function Home() {
 
               <div className="flex flex-wrap gap-4 pt-4 border-t border-[var(--border-color)]">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[var(--accent-emerald)]" />
+                  <div className="w-2 h-2 rounded-full bg-[var(--accent-cyan)]" />
                   <span className="text-xs text-[var(--text-secondary)]">
-                    Trusted Execution Environment
+                    Verified by Cryptography
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[var(--accent-emerald)]" />
+                  <div className="w-2 h-2 rounded-full bg-[var(--accent-cyan)]" />
                   <span className="text-xs text-[var(--text-secondary)]">
-                    Multi-Model Consensus
+                    Real-Time Analysis
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[var(--accent-amber)] animate-pulse" />
-                  <span className="text-xs text-[var(--text-secondary)] font-semibold">
-                    🤖 TinyFish AI Agent Research
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[var(--accent-emerald)]" />
+                  <div className="w-2 h-2 rounded-full bg-[var(--accent-cyan)]" />
                   <span className="text-xs text-[var(--text-secondary)]">
-                    Cryptographic Signatures
+                    Multi-Blockchain Support
                   </span>
                 </div>
               </div>

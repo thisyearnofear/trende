@@ -1,19 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Terminal, Bot, Shield, Zap, Chain, Layers, Rocket } from 'lucide-react';
+import { Terminal, Bot, Shield, Zap, Link, Layers, Rocket } from 'lucide-react';
 import { Card, Button } from './DesignSystem';
 import { useTheme } from './ThemeProvider';
 
 const BOOT_SEQUENCE = [
-  "INITIALIZING SECURE ENCLAVE...",
-  "ESTABLISHING TEE CONNECTION...",
-  "VERIFYING EIGENCOMPUTE SIGNATURES...",
-  "LOADING CONSENSUS MODELS [VENICE, AISA, OPENROUTER]...",
-  "SYNCING BASE SEPOLIA RPC...",
-  "CONNECTING ARBITRUM SEPOLIA...",
-  "ENHANCING USER DELIGHT...",
-  "TRENDE AGENT ONLINE."
+  "INITIALIZING ANALYSIS ENGINE...",
+  "LOADING INTELLIGENCE MODELS...",
+  "CONNECTING DATA SOURCES...",
+  "VERIFYING INTEGRITY CHECKS...",
+  "CALIBRATING MARKET SENTIMENT...",
+  "PREPARING INSIGHTS LAYER...",
+  "SYSTEMS READY...",
+  "TRENDE ONLINE."
 ];
 
 export function Onboarding() {
@@ -88,7 +88,7 @@ export function Onboarding() {
                 </div>
                 <h2 className="text-2xl font-black uppercase tracking-tight mb-2">Trende Agent</h2>
                 <p className="text-[var(--text-secondary)] font-mono text-sm">
-                  The Sovereign AI Oracle for Onchain Intelligence.
+                  Market Intelligence Verified by Cryptography
                 </p>
               </div>
 
@@ -96,24 +96,24 @@ export function Onboarding() {
                 <div className={`flex items-start gap-3 p-3 border-2 transition-colors ${isSoft ? 'soft-ui-out border-0' : 'border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)]'}`} style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '3px 3px 0px 0px var(--shadow-color)' }}>
                   <div className="mt-1"><Zap className="w-5 h-5 text-[var(--accent-amber)]" /></div>
                   <div>
-                    <h4 className="font-black text-sm uppercase tracking-wide">Multi-Model Consensus</h4>
-                    <p className="text-xs text-[var(--text-secondary)] font-mono mt-1">Cross-references Venice, AIsA, and OpenRouter to filter bias and ensure factual accuracy.</p>
+                    <h4 className="font-black text-sm uppercase tracking-wide">Multiple AI Models</h4>
+                    <p className="text-xs text-[var(--text-secondary)] font-mono mt-1">Cross-checks analysis across different AI systems to reduce bias and improve accuracy.</p>
                   </div>
                 </div>
 
                 <div className={`flex items-start gap-3 p-3 border-2 transition-colors ${isSoft ? 'soft-ui-out border-0' : 'border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)]'}`} style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '3px 3px 0px 0px var(--shadow-color)' }}>
                   <div className="mt-1"><Shield className="w-5 h-5 text-[var(--accent-emerald)]" /></div>
                   <div>
-                    <h4 className="font-black text-sm uppercase tracking-wide">TEE Verification</h4>
-                    <p className="text-xs text-[var(--text-secondary)] font-mono mt-1">All research executes in a secure EigenCompute enclave, generating verifiable cryptographic proofs.</p>
+                    <h4 className="font-black text-sm uppercase tracking-wide">Verified Proofs</h4>
+                    <p className="text-xs text-[var(--text-secondary)] font-mono mt-1">Every report is signed with cryptographic proof. You can independently verify the results.</p>
                   </div>
                 </div>
 
                 <div className={`flex items-start gap-3 p-3 border-2 transition-colors ${isSoft ? 'soft-ui-out border-0' : 'border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)]'}`} style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '3px 3px 0px 0px var(--shadow-color)' }}>
                   <div className="mt-1"><Bot className="w-5 h-5 text-[var(--accent-cyan)]" /></div>
                   <div>
-                    <h4 className="font-black text-sm uppercase tracking-wide">Autonomous Agents</h4>
-                    <p className="text-xs text-[var(--text-secondary)] font-mono mt-1">Specialized nodes handle strategy, data harvesting, and architectural synthesis.</p>
+                    <h4 className="font-black text-sm uppercase tracking-wide">Automated Research</h4>
+                    <p className="text-xs text-[var(--text-secondary)] font-mono mt-1">Scans social media, forums, and blockchain in minutes. No manual work required.</p>
                   </div>
                 </div>
               </div>
@@ -121,8 +121,8 @@ export function Onboarding() {
               {/* Multi-Chain Network Section */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <Chain className="w-4 h-4 text-[var(--accent-cyan)]" />
-                  <h4 className="font-black text-xs uppercase tracking-wide">Supported Networks</h4>
+                  <Link className="w-4 h-4 text-[var(--accent-cyan)]" />
+                  <h4 className="font-black text-xs uppercase tracking-wide">Works Across Blockchains</h4>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2">
@@ -160,9 +160,14 @@ export function Onboarding() {
                 </div>
               </div>
 
-              <Button onClick={handleClose} variant="primary" className="w-full h-12 text-sm font-black tracking-widest">
-                ENTER CONTROL ROOM
-              </Button>
+              <div className="space-y-2">
+                <Button onClick={handleClose} variant="primary" className="w-full h-12 text-sm font-black tracking-widest">
+                  ENTER CONTROL ROOM
+                </Button>
+                <Button onClick={handleClose} variant="ghost" className="w-full h-10 text-xs font-black tracking-widest">
+                  SKIP FOR NOW
+                </Button>
+              </div>
             </div>
           )}
         </div>
