@@ -19,7 +19,7 @@ wait_for_health() {
   local elapsed=0
 
   while [ "$elapsed" -lt "$MAX_WAIT_SECONDS" ]; do
-    if curl -fsS --max-time 5 "$url" >/dev/null; then
+    if curl -fsS --max-time 5 "$url" >/dev/null 2>&1; then
       echo "✅ ${name} is healthy: ${url}"
       return 0
     fi
