@@ -14,9 +14,132 @@ from backend.services.ai_service import ai_service
 from shared.models import QueryStatus
 
 
+def _normalize_text(value: str) -> str:
+    return " ".join((value or "").strip().lower().split())
+
+
+def _finding_dedupe_key(item: Any) -> tuple[str, str]:
+    platform = _normalize_text(str(getattr(item, "platform", "") or ""))
+    url = _normalize_text(str(getattr(item, "url", "") or ""))
+    title = _normalize_text(str(getattr(item, "title", "") or ""))
+    content = _normalize_text(str(getattr(item, "content", "") or ""))[:180]
+    # Prefer URL identity; fall back to title/content signature.
+    identity = url or f"{title}|{content}"
+    return (platform, identity)
+
+
+def _timestamp_rank(item: Any) -> float:
+    ts = getattr(item, "timestamp", None)
+    if ts is None:
+        return 0.0
+    if isinstance(ts, datetime.datetime):
+        return ts.timestamp()
+    if isinstance(ts, str):
+        try:
+            return datetime.datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+        except Exception:
+            return 0.0
+    return 0.0
+
+
+def _select_validator_sample(findings: list[Any], limit: int) -> list[Any]:
+    if len(findings) <= limit:
+        return findings
+
+    # Bias toward recency, then keep cross-platform diversity in the sample.
+    ordered = sorted(findings, key=_timestamp_rank, reverse=True)
+    by_platform: dict[str, list[Any]] = {}
+    for item in ordered:
+        platform = _normalize_text(str(getattr(item, "platform", "") or "unknown"))
+        by_platform.setdefault(platform, []).append(item)
+
+    sample: list[Any] = []
+    while len(sample) < limit:
+        progressed = False
+        for platform in list(by_platform.keys()):
+            bucket = by_platform.get(platform) or []
+            if not bucket:
+                continue
+            sample.append(bucket.pop(0))
+            progressed = True
+            if len(sample) >= limit:
+                break
+        if not progressed:
+            break
+
+    return sample
+
+
+async def _generate_follow_up_directions(
+    topic: str, validation_logs: list[str], findings: list[Any]
+) -> list[str]:
+    if not validation_logs and not findings:
+        return []
+
+    sample_lines = [
+        f"- [{getattr(f, 'platform', 'unknown')}] {str(getattr(f, 'title', '') or getattr(f, 'content', ''))[:160]}"
+        for f in findings[:8]
+    ]
+    log_lines = [f"- {line}" for line in validation_logs[:8]]
+    prompt = f"""
+You are a research planner. The current pass on "{topic}" has low confidence.
+
+Validation notes:
+{chr(10).join(log_lines) if log_lines else "- No explicit validation logs"}
+
+Evidence snapshot:
+{chr(10).join(sample_lines) if sample_lines else "- No evidence snapshot available"}
+
+Return ONLY JSON:
+{{
+  "follow_up_directions": [
+    "Short, concrete direction with a verifiable target",
+    "Another direction focused on contradictory or missing evidence",
+    "Another direction focused on recency/time-window verification"
+  ]
+}}
+"""
+    try:
+        response = await ai_service.get_response(
+            prompt,
+            system_prompt="You produce concise, high-signal follow-up research directions.",
+        )
+        parsed = response[response.find("{") : response.rfind("}") + 1]
+        data = json.loads(parsed)
+        directions = data.get("follow_up_directions", [])
+        if isinstance(directions, list):
+            cleaned = [str(d).strip() for d in directions if str(d).strip()]
+            return cleaned[:3]
+    except Exception:
+        pass
+
+    # Deterministic fallback if follow-up generation fails.
+    fallback: list[str] = []
+    for line in validation_logs[:3]:
+        base = str(line).strip()
+        if not base:
+            continue
+        fallback.append(f"Resolve this evidence gap with fresh primary sources: {base}")
+    if not fallback:
+        fallback = [
+            "Verify contradictory claims using two independent, recent primary sources.",
+            "Collect one quantitative datapoint (volume, usage, or growth) to validate momentum.",
+            "Prioritize sources published in the last 7 days and compare narrative consistency.",
+        ]
+    return fallback[:3]
+
+
 async def planner_node(state: GraphState) -> GraphState:
     state["status"] = QueryStatus.PLANNING
-    state["logs"].append(f"🧠 INITIALIZING: Crafting a strategic research blueprint for '{state['topic']}'...")
+    depth = state.get("current_depth", 0)
+    
+    if depth > 0 and state.get("follow_up_directions"):
+        state["logs"].append(f"🔄 DEEP DIVE (Depth {depth}): Refining research based on previous findings...")
+        follow_up_context = "\n".join([f"- {d}" for d in state["follow_up_directions"]])
+        prompt_prefix = f"This is a follow-up research task at depth {depth}. Focus specifically on these areas that need more clarity:\n{follow_up_context}"
+    else:
+        state["logs"].append(f"🧠 INITIALIZING: Crafting a strategic research blueprint for '{state['topic']}'...")
+        prompt_prefix = "This is the initial research phase."
 
     # RAG: Check historical context
     try:
@@ -33,6 +156,8 @@ async def planner_node(state: GraphState) -> GraphState:
         historical_context = ""
 
     prompt = f"""
+    {prompt_prefix}
+    
     The user wants to find trends about: {state["topic"]}
     Requested platforms: {", ".join(state["platforms"])}
 
@@ -94,12 +219,19 @@ async def planner_node(state: GraphState) -> GraphState:
         state["logs"].append(
             f"🎯 STRATEGY FORMULATED: Created {len(state['search_queries'])} precision-targeted queries for optimal coverage."
         )
+        
+        # Increment depth for tracking
+        state["current_depth"] = depth + 1
+        # Clear follow-up directions after use
+        state["follow_up_directions"] = []
+        
     except Exception as e:
         state["logs"].append(f"⚠️  PLAN ADJUSTMENT: Failed to parse research plan, falling back to general queries. Error: {e}")
         # Fallback query
         state["search_queries"] = [
             {"platform": p, "query": state["topic"]} for p in state["platforms"]
         ]
+        state["current_depth"] = depth + 1
 
     return state
 
@@ -216,11 +348,29 @@ async def researcher_node(state: GraphState) -> GraphState:
                 state["logs"].append(f"✅ SUCCESS: Harvested {len(result)} items from {platform.upper()}")
                 all_items.extend(result)
         
-        state["raw_findings"] = all_items
+        if "raw_findings" not in state or not state["raw_findings"]:
+            state["raw_findings"] = []
+
+        existing_keys = {_finding_dedupe_key(item) for item in state["raw_findings"]}
+        deduped_new_items = []
+        dropped_duplicates = 0
+        for item in all_items:
+            key = _finding_dedupe_key(item)
+            if key in existing_keys:
+                dropped_duplicates += 1
+                continue
+            existing_keys.add(key)
+            deduped_new_items.append(item)
+
+        state["raw_findings"].extend(deduped_new_items)
         if all_items:
             state["logs"].append(
-                f"📊 AGGREGATION COMPLETE: Total signals acquired: {len(all_items)}. Commencing neural validation..."
+                f"📊 AGGREGATION COMPLETE: Total signals acquired: {len(all_items)}; added {len(deduped_new_items)} net-new. Commencing neural validation..."
             )
+            if dropped_duplicates:
+                state["logs"].append(
+                    f"♻️ FINDING DEDUPE: Dropped {dropped_duplicates} duplicate signals across iterative passes."
+                )
         else:
             state["logs"].append("🚨 CRITICAL: No data harvested from any source. Synthesis will be based on limited context.")
     else:
@@ -238,9 +388,18 @@ async def validator_node(state: GraphState) -> GraphState:
         state["confidence_score"] = 0.0
         return state
 
+    validation_limit = max(12, int(os.getenv("VALIDATOR_CONTEXT_MAX_FINDINGS", "40")))
+    findings_for_validation = _select_validator_sample(
+        state["raw_findings"], limit=validation_limit
+    )
+    if len(findings_for_validation) < len(state["raw_findings"]):
+        state["logs"].append(
+            f"🧮 VALIDATOR WINDOW: Evaluating {len(findings_for_validation)}/{len(state['raw_findings'])} findings (diverse recency sample)."
+        )
+
     # Construct context for validation
     findings_context = "\n".join(
-        [f"SOURCE [{f.platform}] @{f.author}: {f.content[:200]}" for f in state["raw_findings"]]
+        [f"SOURCE [{f.platform}] @{f.author}: {f.content[:200]}" for f in findings_for_validation]
     )
 
     prompt = f"""
@@ -276,15 +435,31 @@ async def validator_node(state: GraphState) -> GraphState:
 
         # Filter findings
         state["filtered_findings"] = [
-            state["raw_findings"][i] for i in valid_indices if i < len(state["raw_findings"])
+            findings_for_validation[i] for i in valid_indices if i < len(findings_for_validation)
         ]
+        if not state["filtered_findings"]:
+            # Graceful fallback to avoid empty synthesis due to indexing/schema drift.
+            state["filtered_findings"] = findings_for_validation[: min(10, len(findings_for_validation))]
         state["logs"].append(
             f"✅ VERIFICATION COMPLETE: Confidence level: {state['confidence_score']:.2f}. Curated {len(state['filtered_findings'])} high-quality insights."
         )
+        
+        # Decide if we need follow-up research
+        if state["confidence_score"] < 0.7 and state["current_depth"] < state.get("max_depth", 1):
+            state["follow_up_directions"] = await _generate_follow_up_directions(
+                state["topic"],
+                state.get("validation_results", []),
+                state["filtered_findings"] or findings_for_validation,
+            )
+            state["logs"].append(f"🔁 SIGNAL GAP DETECTED: Intelligence confidence is low. Triggering autonomous follow-up research...")
+        else:
+            state["follow_up_directions"] = []
+            
     except Exception as e:
         state["logs"].append(f"⚠️  VALIDATION ERROR: Parsing failed: {e}. Using all raw findings as fallback.")
         state["filtered_findings"] = state["raw_findings"]
         state["confidence_score"] = 0.5
+        state["follow_up_directions"] = []
 
     return state
 
@@ -441,10 +616,22 @@ def create_workflow() -> Any:
     workflow.add_node("analyzer", analyzer_node)
     workflow.add_node("architect", architect_node)
 
+    def should_continue_research(state: GraphState):
+        if state.get("follow_up_directions") and state.get("current_depth", 0) < state.get("max_depth", 1):
+            return "planner"
+        return "analyzer"
+
     workflow.set_entry_point("planner")
     workflow.add_edge("planner", "researcher")
     workflow.add_edge("researcher", "validator")
-    workflow.add_edge("validator", "analyzer")
+    workflow.add_conditional_edges(
+        "validator",
+        should_continue_research,
+        {
+            "planner": "planner",
+            "analyzer": "analyzer"
+        }
+    )
     workflow.add_edge("analyzer", "architect")
     workflow.add_edge("architect", END)
 
@@ -489,6 +676,9 @@ async def run_trend_analysis(
         "meme_page_data": None,
         "consensus_data": None,
         "attestation_data": None,
+        "current_depth": 0,
+        "max_depth": 2 if "tinyfish" in (platforms or []) or "web" in (platforms or []) else 1,
+        "follow_up_directions": [],
         "error": None,
     }
 
@@ -548,6 +738,9 @@ async def run_editorial_task(
         "meme_page_data": None,
         "consensus_data": None,
         "attestation_data": None,
+        "current_depth": 0,
+        "max_depth": 1,
+        "follow_up_directions": [],
         "error": None,
     }
     

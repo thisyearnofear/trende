@@ -686,6 +686,9 @@ async def run_agent_workflow(
         "meme_page_data": None,
         "consensus_data": None,
         "attestation_data": None,
+        "current_depth": 0,
+        "max_depth": 2 if "tinyfish" in (platforms or []) or "web" in (platforms or []) else 1,
+        "follow_up_directions": [],
         "error": None,
     }
 

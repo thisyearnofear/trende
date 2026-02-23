@@ -36,4 +36,9 @@ class GraphState(TypedDict):
     publish_status: Optional[str]
     published_url: Optional[str]
     
+    # Iterative Research (New fields)
+    current_depth: int
+    max_depth: int
+    follow_up_directions: List[str]
+    
     error: Optional[str]
