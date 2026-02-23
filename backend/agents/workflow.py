@@ -3,7 +3,7 @@ import json
 import datetime
 import os
 import uuid
-from typing import Any, Optional
+from typing import Any, Awaitable, Callable, Optional
 
 from langgraph.graph import END, StateGraph
 
@@ -166,7 +166,7 @@ async def planner_node(state: GraphState) -> GraphState:
 
     Generate a research plan in JSON format.
     You MUST include search queries for each of the requested platforms.
-    Available platforms: twitter, linkedin, news, newsapi, tiktok, youtube, web, gdelt, wikimedia, hackernews, stackexchange, coingecko, tinyfish, chainlink.
+    Available platforms: twitter, linkedin, news, newsapi, tiktok, youtube, web, gdelt, wikimedia, hackernews, stackexchange, coingecko, tinyfish, chainlink, firecrawl, synthdata.
     If the user asked for a specific platform, prioritize it.
 
     JSON format:
@@ -271,6 +271,8 @@ async def researcher_node(state: GraphState) -> GraphState:
     from backend.integrations.connectors.coingecko import CoinGeckoConnector
     from backend.integrations.connectors.tinyfish import TinyFishConnector
     from backend.integrations.connectors.chainlink import ChainlinkConnector
+    from backend.integrations.connectors.firecrawl import FirecrawlConnector
+    from backend.integrations.connectors.synthdata import SynthDataConnector
 
     twitter = TwitterConnector()
     linkedin = LinkedInConnector()
@@ -285,68 +287,143 @@ async def researcher_node(state: GraphState) -> GraphState:
     stackexchange = StackExchangeConnector()
     coingecko = CoinGeckoConnector()
     chainlink = ChainlinkConnector()
+    firecrawl = FirecrawlConnector()
+    synthdata = SynthDataConnector()
 
     tasks = []
-    task_platforms = []
     default_timeout = max(8, int(os.getenv("RESEARCH_PLATFORM_TIMEOUT_SECS", "35")))
     tinyfish_timeout = max(default_timeout, int(os.getenv("RESEARCH_TINYFISH_TIMEOUT_SECS", "45")))
+    retries = max(1, int(os.getenv("RESEARCH_CONNECTOR_RETRIES", "2")))
+    retry_backoff = max(0.2, float(os.getenv("RESEARCH_CONNECTOR_BACKOFF_SECS", "0.8")))
 
-    async def timed_search(platform: str, coro, timeout_secs: int):
-        try:
-            return await asyncio.wait_for(coro, timeout=timeout_secs)
-        except asyncio.TimeoutError:
-            raise TimeoutError(f"{platform} timed out after {timeout_secs}s")
+    async def execute_connector(
+        label: str,
+        run: Callable[[], Awaitable[list[dict[str, Any]] | list[Any]]],
+        timeout_secs: int,
+    ) -> tuple[list[Any], Optional[str]]:
+        last_error: Optional[str] = None
+        for attempt in range(1, retries + 1):
+            try:
+                result = await asyncio.wait_for(run(), timeout=timeout_secs)
+                return (result or []), None
+            except asyncio.TimeoutError:
+                last_error = f"{label} timed out after {timeout_secs}s"
+            except Exception as e:
+                last_error = f"{label} error: {e}"
+
+            if attempt < retries:
+                sleep_secs = retry_backoff * attempt
+                state["logs"].append(
+                    f"↻ RETRY {attempt}/{retries - 1}: {label.upper()} failed, retrying in {sleep_secs:.1f}s..."
+                )
+                await asyncio.sleep(sleep_secs)
+        return [], last_error
+
+    def build_chain(platform: str, query: str) -> list[tuple[str, Callable[[], Awaitable[list[Any]]], int]]:
+        if platform == "twitter":
+            return [("twitter", lambda: twitter.search(query, limit=5), default_timeout)]
+        if platform == "linkedin":
+            return [("linkedin", lambda: linkedin.search(query, limit=5), default_timeout)]
+        if platform in ["news", "newsapi"]:
+            chain = [
+                ("newsapi", lambda: news.search(query, limit=5), default_timeout),
+            ]
+            if firecrawl.api_key:
+                chain.append(("firecrawl", lambda: firecrawl.search(f"{query} latest news", limit=5), default_timeout))
+            return chain
+        if platform == "web":
+            chain = [
+                ("tabstack", lambda: tabstack.search(query, limit=5), default_timeout),
+            ]
+            if firecrawl.api_key:
+                chain.append(("firecrawl", lambda: firecrawl.search(query, limit=5), default_timeout))
+            if tinyfish.api_key:
+                chain.append(("tinyfish", lambda: tinyfish.search(query, limit=5), tinyfish_timeout))
+            return chain
+        if platform == "tiktok":
+            return [("tiktok", lambda: tiktok.search(query, limit=5), default_timeout)]
+        if platform == "youtube":
+            return [("youtube", lambda: youtube.search(query, limit=5), default_timeout)]
+        if platform == "gdelt":
+            return [("gdelt", lambda: gdelt.search(query, limit=5), default_timeout)]
+        if platform == "wikimedia":
+            return [("wikimedia", lambda: wikimedia.search(query, limit=5), default_timeout)]
+        if platform in ["hackernews", "hn"]:
+            return [("hackernews", lambda: hackernews.search(query, limit=5), default_timeout)]
+        if platform in ["stackexchange", "se"]:
+            return [("stackexchange", lambda: stackexchange.search(query, limit=5), default_timeout)]
+        if platform == "coingecko":
+            chain = [("coingecko", lambda: coingecko.search(query, limit=5), default_timeout)]
+            if synthdata.api_key:
+                chain.append(("synthdata", lambda: synthdata.search(query, limit=5), default_timeout))
+            return chain
+        if platform == "tinyfish":
+            return [("tinyfish", lambda: tinyfish.search(query, limit=5), tinyfish_timeout)]
+        if platform == "chainlink":
+            return [("chainlink", lambda: chainlink.search(query, limit=1), default_timeout)]
+        if platform == "firecrawl":
+            return [("firecrawl", lambda: firecrawl.search(query, limit=5), default_timeout)]
+        if platform == "synthdata":
+            return [("synthdata", lambda: synthdata.search(query, limit=5), default_timeout)]
+        return [("tabstack", lambda: tabstack.search(query, limit=5), default_timeout)]
+
+    async def search_with_fallback(platform: str, query: str) -> dict[str, Any]:
+        state["logs"].append(f"🤖 AGENT >> Establishing quantum link to {platform.upper()} for: '{query}'")
+        chain = build_chain(platform, query)
+        last_error: Optional[str] = None
+        for idx, (label, runner, timeout_secs) in enumerate(chain):
+            if idx > 0:
+                state["logs"].append(
+                    f"🛟 FALLBACK ROUTE: {platform.upper()} primary route yielded no signal. Trying {label.upper()}..."
+                )
+            items, err = await execute_connector(label, runner, timeout_secs)
+            if items:
+                return {
+                    "requested_platform": platform,
+                    "source": label,
+                    "items": items,
+                    "fallback_used": idx > 0,
+                }
+            last_error = err or last_error
+        return {
+            "requested_platform": platform,
+            "source": chain[-1][0] if chain else None,
+            "items": [],
+            "fallback_used": False,
+            "error": last_error,
+        }
+
     for sq in state["search_queries"]:
         platform = sq["platform"]
         query = sq["query"]
-        task_platforms.append(platform)
-        state["logs"].append(f"🤖 AGENT >> Establishing quantum link to {platform.upper()} for: '{query}'")
-
-        if platform == "twitter":
-            tasks.append(timed_search(platform, twitter.search(query, limit=5), default_timeout))
-        elif platform == "linkedin":
-            tasks.append(timed_search(platform, linkedin.search(query, limit=5), default_timeout))
-        elif platform in ["news", "newsapi"]:
-            tasks.append(timed_search(platform, news.search(query, limit=5), default_timeout))
-        elif platform == "web":
-            tasks.append(timed_search(platform, tabstack.search(query, limit=5), default_timeout))
-        elif platform == "tiktok":
-            tasks.append(timed_search(platform, tiktok.search(query, limit=5), default_timeout))
-        elif platform == "youtube":
-            tasks.append(timed_search(platform, youtube.search(query, limit=5), default_timeout))
-        elif platform == "gdelt":
-            tasks.append(timed_search(platform, gdelt.search(query, limit=5), default_timeout))
-        elif platform == "wikimedia":
-            tasks.append(timed_search(platform, wikimedia.search(query, limit=5), default_timeout))
-        elif platform in ["hackernews", "hn"]:
-            tasks.append(timed_search(platform, hackernews.search(query, limit=5), default_timeout))
-        elif platform in ["stackexchange", "se"]:
-            tasks.append(timed_search(platform, stackexchange.search(query, limit=5), default_timeout))
-        elif platform == "coingecko":
-            tasks.append(timed_search(platform, coingecko.search(query, limit=5), default_timeout))
-        elif platform == "tinyfish":
-            tasks.append(timed_search(platform, tinyfish.search(query, limit=5), tinyfish_timeout))
-        elif platform == "chainlink":
-            tasks.append(timed_search(platform, chainlink.search(query, limit=1), default_timeout))
-        else:
-            # Fallback for unknown platforms
-            state["logs"].append(f"⚠️  Warning: Platform {platform} not natively supported. Attempting web fallback.")
-            tasks.append(timed_search(platform, tabstack.search(query, limit=5), default_timeout))
+        tasks.append(search_with_fallback(platform, query))
 
     if tasks:
         state["logs"].append(f"🔄 Gathering intelligence from {len(tasks)} sources simultaneously...")
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         all_items = []
-        for i, result in enumerate(results):
-            platform = task_platforms[i] if i < len(task_platforms) else "unknown"
+        for result in results:
             if isinstance(result, Exception):
-                state["logs"].append(f"❌ ERROR: Platform {platform.upper()} failed: {str(result)}")
-            elif not result:
-                state["logs"].append(f"⚠️  EMPTY: No data found on {platform.upper()}. This could be due to rate limits or narrow search.")
+                state["logs"].append(f"❌ ERROR: Search job failed: {str(result)}")
+                continue
+            platform = str(result.get("requested_platform", "unknown")).upper()
+            source = str(result.get("source", "")).upper() if result.get("source") else ""
+            items = result.get("items") or []
+            if not items:
+                err = result.get("error")
+                if err:
+                    state["logs"].append(f"❌ ERROR: Platform {platform} failed: {err}")
+                else:
+                    state["logs"].append(f"⚠️  EMPTY: No data found on {platform}. This could be due to rate limits or narrow search.")
+                continue
+            if result.get("fallback_used"):
+                state["logs"].append(
+                    f"🛟 FALLBACK RECOVERY: {platform} recovered via {source}; harvested {len(items)} items."
+                )
             else:
-                state["logs"].append(f"✅ SUCCESS: Harvested {len(result)} items from {platform.upper()}")
-                all_items.extend(result)
+                state["logs"].append(f"✅ SUCCESS: Harvested {len(items)} items from {platform}")
+            all_items.extend(items)
         
         if "raw_findings" not in state or not state["raw_findings"]:
             state["raw_findings"] = []

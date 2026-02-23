@@ -21,6 +21,8 @@ class PlatformType(str, Enum):
     COINGECKO = "coingecko"
     TINYFISH = "tinyfish"
     CHAINLINK = "chainlink"
+    FIRECRAWL = "firecrawl"
+    SYNTHDATA = "synthdata"
 
 
 class Platform:
@@ -150,6 +152,20 @@ PLATFORMS: dict[PlatformType, Platform] = {
         "Chainlink",
         "⛓️",
         "#375BD2",
+        supports_embed=False,
+    ),
+    PlatformType.FIRECRAWL: Platform(
+        PlatformType.FIRECRAWL,
+        "Firecrawl",
+        "🔥",
+        "#FF5A1F",
+        supports_embed=False,
+    ),
+    PlatformType.SYNTHDATA: Platform(
+        PlatformType.SYNTHDATA,
+        "SynthData",
+        "∑",
+        "#22C55E",
         supports_embed=False,
     ),
 }

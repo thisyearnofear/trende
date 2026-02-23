@@ -637,6 +637,8 @@ async def start_analysis(
             "agreement_score": 0.0,
             "diversity_level": "low",
             "attestation_status": "pending",
+            "data_sufficiency": "unknown",
+            "findings_count": 0,
             "logs": [],
         },
     }
@@ -735,12 +737,20 @@ async def run_agent_workflow(
                 merged_warnings = list(
                     dict.fromkeys((consensus_data.get("warnings", []) or []) + guardrail_alerts)
                 )
+                findings_count = len(tasks[task_id].get("raw_findings") or [])
+                data_sufficiency = "healthy"
+                if findings_count == 0:
+                    data_sufficiency = "sparse"
+                elif findings_count < 5:
+                    data_sufficiency = "partial"
                 tasks[task_id]["run_telemetry"] = {
                     "run_id": task_id,
                     "provider_count": len(consensus_data.get("providers", [])),
                     "agreement_score": consensus_data.get("agreement_score", 0.0),
                     "diversity_level": consensus_data.get("diversity_level", "low"),
                     "attestation_status": attestation_data.get("status", "pending"),
+                    "data_sufficiency": data_sufficiency,
+                    "findings_count": findings_count,
                     "warnings": merged_warnings,
                     "provider_failure_rate": provider_failure_rate,
                     "duration_seconds": duration_seconds,
@@ -1292,6 +1302,8 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             "attestationStatus": run_telemetry.get(
                 "attestation_status", (attestation_data or {}).get("status", "pending")
             ),
+            "dataSufficiency": run_telemetry.get("data_sufficiency", "unknown"),
+            "findingsCount": run_telemetry.get("findings_count", len(raw_findings or [])),
             "warnings": run_telemetry.get("warnings", (consensus_data or {}).get("warnings", [])),
             "logs": run_telemetry.get("logs", task.get("logs", [])[-12:]),
             "updatedAt": run_telemetry.get(

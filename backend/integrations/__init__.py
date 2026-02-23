@@ -12,6 +12,8 @@ from .connectors.stackexchange import StackExchangeConnector
 from .connectors.coingecko import CoinGeckoConnector
 from .connectors.tinyfish import TinyFishConnector
 from .connectors.chainlink import ChainlinkConnector
+from .connectors.firecrawl import FirecrawlConnector
+from .connectors.synthdata import SynthDataConnector
 
 __all__ = [
     "AbstractPlatformConnector",
@@ -28,4 +30,6 @@ __all__ = [
     "CoinGeckoConnector",
     "TinyFishConnector",
     "ChainlinkConnector",
+    "FirecrawlConnector",
+    "SynthDataConnector",
 ]

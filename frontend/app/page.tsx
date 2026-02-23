@@ -305,6 +305,22 @@ export default function Home() {
   );
 
   const startedAt = data?.query?.createdAt ? new Date(data.query.createdAt).getTime() : runStartedAtMs;
+  const dataHealth = useMemo(() => {
+    const telemetry = data?.telemetry;
+    const level = telemetry?.dataSufficiency || (sourceCount === 0 ? "sparse" : sourceCount < 5 ? "partial" : "healthy");
+    const warnings = telemetry?.warnings || [];
+    const findingsCount = telemetry?.findingsCount ?? sourceCount;
+    const fallbackMention = warnings.some((w) => w.includes("empty_findings") || w.includes("provider_failure_rate"));
+    let message = "Evidence coverage is healthy across selected sources.";
+    if (level === "sparse") {
+      message = "This run completed with very limited source evidence. Treat conviction as provisional and rerun or expand source routes.";
+    } else if (level === "partial") {
+      message = "This run completed with partial evidence coverage. Some selected routes likely timed out or returned thin results.";
+    } else if (fallbackMention) {
+      message = "Fallback paths were used to complete this run. Verify critical claims against primary references.";
+    }
+    return { level, message, warnings, findingsCount };
+  }, [data?.telemetry, sourceCount]);
   const filteredCommons = useMemo(() => {
     const term = commonsSearch.trim().toLowerCase();
     if (!term) return commonsResearch;
@@ -1139,7 +1155,11 @@ export default function Home() {
                     </div>
                   </summary>
                   <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                    <TrendSummary summary={data.summary} sourceLabelByOrdinal={sourceLabelByOrdinal} />
+                    <TrendSummary
+                      summary={data.summary}
+                      sourceLabelByOrdinal={sourceLabelByOrdinal}
+                      dataHealth={dataHealth}
+                    />
                   </div>
                 </details>
               </div>

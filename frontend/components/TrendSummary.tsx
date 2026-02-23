@@ -1,7 +1,7 @@
 'use client';
 
 import { TrendSummary as TrendSummaryType } from '@/lib/types';
-import { TrendingUp, TrendingDown, Minus, Lightbulb, Clock, ShieldCheck, Flame, Sparkles, Radar } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Clock, ShieldCheck, Flame, Sparkles, Radar } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Card, Badge, Progress, Alert } from './DesignSystem';
@@ -11,10 +11,17 @@ interface TrendSummaryProps {
   summary?: TrendSummaryType;
   sourceLabelByOrdinal?: Record<number, string>;
   isLoading?: boolean;
+  dataHealth?: {
+    level: 'healthy' | 'partial' | 'sparse' | 'unknown';
+    message: string;
+    findingsCount: number;
+    warnings: string[];
+  };
 }
 
-export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading }: TrendSummaryProps) {
+export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, dataHealth }: TrendSummaryProps) {
   const { isSoft } = useTheme();
+  void sourceLabelByOrdinal;
   if (isLoading) {
     return (
       <Card accent="cyan" className={cn("p-6 animate-pulse glass", isSoft ? "soft-ui-out border-0" : "border-cyan-500/30")}>
@@ -72,6 +79,23 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading }: 
       </div>
 
       <div className="p-6 space-y-8">
+        {dataHealth && dataHealth.level !== 'healthy' && (
+          <Alert
+            variant={dataHealth.level === 'sparse' ? 'warning' : 'info'}
+            className={cn(
+              isSoft ? 'soft-ui-out border-0' : 'border-white/10',
+            )}
+          >
+            <p className="text-[10px] font-black uppercase tracking-widest mb-1">
+              {dataHealth.level === 'sparse' ? 'Limited Evidence Coverage' : 'Partial Evidence Coverage'}
+            </p>
+            <p className="text-xs leading-relaxed">{dataHealth.message}</p>
+            <div className="mt-2 text-[10px] font-mono opacity-80">
+              findings={dataHealth.findingsCount} {dataHealth.warnings.length > 0 ? `• alerts=${dataHealth.warnings.length}` : ''}
+            </div>
+          </Alert>
+        )}
+
         {/* Executive Summary Section */}
         <section>
           <div className="flex items-center gap-2 mb-3">

@@ -179,6 +179,8 @@ export interface ResultsResponse {
     diversityLevel: 'low' | 'medium' | 'high';
     durationSeconds?: number;
     attestationStatus: string;
+    dataSufficiency?: 'healthy' | 'partial' | 'sparse' | 'unknown';
+    findingsCount?: number;
     warnings: string[];
     logs: string[];
     updatedAt: string;

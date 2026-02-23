@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     tabstack_api_key: str = Field(default="", alias="TABSTACK_API_KEY")
     tinyfish_api_key: str = Field(default="", alias="TINYFISH_API_KEY")
     coingecko_api_key: str = Field(default="", alias="COINGECKO_API_KEY")
+    firecrawl_api_key: str = Field(default="", alias="FIRECRAWL_API_KEY")
+    synthdata_api_key: str = Field(default="", alias="SYNTHDATA_API_KEY")
 
     # Platform API Keys
     twitter_api_key: str = Field(default="", alias="TWITTER_API_KEY")
