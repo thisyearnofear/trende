@@ -97,6 +97,21 @@ const SIMULATED_LOGS: Record<string, string[]> = {
   ],
 };
 
+const STAGE_MILESTONES: Record<string, string> = {
+  planner: "Mission intent parsed. Agent is generating source-aware queries.",
+  researcher: "Signal harvest phase active. Connectors are executing in parallel.",
+  validator: "Truth engine active. Contradictions and low-quality evidence are being filtered.",
+  consensus: "Multi-model synthesis underway. Divergence and agreement are being reconciled.",
+  architect: "TEE packaging + attestation handoff in progress.",
+};
+
+const WAIT_EXPLAINERS = [
+  "Why this takes time: each source route has retries, timeout budgets, and quality filtering before synthesis.",
+  "Consensus is weighted by source quality, freshness, and model agreement, not just raw volume.",
+  "When primary routes fail, Trende triggers fallback paths to avoid single-source blind spots.",
+  "Attestation is generated after synthesis to bind what was computed and how it was produced.",
+];
+
 // ============================================
 // STAGE CARD — single source of truth
 // ============================================
@@ -263,6 +278,28 @@ function TimelineInterlude({
   );
 }
 
+function MilestonePulse({
+  text,
+  reducedMotion,
+}: {
+  text: string;
+  reducedMotion: boolean;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: reducedMotion ? 0 : 0.35, ease: "easeOut" }}
+      className="glass border-cyan-500/20 rounded-xl px-3 py-2"
+    >
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300 mb-1">
+        Stage Arrival
+      </p>
+      <p className="text-xs text-[var(--text-secondary)]">{text}</p>
+    </motion.div>
+  );
+}
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -284,13 +321,20 @@ export function ProcessingStatus({
   const [activeHash, setActiveHash] = useState("0x...");
   const [simulatedLog, setSimulatedLog] = useState<string | null>(null);
   const [expandedStageId, setExpandedStageId] = useState<string>(currentStageId);
+  const [explainerIndex, setExplainerIndex] = useState(0);
   const railRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const revealedRef = useRef<Set<string>>(new Set());
   const initialProgressRef = useRef(progress);
+  const stageChangeTickRef = useRef(0);
+  const [stagePulseTick, setStagePulseTick] = useState(0);
   const mutedTextClass = isSoft ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)]";
 
   useEffect(() => { setExpandedStageId(currentStageId); }, [currentStageId]);
+  useEffect(() => {
+    stageChangeTickRef.current += 1;
+    setStagePulseTick(stageChangeTickRef.current);
+  }, [currentStageId]);
 
   const runtimeEstimate = useMemo(
     () =>
@@ -350,6 +394,15 @@ export function ProcessingStatus({
       setSimulatedLog(null);
     };
   }, [isProcessing, currentStageId, prefersReducedMotion]);
+
+  useEffect(() => {
+    if (!isProcessing) return;
+    const intervalMs = prefersReducedMotion ? 6000 : 4200;
+    const timer = setInterval(() => {
+      setExplainerIndex((prev) => (prev + 1) % WAIT_EXPLAINERS.length);
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [isProcessing, prefersReducedMotion]);
 
   const terminalEvents = useMemo(() => {
     const filtered = events.filter(
@@ -449,9 +502,25 @@ export function ProcessingStatus({
 
   const expandedIndex = STAGES.findIndex((s) => s.id === expandedStageId);
   const remaining = Math.max(runtimeEstimate.totalSeconds - elapsedSeconds, 0);
+  const milestoneText = STAGE_MILESTONES[currentStageId] || STAGE_MILESTONES.planner;
+  const explainerText = WAIT_EXPLAINERS[explainerIndex];
+  const stageAura = currentStageId === "researcher"
+    ? "from-cyan-500/20 via-emerald-400/10 to-transparent"
+    : currentStageId === "validator"
+      ? "from-amber-500/15 via-cyan-500/10 to-transparent"
+      : currentStageId === "consensus"
+        ? "from-violet-500/20 via-cyan-500/10 to-transparent"
+        : currentStageId === "architect"
+          ? "from-emerald-500/20 via-cyan-500/10 to-transparent"
+          : "from-cyan-500/20 via-transparent to-transparent";
 
   return (
     <div className="relative">
+      <div className={cn(
+        "pointer-events-none absolute inset-0 rounded-2xl blur-2xl opacity-60",
+        "bg-gradient-to-br transition-all duration-700",
+        stageAura
+      )} />
       <div className="space-y-6">
         {/* ── Section 1: Agent ── */}
         <div
@@ -501,6 +570,10 @@ export function ProcessingStatus({
                 <span>~{remaining}s</span>
                 <span className="hidden sm:inline">remaining</span>
               </div>
+            </div>
+
+            <div className="mb-3">
+              <MilestonePulse key={`${currentStageId}-${stagePulseTick}`} text={milestoneText} reducedMotion={prefersReducedMotion} />
             </div>
 
             {/* Mobile: snap-scroll rail */}
@@ -571,6 +644,19 @@ export function ProcessingStatus({
                 </span>
               </div>
             </div>
+
+            <motion.div
+              key={`explainer-${explainerIndex}`}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.25 }}
+              className="mt-3 p-3 rounded-lg border border-white/10 bg-black/20"
+            >
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-300 mb-1">
+                Runtime Insight
+              </p>
+              <p className="text-xs text-[var(--text-secondary)]">{explainerText}</p>
+            </motion.div>
           </Card>
         </div>
 
