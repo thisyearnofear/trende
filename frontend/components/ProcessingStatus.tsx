@@ -10,6 +10,9 @@ import {
   Circle,
   Loader2,
   Clock3,
+  Sparkles,
+  BrainCircuit,
+  Shield,
 } from "lucide-react";
 import { gsap } from "gsap";
 import { TerminalLog } from "./TypewriterText";
@@ -17,9 +20,8 @@ import { AgentPersona } from "./AgentPersona";
 import { Card, Progress, Badge } from "./DesignSystem";
 import { useTheme } from "./ThemeProvider";
 import { usePrefersReducedMotion } from "./Motion";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { ScrambleText } from "./ScrambleText";
 
 interface ProcessingStatusProps {
   status: QueryStatus | null;
@@ -108,40 +110,7 @@ interface StageCardProps {
   onSelect: () => void;
   variant: "rail" | "grid";
   reducedMotion: boolean;
-  activationTick: number;
   softMode: boolean;
-}
-
-function NeuralFlux() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-      <motion.div
-        animate={{
-          scale: [1, 1.2, 1],
-          x: [0, 50, 0],
-          y: [0, -30, 0],
-        }}
-        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-        className="absolute -top-20 -left-20 w-64 h-64 bg-cyan-500 rounded-full blur-[80px]"
-      />
-      <motion.div
-        animate={{
-          scale: [1, 1.3, 1],
-          x: [0, -40, 0],
-          y: [0, 60, 0],
-        }}
-        transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-        className="absolute -bottom-20 -right-20 w-80 h-80 bg-violet-600 rounded-full blur-[100px]"
-      />
-      <motion.div
-        animate={{
-          opacity: [0.1, 0.3, 0.1],
-        }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--accent-cyan)_0%,transparent_70%)] opacity-10"
-      />
-    </div>
-  );
 }
 
 function StageCard({
@@ -153,7 +122,6 @@ function StageCard({
   onSelect,
   variant,
   reducedMotion,
-  activationTick,
   softMode,
 }: StageCardProps) {
   const isRail = variant === "rail";
@@ -267,23 +235,31 @@ function RailDots({
   );
 }
 
-// ============================================
-// SPINE SECTION MARKER
-// ============================================
-
-function SpineMarker({ lit, color }: { lit: boolean; color: "cyan" | "emerald" | "muted" }) {
-  const palette = {
-    cyan: { border: "var(--accent-cyan)", bg: "var(--accent-cyan)", shadow: "0 0 8px var(--accent-cyan)" },
-    emerald: { border: "var(--accent-emerald)", bg: "var(--accent-emerald)", shadow: "none" },
-    muted: { border: "var(--border-color)", bg: "var(--bg-primary)", shadow: "none" },
-  };
-  const c = lit ? palette[color] : palette.muted;
-
+function TimelineInterlude({
+  icon,
+  title,
+  body,
+}: {
+  icon: "brain" | "spark" | "shield";
+  title: string;
+  body: string;
+}) {
+  const Icon = icon === "brain" ? BrainCircuit : icon === "shield" ? Shield : Sparkles;
   return (
-    <div
-      className="hidden sm:block absolute -left-[30px] top-4 w-3 h-3 border-2 transition-all duration-500 z-10"
-      style={{ borderColor: c.border, backgroundColor: c.bg, boxShadow: c.shadow }}
-    />
+    <div className="relative py-1">
+      <div className="absolute left-0 right-0 top-1/2 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+      <div className="relative mx-auto w-full max-w-3xl px-3">
+        <div className="glass border-white/10 rounded-xl p-3 flex items-start gap-3">
+          <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-center shrink-0">
+            <Icon className="w-4 h-4 text-cyan-300" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">{title}</p>
+            <p className="text-xs text-[var(--text-secondary)]">{body}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -308,7 +284,6 @@ export function ProcessingStatus({
   const [activeHash, setActiveHash] = useState("0x...");
   const [simulatedLog, setSimulatedLog] = useState<string | null>(null);
   const [expandedStageId, setExpandedStageId] = useState<string>(currentStageId);
-  const [activationTick, setActivationTick] = useState(0);
   const railRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const revealedRef = useRef<Set<string>>(new Set());
@@ -316,7 +291,6 @@ export function ProcessingStatus({
   const mutedTextClass = isSoft ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)]";
 
   useEffect(() => { setExpandedStageId(currentStageId); }, [currentStageId]);
-  useEffect(() => { setActivationTick((t) => t + 1); }, [currentStageId]);
 
   const runtimeEstimate = useMemo(
     () =>
@@ -478,38 +452,25 @@ export function ProcessingStatus({
 
   return (
     <div className="relative">
-      {/* Vertical Spine — hidden on small phones to reclaim content width */}
-      <div className="hidden sm:block absolute left-[22px] top-0 bottom-0 w-px bg-[var(--border-color)]" />
-      <div
-        className="hidden sm:block absolute left-[22px] top-0 w-px origin-top transition-transform duration-1000 ease-out"
-        style={{
-          backgroundColor: "var(--accent-cyan)",
-          transform: `scaleY(${Math.min(progress / 100, 1)})`,
-          height: "100%",
-        }}
-      />
-
-      <div className="space-y-6 sm:pl-12">
+      <div className="space-y-6">
         {/* ── Section 1: Agent ── */}
         <div
           className="relative animate-in fade-in slide-in-from-bottom-4 duration-500"
         >
-          <SpineMarker
-            lit={progress >= 0}
-            color={progress >= 20 ? "emerald" : "cyan"}
-          />
           <AgentPersona status={getAgentStatus()} progress={progress} />
         </div>
+
+        <TimelineInterlude
+          icon="brain"
+          title="Reasoning In Progress"
+          body="Trende is reconciling conflicting narratives, ranking evidence freshness, and deciding whether to trigger deeper follow-up loops."
+        />
 
         {/* ── Section 2: Timeline + Inline Brief ── */}
         <div
           className="relative animate-in fade-in slide-in-from-bottom-4 duration-500"
           style={{ animationDelay: "150ms", animationFillMode: "both" }}
         >
-          <SpineMarker
-            lit={progress >= 20}
-            color={progress >= 60 ? "emerald" : progress >= 20 ? "cyan" : "muted"}
-          />
           <Card accent="violet" className="p-4 sm:p-5">
             {/* Compact inline brief */}
             {isProcessing && queryData && (
@@ -558,7 +519,6 @@ export function ProcessingStatus({
                   onSelect={() => setExpandedStageId(stage.id)}
                   variant="rail"
                   reducedMotion={prefersReducedMotion}
-                  activationTick={activationTick}
                   softMode={isSoft}
                 />
               ))}
@@ -583,7 +543,6 @@ export function ProcessingStatus({
                   onSelect={() => setExpandedStageId(stage.id)}
                   variant="grid"
                   reducedMotion={prefersReducedMotion}
-                  activationTick={activationTick}
                   softMode={isSoft}
                 />
               ))}
@@ -615,15 +574,17 @@ export function ProcessingStatus({
           </Card>
         </div>
 
+        <TimelineInterlude
+          icon="shield"
+          title="Verifiable Compute Path"
+          body="Consensus outputs are normalized for attestation, then signed through trusted execution so downstream users can verify provenance."
+        />
+
         {/* ── Section 3: TEE Terminal ── */}
         <div
           className="relative animate-in fade-in slide-in-from-bottom-4 duration-500"
           style={{ animationDelay: "300ms", animationFillMode: "both" }}
         >
-          <SpineMarker
-            lit={progress >= 60}
-            color={progress >= 100 ? "emerald" : progress >= 60 ? "cyan" : "muted"}
-          />
           <Card accent="cyan" shadow="lg">
             {/* Header */}
             <div className="border-b-2 border-[var(--border-color)] p-4 flex items-center justify-between">

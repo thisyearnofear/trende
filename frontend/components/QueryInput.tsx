@@ -3,8 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Sparkles, Loader2, Compass, Layers, Zap, Shield, BarChart3, Settings2, Rocket, Activity } from 'lucide-react';
 import { QueryRequest } from '@/lib/types';
-import { estimateMissionRuntime } from '@/lib/runtimeEstimate';
-import { Card, Button, Input, Badge, Tooltip } from './DesignSystem';
+import { Card, Button } from './DesignSystem';
 import { cn } from '@/lib/utils';
 
 interface QueryInputProps {
@@ -94,7 +93,6 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [models, setModels] = useState<string[]>(['venice', 'openrouter_llama_70b', 'openrouter_hermes']);
   const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const activeProfile = useMemo(() => {
     return MISSION_PROFILES.find(p =>
@@ -141,13 +139,10 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const avgQuality = models.length > 0
     ? models.reduce((sum, m) => sum + (MODEL_OPTIONS.find(opt => opt.id === m)?.quality || 0), 0) / models.length
     : 0;
-  const estimatedSeconds = estimateMissionRuntime({
-    platforms,
-    models,
-    relevanceThreshold,
-  }).totalSeconds;
-  const metricKey = `${estimatedSeconds}-${Math.round(avgQuality)}-${totalCost.toFixed(4)}`;
-
+  const selectedSuggestion = useMemo(
+    () => SUGGESTIONS.find((suggestion) => suggestion === idea.trim()) || null,
+    [idea]
+  );
   return (
     <div className="relative group">
       {/* Background glow effects */}
@@ -210,9 +205,19 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                     type="button"
                     onClick={() => setIdea(suggestion)}
                     disabled={disabled}
-                    className="flex-1 text-xs font-mono px-4 py-3 rounded-2xl glass border-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-cyan-400/50 hover:bg-white/10 transition-all text-left flex flex-col justify-between min-h-[80px]"
+                    className={cn(
+                      "flex-1 text-xs font-mono px-4 py-3 rounded-2xl glass transition-all text-left flex flex-col justify-between min-h-[80px]",
+                      selectedSuggestion === suggestion
+                        ? "border-cyan-400/70 bg-cyan-500/10 text-[var(--text-primary)] shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
+                        : "border-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-cyan-400/50 hover:bg-white/10"
+                    )}
                   >
-                    <span className="text-[var(--accent-cyan)] font-black uppercase tracking-[0.2em] text-[10px] block mb-2 opacity-60">One-Click</span>
+                    <span className={cn(
+                      "font-black uppercase tracking-[0.2em] text-[10px] block mb-2",
+                      selectedSuggestion === suggestion ? "text-cyan-300 opacity-100" : "text-[var(--accent-cyan)] opacity-60"
+                    )}>
+                      {selectedSuggestion === suggestion ? "Selected" : "One-Click"}
+                    </span>
                     <span className="line-clamp-3 leading-relaxed">{suggestion}</span>
                   </button>
                 ))}

@@ -83,6 +83,7 @@ export default function Home() {
   const [historyMode, setHistoryMode] = useState<"recent" | "saved">("recent");
   const [lastQuery, setLastQuery] = useState<QueryRequest | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [runStartedAtMs, setRunStartedAtMs] = useState<number | null>(null);
   const [showForgeInline, setShowForgeInline] = useState(false);
   const [briefOpen, setBriefOpen] = useState(true);
   const [showCommons, setShowCommons] = useState(true);
@@ -106,11 +107,14 @@ export default function Home() {
   const { research: commonsResearch, isLoading: commonsLoading, refresh: refreshCommons } = useCommons();
   const [saveVisibility, setSaveVisibility] = useState<"private" | "unlisted" | "public">("private");
   const [isSavingResearch, setIsSavingResearch] = useState(false);
+  const isRunActive = isProcessing || ["pending", "planning", "researching", "analyzing", "processing"].includes(status || "");
 
   const handleSubmit = useCallback(
     async (request: QueryRequest) => {
       try {
         setLastQuery(request);
+        setRunStartedAtMs(Date.now());
+        setElapsedSeconds(0);
         const response = await startAnalysis(request);
         setQueryId(response.id);
         if (typeof window !== "undefined") {
@@ -300,7 +304,7 @@ export default function Home() {
     ],
   );
 
-  const startedAt = data?.query?.createdAt ? new Date(data.query.createdAt).getTime() : null;
+  const startedAt = data?.query?.createdAt ? new Date(data.query.createdAt).getTime() : runStartedAtMs;
   const filteredCommons = useMemo(() => {
     const term = commonsSearch.trim().toLowerCase();
     if (!term) return commonsResearch;
@@ -318,7 +322,7 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (!isProcessing || !startedAt) return;
+    if (!isRunActive || !startedAt) return;
     const updateElapsed = () => {
       const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
       setElapsedSeconds(seconds);
@@ -326,7 +330,18 @@ export default function Home() {
     updateElapsed();
     const timer = setInterval(updateElapsed, 1000);
     return () => clearInterval(timer);
-  }, [isProcessing, startedAt]);
+  }, [isRunActive, startedAt]);
+
+  useEffect(() => {
+    if (!isRunActive) {
+      setRunStartedAtMs(null);
+    }
+  }, [isRunActive]);
+
+  useEffect(() => {
+    // Default to public-first sharing for community discovery.
+    setSaveVisibility("public");
+  }, [queryId]);
 
   const handleCopyShareLink = useCallback(async () => {
     if (!activeQueryId || typeof window === "undefined") return;
@@ -958,12 +973,36 @@ export default function Home() {
         {/* Query Input */}
         <QueryInput
           onSubmit={handleSubmit}
-          isLoading={isProcessing}
-          disabled={isProcessing}
+          isLoading={isRunActive}
+          disabled={isRunActive}
         />
 
+        {!isRunActive && (
+          <Card accent="violet" className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  Mission Visibility
+                </p>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  Set default visibility before launch. Public helps Community Commons discover high-signal runs.
+                </p>
+              </div>
+              <select
+                value={saveVisibility}
+                onChange={(event) => setSaveVisibility(event.target.value as "private" | "unlisted" | "public")}
+                className="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-xs font-black uppercase tracking-widest text-[var(--text-primary)] focus:outline-none"
+              >
+                <option value="public" className="bg-black">Public</option>
+                <option value="unlisted" className="bg-black">Unlisted</option>
+                <option value="private" className="bg-black">Private</option>
+              </select>
+            </div>
+          </Card>
+        )}
+
         {/* Processing Status */}
-        {(isProcessing || status === "processing") && (
+        {isRunActive && (
           <ProcessingStatus
             status={status}
             progress={progress}
@@ -995,7 +1034,7 @@ export default function Home() {
         {activeQueryId && !isProcessing && status === "completed" && data?.results && (
           <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
             {/* Mission Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 glass rounded-2xl border-white/10 relative overflow-hidden group">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 glass rounded-2xl border-white/10 relative overflow-visible group">
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-transparent pointer-events-none" />
 
               <div className="relative z-10">

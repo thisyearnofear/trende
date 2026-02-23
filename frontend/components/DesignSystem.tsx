@@ -572,7 +572,7 @@ export function Tooltip({
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.15 }}
             className={cn(
-              'absolute z-50 w-64 p-3 text-xs leading-relaxed',
+              'absolute z-[120] w-64 p-3 text-xs leading-relaxed',
               'bg-[var(--bg-secondary)] text-[var(--text-primary)]',
               !isSoft && 'border-2 border-[var(--border-color)]',
               isSoft ? 'soft-ui-out rounded-xl' : 'rounded-none',

@@ -699,10 +699,13 @@ async def run_agent_workflow(
                 # Update the global task state with the latest changes from the agent
                 for key, value in state_update.items():
                     tasks[task_id][key] = value
-                
-                # Set explicit QueryStatus based on node name
-                if node_name == "planner":
-                    # Planner just completed; reflect that research execution has begun.
+
+                # Honor explicit terminal statuses from node output first.
+                explicit_status = state_update.get("status")
+                if explicit_status in [QueryStatus.COMPLETED, QueryStatus.FAILED]:
+                    tasks[task_id]["status"] = explicit_status
+                # Otherwise set an operational status based on the executing node.
+                elif node_name == "planner":
                     tasks[task_id]["status"] = QueryStatus.RESEARCHING
                 elif node_name == "researcher":
                     tasks[task_id]["status"] = QueryStatus.PROCESSING
@@ -712,6 +715,8 @@ async def run_agent_workflow(
                     tasks[task_id]["status"] = QueryStatus.PROCESSING
                 elif node_name == "architect":
                     tasks[task_id]["status"] = QueryStatus.COMPLETED
+
+                if node_name == "architect":
                     tasks[task_id]["logs"].append("🏆 MISSION ACCOMPLISHED: Final results ready.")
 
                 tasks[task_id]["updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
