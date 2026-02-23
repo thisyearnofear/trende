@@ -3,6 +3,7 @@
 import { TrendSummary as TrendSummaryType } from '@/lib/types';
 import { TrendingUp, TrendingDown, Minus, Lightbulb, Clock, ShieldCheck, Flame, Sparkles, Radar } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { Card, Badge, Progress, Alert } from './DesignSystem';
 import { useTheme } from './ThemeProvider';
 

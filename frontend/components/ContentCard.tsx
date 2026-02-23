@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { TrendItem } from '@/lib/types';
 import { ExternalLink, MessageCircle, Repeat, Heart, Eye, Radar, ShieldCheck } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
+import { cn } from '@/lib/utils';
 
 import { Card } from './DesignSystem';
 

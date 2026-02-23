@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { TrendResult, TrendItem } from '@/lib/types';
 import { ContentCard } from './ContentCard';
 import { ArrowUpRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Card } from './DesignSystem';
 import { useTheme } from './ThemeProvider';
 

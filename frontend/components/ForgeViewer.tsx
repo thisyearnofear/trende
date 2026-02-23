@@ -5,6 +5,7 @@ import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp, Ch
 import { AgentAction, TrendSummary as TrendSummaryType } from '@/lib/types';
 import { useToast } from '@/components/Toast';
 import { AttestationBadge } from '@/components/AttestationBadge';
+import { cn } from '@/lib/utils';
 import { useTheme } from './ThemeProvider';
 import { api } from '@/lib/api';
 
