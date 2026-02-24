@@ -25,7 +25,7 @@ const MODEL_OPTIONS = [
   { id: 'venice', label: 'Venice AI', hint: 'Primary privacy-first consensus lane', quality: 95, cost: 0.002, enabled: true },
   { id: 'openrouter_llama_70b', label: 'OR Llama 70B', hint: 'Strong baseline reasoning and coverage', quality: 90, cost: 0.0006, enabled: true },
   { id: 'openrouter_hermes', label: 'OR Hermes', hint: 'Detailed synthesis and long-context handling', quality: 88, cost: 0.0006, enabled: true },
-  { id: 'openrouter_stepfun', label: 'OR Stepfun', hint: 'Fast contrastive perspective for divergence', quality: 84, cost: 0.0005, enabled: true },
+  { id: 'openrouter_stepfun', label: 'OR Stepfun', hint: 'Contrastive perspective for divergence checks', quality: 84, cost: 0.0005, enabled: true },
   { id: 'aisa', label: 'AIsA (LLM Route)', hint: 'Separate from data connectors; adds provider diversity', quality: 89, cost: 0.0015, enabled: true },
   { id: 'gemini', label: 'Gemini', hint: 'Google model route integration', quality: 87, cost: 0.0008, enabled: false, reason: 'Consensus route rollout pending' },
   { id: 'kimi', label: 'Kimi', hint: 'Moonshot route for long-context synthesis', quality: 86, cost: 0.0007, enabled: false, reason: 'Provider integration pending' },
@@ -33,7 +33,7 @@ const MODEL_OPTIONS = [
 ];
 
 const PLATFORM_OPTIONS: PlatformOption[] = [
-  { id: 'twitter', label: 'X / Twitter', hint: 'Fast social momentum', enabled: false, reason: 'API reliability in progress' },
+  { id: 'twitter', label: 'X / Twitter', hint: 'Social momentum and narrative shifts', enabled: false, reason: 'API reliability in progress' },
   { id: 'linkedin', label: 'LinkedIn', hint: 'Professional conviction', enabled: false, reason: 'Connector stability in progress' },
   { id: 'newsapi', label: 'News', hint: 'Media narrative context', enabled: true },
   { id: 'web', label: 'Web', hint: 'Long-tail signal capture (beta)', enabled: true },
@@ -47,9 +47,9 @@ const PLATFORM_OPTIONS: PlatformOption[] = [
 const MISSION_PROFILES = [
   {
     id: 'alpha-hunter',
-    label: 'Alpha Hunter',
+    label: 'Standard Research',
     icon: Zap,
-    description: 'Fast social momentum & early signals',
+    description: 'Balanced coverage with strong cross-source grounding',
     platforms: ['newsapi', 'web', 'hackernews'],
     models: ['venice', 'openrouter_llama_70b'],
     threshold: 0.5,
@@ -67,9 +67,9 @@ const MISSION_PROFILES = [
   },
   {
     id: 'market-intel',
-    label: 'Market Intel',
+    label: 'Market Intelligence',
     icon: BarChart3,
-    description: 'Macro trends & cross-platform consensus',
+    description: 'Macro trend mapping with multi-platform consensus',
     platforms: ['newsapi', 'web', 'hackernews', 'coingecko'],
     models: ['venice', 'openrouter_llama_70b', 'openrouter_hermes'],
     threshold: 0.65,
@@ -169,6 +169,9 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                 <h3 className="text-base font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">Agent Briefing</h3>
                 <p className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-[0.3em]">
                   {activeProfile ? `PROFILE: ${activeProfile.label}` : 'CUSTOM DIRECTIVE'}
+                </p>
+                <p className="text-[10px] font-mono text-[var(--accent-cyan)] mt-1">
+                  Quality-first execution. Typical completion: 4-12 minutes.
                 </p>
               </div>
             </div>

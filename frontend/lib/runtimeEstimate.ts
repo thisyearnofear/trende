@@ -17,9 +17,16 @@ export function estimateMissionRuntime(input: RuntimeEstimateInput): RuntimeEsti
   const platforms = input.platforms?.length || 0;
   const models = input.models?.length || 0;
   const threshold = input.relevanceThreshold ?? 0.6;
-  const weighted = 70 + platforms * 30 + models * 34 + (threshold > 0.75 ? 40 : 0);
-  const totalSeconds = Math.max(120, Math.round(weighted));
-  const minSeconds = Math.max(90, Math.round(totalSeconds * 0.85));
-  const maxSeconds = Math.round(totalSeconds * 1.9);
+  const selected = new Set(input.platforms || []);
+  let weighted = 180 + platforms * 45 + models * 38 + (threshold > 0.75 ? 60 : 0);
+
+  // Long-form routes need larger budgets and should not be framed as "quick".
+  if (selected.has('web')) weighted += 140;
+  if (selected.has('tinyfish')) weighted += 220;
+  if (selected.has('web') && selected.has('tinyfish')) weighted += 80;
+
+  const totalSeconds = Math.max(240, Math.round(weighted));
+  const minSeconds = Math.max(180, Math.round(totalSeconds * 0.8));
+  const maxSeconds = Math.round(totalSeconds * 2.2);
   return { totalSeconds, minSeconds, maxSeconds };
 }

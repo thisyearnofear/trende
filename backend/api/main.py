@@ -1141,10 +1141,10 @@ async def get_action_status(action_id: str) -> dict[str, Any] | Response:
 @app.get("/api/commons")
 async def get_public_commons(limit: int = 50, sponsor: str | None = None) -> dict[str, Any]:
     """
-    Public Research Commons - browse all completed, attested research.
+    Public Research Commons - browse completed high-quality public research.
 
     This endpoint is publicly accessible without authentication.
-    All completed research becomes part of the commons.
+    Quality-gating defaults exclude sparse/partial runs unless server config opts in.
     """
     records = repo.get_public_research(limit=limit, sponsor=sponsor)
 

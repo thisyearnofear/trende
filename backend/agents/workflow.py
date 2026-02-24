@@ -291,8 +291,9 @@ async def researcher_node(state: GraphState) -> GraphState:
     synthdata = SynthDataConnector()
 
     tasks = []
-    default_timeout = max(8, int(os.getenv("RESEARCH_PLATFORM_TIMEOUT_SECS", "35")))
-    tinyfish_timeout = max(default_timeout, int(os.getenv("RESEARCH_TINYFISH_TIMEOUT_SECS", "45")))
+    default_timeout = max(8, int(os.getenv("RESEARCH_PLATFORM_TIMEOUT_SECS", "45")))
+    web_timeout = max(default_timeout, int(os.getenv("RESEARCH_WEB_TIMEOUT_SECS", "75")))
+    tinyfish_timeout = max(web_timeout, int(os.getenv("RESEARCH_TINYFISH_TIMEOUT_SECS", "120")))
     retries = max(1, int(os.getenv("RESEARCH_CONNECTOR_RETRIES", "2")))
     retry_backoff = max(0.2, float(os.getenv("RESEARCH_CONNECTOR_BACKOFF_SECS", "0.8")))
 
@@ -329,14 +330,14 @@ async def researcher_node(state: GraphState) -> GraphState:
                 ("newsapi", lambda: news.search(query, limit=5), default_timeout),
             ]
             if firecrawl.api_key:
-                chain.append(("firecrawl", lambda: firecrawl.search(f"{query} latest news", limit=5), default_timeout))
+                chain.append(("firecrawl", lambda: firecrawl.search(f"{query} latest news", limit=5), web_timeout))
             return chain
         if platform == "web":
             chain = [
-                ("tabstack", lambda: tabstack.search(query, limit=5), default_timeout),
+                ("tabstack", lambda: tabstack.search(query, limit=5), web_timeout),
             ]
             if firecrawl.api_key:
-                chain.append(("firecrawl", lambda: firecrawl.search(query, limit=5), default_timeout))
+                chain.append(("firecrawl", lambda: firecrawl.search(query, limit=5), web_timeout))
             if tinyfish.api_key:
                 chain.append(("tinyfish", lambda: tinyfish.search(query, limit=5), tinyfish_timeout))
             return chain
@@ -558,12 +559,12 @@ async def analyzer_node(state: GraphState) -> GraphState:
 
     enriched_context = []
     enrich_per_source_timeout = max(
-        5,
-        int(os.getenv("ENRICH_PER_SOURCE_TIMEOUT_SECS", "20")),
+        10,
+        int(os.getenv("ENRICH_PER_SOURCE_TIMEOUT_SECS", "75")),
     )
     enrich_total_budget = max(
         enrich_per_source_timeout,
-        int(os.getenv("ENRICH_TOTAL_BUDGET_SECS", "45")),
+        int(os.getenv("ENRICH_TOTAL_BUDGET_SECS", "240")),
     )
     enrich_started_at = datetime.datetime.now(datetime.timezone.utc)
     # Sort by metrics (e.g. likes/retweets) or just take first few

@@ -1,4 +1,5 @@
 import datetime
+import os
 from typing import Any
 import json
 
@@ -390,9 +391,15 @@ class Repository:
     def get_public_research(
         self, limit: int = 50, sponsor: str | None = None
     ) -> list[dict[str, Any]]:
-        """Get completed research for the public commons feed."""
+        """Get high-quality completed research for the public commons feed."""
         if not HAS_SQL or not self.Session:
             return []
+        include_partial = os.getenv("COMMONS_INCLUDE_PARTIAL", "false").strip().lower() in {"1", "true", "yes"}
+        min_findings = max(1, int(os.getenv("COMMONS_MIN_FINDINGS", "5")))
+        allowed_sufficiency = {"healthy"}
+        if include_partial:
+            allowed_sufficiency.add("partial")
+
         with self.Session() as session:
             query = (
                 session.query(TaskModel)
@@ -401,19 +408,32 @@ class Repository:
             )
             if sponsor:
                 query = query.filter(TaskModel.sponsor_address == sponsor.lower())
-            tasks = query.order_by(TaskModel.created_at.desc()).limit(limit).all()
-            return [
-                {
-                    "task_id": t.task_id,
-                    "topic": t.topic,
-                    "status": t.status,
-                    "sponsor_address": t.sponsor_address,
-                    "platforms": t.platforms,
-                    "created_at": t.created_at.isoformat(),
-                    "has_attestation": bool(t.result and t.result.get("attestation_data")),
-                }
-                for t in tasks
-            ]
+            # Pull a wider window first, then apply quality gate.
+            candidates = query.order_by(TaskModel.created_at.desc()).limit(max(limit * 4, limit)).all()
+            rows: list[dict[str, Any]] = []
+            for t in candidates:
+                result = t.result or {}
+                telemetry = result.get("run_telemetry") or {}
+                sufficiency = str(telemetry.get("data_sufficiency", "unknown")).strip().lower()
+                findings_count = int(telemetry.get("findings_count") or 0)
+                if sufficiency not in allowed_sufficiency:
+                    continue
+                if findings_count < min_findings:
+                    continue
+                rows.append(
+                    {
+                        "task_id": t.task_id,
+                        "topic": t.topic,
+                        "status": t.status,
+                        "sponsor_address": t.sponsor_address,
+                        "platforms": t.platforms,
+                        "created_at": t.created_at.isoformat(),
+                        "has_attestation": bool(result.get("attestation_data")),
+                    }
+                )
+                if len(rows) >= limit:
+                    break
+            return rows
 
     def create_action(
         self,
