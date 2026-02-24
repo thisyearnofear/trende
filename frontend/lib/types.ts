@@ -185,6 +185,16 @@ export interface ResultsResponse {
     warnings: string[];
     logs: string[];
     updatedAt: string;
+    chainlinkProof?: {
+      status?: string;
+      network?: string;
+      txHash?: string;
+      requestId?: string;
+      explorerUrl?: string;
+      sourceQuery?: string;
+      marketId?: string;
+      oracleSettlement?: 'staged' | 'requested';
+    } | null;
   };
 }
 

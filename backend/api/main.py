@@ -315,6 +315,83 @@ def _provider_failure_rate(consensus_data: dict[str, Any]) -> float:
     return round(len(failures) / max(len(outputs), 1), 3)
 
 
+def _extract_chainlink_proof(
+    raw_findings: list[dict[str, Any]] | list[Any],
+    task: dict[str, Any],
+) -> dict[str, Any] | None:
+    latest_finding: dict[str, Any] | None = None
+    latest_ts: datetime.datetime | None = None
+
+    for finding in raw_findings or []:
+        item = finding.model_dump() if hasattr(finding, "model_dump") else finding
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("platform", "")).lower() != "chainlink":
+            continue
+        ts = _parse_iso(item.get("timestamp"))
+        if latest_finding is None or (ts and (latest_ts is None or ts > latest_ts)):
+            latest_finding = item
+            latest_ts = ts
+
+    proof: dict[str, Any] = {}
+    if latest_finding:
+        raw_data = latest_finding.get("raw_data", {}) or {}
+        if isinstance(raw_data, dict):
+            tx_hash = raw_data.get("tx_hash")
+            network = raw_data.get("network")
+            request_id = raw_data.get("request_id")
+            source_query = raw_data.get("source_query")
+            status = raw_data.get("status")
+            if tx_hash:
+                proof["txHash"] = tx_hash
+            if network:
+                proof["network"] = network
+            if request_id:
+                proof["requestId"] = request_id
+            if source_query:
+                proof["sourceQuery"] = source_query
+            if status:
+                proof["status"] = status
+
+    for action in task.get("actions", []) or []:
+        if not isinstance(action, dict):
+            continue
+        action_type = str(action.get("action_type", ""))
+        if action_type not in {"stage_oracle_market", "resolve_oracle_market"}:
+            continue
+        payload = action.get("result_payload") or {}
+        if not isinstance(payload, dict):
+            continue
+        if payload.get("tx_hash"):
+            proof.setdefault("txHash", payload.get("tx_hash"))
+        if payload.get("network"):
+            proof.setdefault("network", payload.get("network"))
+        if payload.get("explorer_url"):
+            proof["explorerUrl"] = payload.get("explorer_url")
+        if payload.get("market_id"):
+            proof.setdefault("marketId", payload.get("market_id"))
+        if action_type == "resolve_oracle_market":
+            proof["oracleSettlement"] = "requested"
+        elif action_type == "stage_oracle_market":
+            proof.setdefault("oracleSettlement", "staged")
+
+    if not proof:
+        return None
+
+    if proof.get("txHash") and not proof.get("explorerUrl"):
+        try:
+            from backend.services.chainlink_service import chainlink_service  # lazy import
+
+            explorer = chainlink_service.chain_info.get("explorer", "https://sepolia.basescan.org")
+            proof["explorerUrl"] = f"{explorer}/tx/{proof['txHash']}"
+            proof.setdefault("network", chainlink_service.active_chain)
+        except Exception:
+            pass
+
+    proof.setdefault("status", "submitted" if proof.get("txHash") else "available")
+    return proof
+
+
 def _task_runtime_alerts(task: dict[str, Any]) -> list[str]:
     alerts: list[str] = []
     status = str(task.get("status", "")).lower()
@@ -1316,6 +1393,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
         editorial_data = res_node.get("editorial_data", task.get("editorial_data"))
 
     top_trends = _derive_top_trends_from_findings(raw_findings or [], limit=5)
+    chainlink_proof = _extract_chainlink_proof(raw_findings or [], task)
 
     # Construct response matching ResultsResponse in frontend/lib/types.ts
     return {
@@ -1378,6 +1456,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             "updatedAt": run_telemetry.get(
                 "updated_at", task.get("updated_at", task.get("created_at", ""))
             ),
+            "chainlinkProof": chainlink_proof,
         },
         "editorial": editorial_data,
     }

@@ -462,6 +462,7 @@ export default function Home() {
     }
     return { level, message, warnings, findingsCount };
   }, [data?.telemetry, sourceCount]);
+  const chainlinkProof = useMemo(() => data?.telemetry?.chainlinkProof || null, [data?.telemetry]);
   const filteredCommons = useMemo(() => {
     const term = commonsSearch.trim().toLowerCase();
     if (!term) return commonsResearch;
@@ -1322,6 +1323,63 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            {chainlinkProof && (
+              <Card accent="amber" className="p-4 sm:p-5">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent-amber)]">
+                      Chainlink Proof
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      Decentralized oracle trace for this run. Verifies request routing and on-chain execution intent.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3 text-[10px] font-mono">
+                      <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)] uppercase">
+                        Status: {chainlinkProof.status || "available"}
+                      </span>
+                      {chainlinkProof.network && (
+                        <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)] uppercase">
+                          Network: {chainlinkProof.network}
+                        </span>
+                      )}
+                      {chainlinkProof.requestId && (
+                        <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">
+                          Request: {String(chainlinkProof.requestId).slice(0, 14)}...
+                        </span>
+                      )}
+                      {chainlinkProof.txHash && (
+                        <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">
+                          Tx: {String(chainlinkProof.txHash).slice(0, 10)}...{String(chainlinkProof.txHash).slice(-6)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {chainlinkProof.explorerUrl && (
+                      <a href={chainlinkProof.explorerUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="secondary" size="sm">
+                          Open Explorer
+                          <ExternalLink className="w-3.5 h-3.5 ml-1" />
+                        </Button>
+                      </a>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        showToast(
+                          "Chainlink adds decentralized request traceability and on-chain composability for agent-to-agent settlement.",
+                          "info"
+                        )
+                      }
+                    >
+                      Why It Matters
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
               <ResultsFlowDivider
