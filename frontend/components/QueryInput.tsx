@@ -93,6 +93,11 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [models, setModels] = useState<string[]>(['venice', 'openrouter_llama_70b', 'openrouter_hermes']);
   const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [advancedSeen, setAdvancedSeen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('trende:advanced_controls_seen') === '1';
+  });
+  const [highlightSelections, setHighlightSelections] = useState(false);
 
   const activeProfile = useMemo(() => {
     return MISSION_PROFILES.find(p =>
@@ -143,6 +148,29 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
     () => SUGGESTIONS.find((suggestion) => suggestion === idea.trim()) || null,
     [idea]
   );
+
+  const markAdvancedSeen = useCallback(() => {
+    setAdvancedSeen(true);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('trende:advanced_controls_seen', '1');
+    }
+  }, []);
+
+  const toggleAdvancedControls = useCallback(() => {
+    setShowAdvanced((prev) => {
+      const next = !prev;
+      if (next) markAdvancedSeen();
+      return next;
+    });
+  }, [markAdvancedSeen]);
+
+  const openAdvancedWithHighlight = useCallback(() => {
+    markAdvancedSeen();
+    setShowAdvanced(true);
+    setHighlightSelections(true);
+    window.setTimeout(() => setHighlightSelections(false), 2600);
+  }, [markAdvancedSeen]);
+
   return (
     <div className="relative group">
       {/* Background glow effects */}
@@ -192,11 +220,17 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
               </div>
               <button
                 type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="text-[10px] font-black tracking-widest flex items-center gap-2 uppercase transition-all hover:text-cyan-400 text-[var(--text-muted)] group/btn"
+                onClick={toggleAdvancedControls}
+                className={cn(
+                  "text-[10px] font-black tracking-widest flex items-center gap-2 uppercase transition-all hover:text-cyan-400 text-[var(--text-muted)] group/btn relative",
+                  !advancedSeen && !showAdvanced && "text-cyan-300 animate-pulse"
+                )}
               >
                 <Settings2 className={cn("w-3.5 h-3.5 transition-transform duration-500", showAdvanced ? "rotate-180" : "")} />
                 Advanced Controls
+                {!advancedSeen && !showAdvanced && (
+                  <span className="text-[8px] font-black uppercase tracking-widest text-amber-300">Recommended</span>
+                )}
               </button>
             </div>
 
@@ -261,6 +295,34 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                     </div>
                   )}
                 </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative group/spec">
+            <button
+              type="button"
+              onClick={openAdvancedWithHighlight}
+              className="w-full text-left px-4 py-3 rounded-xl glass border border-white/10 hover:border-cyan-400/60 transition-all"
+            >
+              <p className="text-xs font-mono text-[var(--text-primary)] line-clamp-1">
+                &quot;{idea.trim() || "Set your mission directive above"}&quot;
+              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-2 text-[10px] font-black uppercase tracking-wider">
+                <span className="px-2 py-1 rounded bg-cyan-500/10 text-cyan-300">{platforms.length} sources</span>
+                <span className="px-2 py-1 rounded bg-amber-500/10 text-amber-300">{models.length} models</span>
+                <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-300">{Math.round(relevanceThreshold * 100)}% threshold</span>
+              </div>
+            </button>
+            <div className="pointer-events-none absolute z-30 left-0 right-0 mt-2 opacity-0 translate-y-1 group-hover/spec:opacity-100 group-hover/spec:translate-y-0 transition-all duration-200">
+              <div className="glass border border-white/10 rounded-xl p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-cyan-300 mb-1">Mission Configuration</p>
+                <p className="text-[10px] font-mono text-[var(--text-secondary)]">
+                  Sources: {platforms.join(", ")}
+                </p>
+                <p className="text-[10px] font-mono text-[var(--text-secondary)] mt-1">
+                  Models: {models.join(", ")}
+                </p>
               </div>
             </div>
           </div>
@@ -332,7 +394,8 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                         disabled={disabled || unavailable}
                         className={cn(
                           "text-left p-4 rounded-xl glass border transition-all duration-300 relative group/plat",
-                          active ? "border-cyan-500/50 bg-cyan-500/5" : "border-white/5 hover:border-white/20 opacity-40 hover:opacity-100"
+                          active ? "border-cyan-500/50 bg-cyan-500/5" : "border-white/5 hover:border-white/20 opacity-40 hover:opacity-100",
+                          active && highlightSelections && "ring-1 ring-cyan-300/80 animate-pulse"
                         )}
                         title={unavailable ? platform.reason : platform.hint}
                       >
@@ -389,7 +452,8 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                         disabled={disabled || unavailable}
                         className={cn(
                           "text-left p-3 rounded-xl glass border transition-all duration-300",
-                          active ? "border-amber-500/50 bg-amber-500/5 shadow-inner" : "border-white/5 hover:border-white/20 opacity-40 hover:opacity-100"
+                          active ? "border-amber-500/50 bg-amber-500/5 shadow-inner" : "border-white/5 hover:border-white/20 opacity-40 hover:opacity-100",
+                          active && highlightSelections && "ring-1 ring-amber-300/80 animate-pulse"
                         )}
                       >
                         <p className={cn(

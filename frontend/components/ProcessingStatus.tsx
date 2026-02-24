@@ -502,6 +502,8 @@ export function ProcessingStatus({
 
   const expandedIndex = STAGES.findIndex((s) => s.id === expandedStageId);
   const remaining = Math.max(runtimeEstimate.totalSeconds - elapsedSeconds, 0);
+  const overtime = elapsedSeconds > runtimeEstimate.totalSeconds;
+  const clockTone = overtime ? "text-rose-300 border-rose-400/40 bg-rose-500/10" : remaining < 90 ? "text-amber-300 border-amber-400/40 bg-amber-500/10" : "text-cyan-300 border-cyan-400/40 bg-cyan-500/10";
   const milestoneText = STAGE_MILESTONES[currentStageId] || STAGE_MILESTONES.planner;
   const explainerText = WAIT_EXPLAINERS[explainerIndex];
   const stageAura = currentStageId === "researcher"
@@ -563,12 +565,16 @@ export function ProcessingStatus({
                   Mission Timeline
                 </h3>
               </div>
-              <div className={`flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-mono ${mutedTextClass}`}>
-                <span>{elapsedSeconds}s</span>
-                <span className="hidden sm:inline">elapsed</span>
-                <span>•</span>
-                <span>~{remaining}s</span>
-                <span className="hidden sm:inline">remaining</span>
+              <div className={cn("px-3 py-2 rounded-lg border font-mono min-w-[170px] text-center", clockTone, !prefersReducedMotion && "animate-pulse")}>
+                <p className="text-[10px] uppercase tracking-[0.2em] font-black">Mission Clock</p>
+                <div className="flex items-center justify-center gap-2 mt-1 text-sm sm:text-base font-black tabular-nums">
+                  <span>{elapsedSeconds}s</span>
+                  <span className="opacity-60">/</span>
+                  <span>~{remaining}s</span>
+                </div>
+                <p className="text-[10px] mt-0.5 uppercase tracking-wider opacity-80">
+                  {overtime ? "Over estimate" : "Elapsed / remaining"}
+                </p>
               </div>
             </div>
 

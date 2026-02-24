@@ -451,6 +451,53 @@ async def researcher_node(state: GraphState) -> GraphState:
                 )
         else:
             state["logs"].append("🚨 CRITICAL: No data harvested from any source. Synthesis will be based on limited context.")
+
+        min_findings_required = max(3, int(os.getenv("MIN_FINDINGS_PER_RUN", "8")))
+        current_count = len(state["raw_findings"])
+        if current_count < min_findings_required:
+            state["logs"].append(
+                f"🧱 QUALITY FLOOR: Captured {current_count}/{min_findings_required} findings. Running compulsory backfill routes..."
+            )
+            backfill_chain: list[tuple[str, Callable[[], Awaitable[list[Any]]], int]] = [
+                ("newsapi_backfill", lambda: news.search(state["topic"], limit=6), default_timeout),
+                ("tabstack_backfill", lambda: tabstack.search(state["topic"], limit=6), web_timeout),
+                ("hackernews_backfill", lambda: hackernews.search(state["topic"], limit=6), default_timeout),
+                ("stackexchange_backfill", lambda: stackexchange.search(state["topic"], limit=6), default_timeout),
+            ]
+            if firecrawl.api_key:
+                backfill_chain.append(("firecrawl_backfill", lambda: firecrawl.search(state["topic"], limit=6), web_timeout))
+            if coingecko.api_key:
+                backfill_chain.append(("coingecko_backfill", lambda: coingecko.search(state["topic"], limit=4), default_timeout))
+
+            for label, runner, timeout_secs in backfill_chain:
+                if len(state["raw_findings"]) >= min_findings_required:
+                    break
+                items, err = await execute_connector(label, runner, timeout_secs)
+                if not items:
+                    if err:
+                        state["logs"].append(f"⚠️ BACKFILL MISS: {label} failed: {err}")
+                    continue
+                added = 0
+                for item in items:
+                    key = _finding_dedupe_key(item)
+                    if key in existing_keys:
+                        continue
+                    existing_keys.add(key)
+                    state["raw_findings"].append(item)
+                    added += 1
+                if added > 0:
+                    state["logs"].append(
+                        f"✅ BACKFILL SUCCESS: {label} added {added} new findings ({len(state['raw_findings'])}/{min_findings_required})."
+                    )
+
+            if len(state["raw_findings"]) < min_findings_required:
+                state["logs"].append(
+                    f"⚠️ QUALITY FLOOR NOT MET: Run completed with {len(state['raw_findings'])} findings after backfill."
+                )
+            else:
+                state["logs"].append(
+                    f"🎯 QUALITY FLOOR MET: Run reached {len(state['raw_findings'])} findings before validation."
+                )
     else:
         state["logs"].append("😴 No search tasks were generated. Nothing to harvest.")
 
