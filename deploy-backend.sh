@@ -7,7 +7,8 @@ ENV_FILE="$DEPLOY_DIR/.env"
 CONTAINER_NAME="trende-backend"
 IMAGE_NAME="trende/backend:latest"
 NETWORK_NAME="trende-network"
-DB_FILE="$DEPLOY_DIR/trends.db"
+DATA_DIR="$DEPLOY_DIR/data"
+DB_FILE="$DATA_DIR/trends.db"
 MAX_WAIT_SECONDS="${MAX_WAIT_SECONDS:-90}"
 HEALTH_POLL_SECONDS="${HEALTH_POLL_SECONDS:-3}"
 ATTEST_HEALTH_URL="http://localhost:8000/api/health/attestation"
@@ -46,13 +47,15 @@ docker stop "$CONTAINER_NAME" 2>/dev/null || true
 docker rm "$CONTAINER_NAME" 2>/dev/null || true
 
 echo "🚀 Starting new container..."
+mkdir -p "$DATA_DIR"
 touch "$DB_FILE"
 docker run -d \
   --name "$CONTAINER_NAME" \
   --env-file "$ENV_FILE" \
+  -e DATABASE_URL="sqlite:////app/data/trends.db" \
   --network "$NETWORK_NAME" \
   -p 8000:8000 \
-  -v "$DB_FILE:/app/trends.db" \
+  -v "$DATA_DIR:/app/data" \
   --restart unless-stopped \
   "$IMAGE_NAME"
 
