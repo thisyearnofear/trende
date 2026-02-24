@@ -359,7 +359,15 @@ class QueryRequest(BaseModel):
     topic: str | None = None
     idea: str | None = None
     platforms: list[str] = Field(default_factory=lambda: ["twitter", "newsapi", "linkedin"])
-    models: list[str] = Field(default_factory=lambda: ["venice", "aisa", "openrouter"])
+    models: list[str] = Field(
+        default_factory=lambda: [
+            "venice_default",
+            "venice_mistral",
+            "openrouter_llama_70b",
+            "openrouter_hermes",
+            "aisa",
+        ]
+    )
     relevance_threshold: float | None = None
     visibility: str = "public"
     payment: X402Payment | None = None

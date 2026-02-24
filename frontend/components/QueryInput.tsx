@@ -22,7 +22,7 @@ interface PlatformOption {
 }
 
 const MODEL_OPTIONS = [
-  { id: 'venice', label: 'Venice AI', hint: 'Primary privacy-first consensus lane', quality: 95, cost: 0.002, enabled: true },
+  { id: 'venice_default', label: 'Venice AI', hint: 'Primary privacy-first consensus lane', quality: 95, cost: 0.002, enabled: true },
   { id: 'openrouter_llama_70b', label: 'OR Llama 70B', hint: 'Strong baseline reasoning and coverage', quality: 90, cost: 0.0006, enabled: true },
   { id: 'openrouter_hermes', label: 'OR Hermes', hint: 'Detailed synthesis and long-context handling', quality: 88, cost: 0.0006, enabled: true },
   { id: 'openrouter_stepfun', label: 'OR Stepfun', hint: 'Contrastive perspective for divergence checks', quality: 84, cost: 0.0005, enabled: true },
@@ -51,7 +51,7 @@ const MISSION_PROFILES = [
     icon: Zap,
     description: 'Balanced coverage with strong cross-source grounding',
     platforms: ['newsapi', 'web', 'hackernews'],
-    models: ['venice', 'venice_uncensored', 'openrouter_llama_70b'],
+    models: ['venice_default', 'venice_mistral', 'openrouter_llama_70b', 'aisa'],
     threshold: 0.5,
     accent: 'var(--accent-amber)'
   },
@@ -61,7 +61,7 @@ const MISSION_PROFILES = [
     icon: Shield,
     description: 'Deep technical verification & TEE proof',
     platforms: ['web', 'tinyfish', 'hackernews', 'stackexchange'],
-    models: ['venice', 'venice_mistral', 'openrouter_hermes', 'aisa'],
+    models: ['venice_default', 'venice_uncensored', 'venice_mistral', 'openrouter_hermes', 'aisa'],
     threshold: 0.8,
     accent: 'var(--accent-cyan)'
   },
@@ -71,7 +71,7 @@ const MISSION_PROFILES = [
     icon: BarChart3,
     description: 'Macro trend mapping with multi-platform consensus',
     platforms: ['newsapi', 'web', 'hackernews', 'coingecko'],
-    models: ['venice', 'venice_glm', 'openrouter_llama_70b', 'openrouter_hermes'],
+    models: ['venice_default', 'venice_glm', 'openrouter_llama_70b', 'openrouter_hermes', 'aisa'],
     threshold: 0.65,
     accent: 'var(--accent-emerald)'
   }
@@ -90,7 +90,7 @@ const SUGGESTIONS = [
 export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [idea, setIdea] = useState('');
   const [platforms, setPlatforms] = useState<string[]>(['newsapi', 'web', 'hackernews', 'stackexchange']);
-  const [models, setModels] = useState<string[]>(['venice', 'venice_uncensored', 'openrouter_llama_70b', 'openrouter_hermes']);
+  const [models, setModels] = useState<string[]>(['venice_default', 'venice_mistral', 'openrouter_llama_70b', 'openrouter_hermes', 'aisa']);
   const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advancedSeen, setAdvancedSeen] = useState<boolean>(() => {
