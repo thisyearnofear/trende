@@ -16,7 +16,7 @@ from backend.agents.workflow import create_workflow, run_editorial_task
 from backend.api.routes import acp as acp_routes
 from backend.services.acp_service import acp_service
 from backend.database.repository import Repository, init_db
-from backend.services.ai_service import OPENROUTER_VARIANTS, ai_service
+from backend.services.ai_service import OPENROUTER_VARIANTS, VENICE_VARIANTS, ai_service
 from backend.services.attestation_service import attestation_service
 from backend.services.export_service import (
     build_export_payload,
@@ -420,7 +420,8 @@ def _configured_consensus_routes() -> dict[str, Any]:
     routes: list[dict[str, str]] = []
 
     if os.getenv("VENICE_API_KEY"):
-        routes.append({"provider": "venice", "model_id": "llama-3.3-70b"})
+        for label, model in VENICE_VARIANTS:
+            routes.append({"provider": label, "model_id": model})
     if os.getenv("AISA_API_KEY"):
         routes.append({"provider": "aisa", "model_id": "gpt-4o"})
     if os.getenv("GEMINI_API_KEY"):

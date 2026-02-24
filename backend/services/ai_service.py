@@ -16,6 +16,12 @@ from backend.services.pinecone_service import pinecone_service
 from backend.services.venice_service import venice_service
 
 DEFAULT_PROVIDER_ORDER: Tuple[str, ...] = ("venice", "aisa", "openrouter", "gemini")
+VENICE_VARIANTS: Tuple[Tuple[str, str], ...] = (
+    ("venice_default", "llama-3.3-70b"),
+    ("venice_uncensored", "venice-uncensored"),
+    ("venice_mistral", "mistral-31-24b"),
+    ("venice_glm", "zai-org-glm-4.7"),
+)
 OPENROUTER_VARIANTS: Tuple[Tuple[str, str], ...] = (
     ("openrouter_auto", "openrouter/auto"),
     ("openrouter_free", "openrouter/free"),
@@ -52,11 +58,16 @@ class AIService:
         messages.append({"role": "user", "content": prompt})
         return messages
 
-    async def _call_venice(self, prompt: str, system_prompt: Optional[str]) -> Optional[str]:
+    async def _call_venice(
+        self,
+        prompt: str,
+        system_prompt: Optional[str],
+        model: str = "llama-3.3-70b",
+    ) -> Optional[str]:
         if not os.getenv("VENICE_API_KEY"):
             return None
         return await venice_service.chat_completion(
-            model="llama-3.3-70b",
+            model=model,
             messages=self._build_messages(prompt, system_prompt),
         )
 
@@ -147,6 +158,9 @@ class AIService:
         for label, model in OPENROUTER_VARIANTS:
             if provider == label:
                 return await self._call_openrouter(prompt, system_prompt, model=model)
+        for label, model in VENICE_VARIANTS:
+            if provider == label:
+                return await self._call_venice(prompt, system_prompt, model=model)
 
         return None
 
@@ -183,6 +197,23 @@ class AIService:
         scheduled = set()
 
         for name in requested:
+            if name == "venice":
+                for label, model in VENICE_VARIANTS:
+                    if os.getenv("VENICE_API_KEY") and label not in scheduled:
+                        scheduled.add(label)
+                        labels.append((label, model))
+                        tasks.append(
+                            asyncio.create_task(
+                                asyncio.wait_for(
+                                    self._call_with_metrics(
+                                        self._call_venice(prompt, system_prompt, model=model)
+                                    ),
+                                    timeout=60.0
+                                )
+                            )
+                        )
+                continue
+
             if name == "openrouter":
                 for label, model in OPENROUTER_VARIANTS:
                     if os.getenv("OPENROUTER_API_KEY") and label not in scheduled:
@@ -200,7 +231,7 @@ class AIService:
                         )
                 continue
 
-            if name in {"venice", "aisa", "gemini"}:
+            if name in {"aisa", "gemini"}:
                 if name not in scheduled:
                     scheduled.add(name)
                     labels.append((name, name))
@@ -229,6 +260,24 @@ class AIService:
                             asyncio.wait_for(
                                 self._call_with_metrics(
                                     self._call_openrouter(prompt, system_prompt, model=model)
+                                ),
+                                timeout=60.0
+                            )
+                        )
+                    )
+            for label, model in VENICE_VARIANTS:
+                if (
+                    name == label
+                    and os.getenv("VENICE_API_KEY")
+                    and label not in scheduled
+                ):
+                    scheduled.add(label)
+                    labels.append((label, model))
+                    tasks.append(
+                        asyncio.create_task(
+                            asyncio.wait_for(
+                                self._call_with_metrics(
+                                    self._call_venice(prompt, system_prompt, model=model)
                                 ),
                                 timeout=60.0
                             )

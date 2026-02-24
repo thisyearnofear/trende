@@ -27,9 +27,9 @@ const MODEL_OPTIONS = [
   { id: 'openrouter_hermes', label: 'OR Hermes', hint: 'Detailed synthesis and long-context handling', quality: 88, cost: 0.0006, enabled: true },
   { id: 'openrouter_stepfun', label: 'OR Stepfun', hint: 'Contrastive perspective for divergence checks', quality: 84, cost: 0.0005, enabled: true },
   { id: 'aisa', label: 'AIsA (LLM Route)', hint: 'Separate from data connectors; adds provider diversity', quality: 89, cost: 0.0015, enabled: true },
-  { id: 'gemini', label: 'Gemini', hint: 'Google model route integration', quality: 87, cost: 0.0008, enabled: false, reason: 'Consensus route rollout pending' },
-  { id: 'kimi', label: 'Kimi', hint: 'Moonshot route for long-context synthesis', quality: 86, cost: 0.0007, enabled: false, reason: 'Provider integration pending' },
-  { id: 'minimax', label: 'MiniMax', hint: 'Alternative reasoning lane for diversity', quality: 84, cost: 0.0007, enabled: false, reason: 'Provider integration pending' },
+  { id: 'venice_uncensored', label: 'Venice Uncensored', hint: 'High-recall uncensored Venice route', quality: 86, cost: 0.0013, enabled: true },
+  { id: 'venice_mistral', label: 'Venice Mistral', hint: 'Mistral-family Venice route for style diversity', quality: 85, cost: 0.0011, enabled: true },
+  { id: 'venice_glm', label: 'Venice GLM', hint: 'GLM-family Venice route for additional perspective', quality: 85, cost: 0.0011, enabled: true },
 ];
 
 const PLATFORM_OPTIONS: PlatformOption[] = [
@@ -51,7 +51,7 @@ const MISSION_PROFILES = [
     icon: Zap,
     description: 'Balanced coverage with strong cross-source grounding',
     platforms: ['newsapi', 'web', 'hackernews'],
-    models: ['venice', 'openrouter_llama_70b'],
+    models: ['venice', 'venice_uncensored', 'openrouter_llama_70b'],
     threshold: 0.5,
     accent: 'var(--accent-amber)'
   },
@@ -61,7 +61,7 @@ const MISSION_PROFILES = [
     icon: Shield,
     description: 'Deep technical verification & TEE proof',
     platforms: ['web', 'tinyfish', 'hackernews', 'stackexchange'],
-    models: ['venice', 'openrouter_hermes', 'aisa'],
+    models: ['venice', 'venice_mistral', 'openrouter_hermes', 'aisa'],
     threshold: 0.8,
     accent: 'var(--accent-cyan)'
   },
@@ -71,7 +71,7 @@ const MISSION_PROFILES = [
     icon: BarChart3,
     description: 'Macro trend mapping with multi-platform consensus',
     platforms: ['newsapi', 'web', 'hackernews', 'coingecko'],
-    models: ['venice', 'openrouter_llama_70b', 'openrouter_hermes'],
+    models: ['venice', 'venice_glm', 'openrouter_llama_70b', 'openrouter_hermes'],
     threshold: 0.65,
     accent: 'var(--accent-emerald)'
   }
@@ -90,7 +90,7 @@ const SUGGESTIONS = [
 export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [idea, setIdea] = useState('');
   const [platforms, setPlatforms] = useState<string[]>(['newsapi', 'web', 'hackernews', 'stackexchange']);
-  const [models, setModels] = useState<string[]>(['venice', 'openrouter_llama_70b', 'openrouter_hermes']);
+  const [models, setModels] = useState<string[]>(['venice', 'venice_uncensored', 'openrouter_llama_70b', 'openrouter_hermes']);
   const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advancedSeen, setAdvancedSeen] = useState<boolean>(() => {
