@@ -463,6 +463,16 @@ export default function Home() {
     return { level, message, warnings, findingsCount };
   }, [data?.telemetry, sourceCount]);
   const chainlinkProof = useMemo(() => data?.telemetry?.chainlinkProof || null, [data?.telemetry]);
+  const trustStack = useMemo(() => data?.telemetry?.trustStack, [data?.telemetry]);
+  const chainlinkStatusLabel = useMemo(() => {
+    const status = trustStack?.chainlink?.status;
+    if (status === "resolution_requested") return "Resolution Requested";
+    if (status === "market_staged") return "Market Staged";
+    if (status === "request_submitted") return "Request Submitted";
+    if (status === "available") return "Standby";
+    if (status === "not_configured") return "Not Configured";
+    return "Standby";
+  }, [trustStack?.chainlink?.status]);
   const filteredCommons = useMemo(() => {
     const term = commonsSearch.trim().toLowerCase();
     if (!term) return commonsResearch;
@@ -1138,6 +1148,26 @@ export default function Home() {
             disabled={isRunActive}
           />
 
+          {!isRunActive && (
+            <Card accent="cyan" className="p-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent-cyan)]">
+                    Trust Stack
+                  </p>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    TEE attestation + multi-model consensus are active by default. Chainlink oracle settlement is available once a mission finalizes.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-[10px] font-mono uppercase">
+                  <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">TEE: Active</span>
+                  <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">Consensus: Active</span>
+                  <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">Chainlink: Standby</span>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {isRunActive && (
             <RunFlowDivider
               stage="dispatch"
@@ -1218,6 +1248,9 @@ export default function Home() {
                   </p>
                   <p className="text-xs text-[var(--text-secondary)]">
                     Explore completed public runs or reopen a prior proof. Your current mission keeps running in the background.
+                  </p>
+                  <p className="text-[11px] font-mono text-[var(--text-muted)] mt-2">
+                    Chainlink lane: {chainlinkStatusLabel}. TEE + consensus continue even if you leave this page.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1324,7 +1357,41 @@ export default function Home() {
               </div>
             </div>
 
-            {chainlinkProof && (
+            <Card accent="cyan" className="p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent-cyan)]">
+                  Trust Stack
+                </p>
+                <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                  What was verified
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">TEE</p>
+                  <p className="text-sm font-black mt-1">{trustStack?.tee?.status || "pending"}</p>
+                  <p className="text-[11px] font-mono text-[var(--text-secondary)] mt-1">
+                    Provider: {trustStack?.tee?.provider || "eigen"}
+                  </p>
+                </div>
+                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Consensus</p>
+                  <p className="text-sm font-black mt-1">{trustStack?.consensus?.status || "degraded"}</p>
+                  <p className="text-[11px] font-mono text-[var(--text-secondary)] mt-1">
+                    {(trustStack?.consensus?.providers?.length || 0)} routes • {Math.round((trustStack?.consensus?.agreementScore || 0) * 100)}% agreement
+                  </p>
+                </div>
+                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Chainlink</p>
+                  <p className="text-sm font-black mt-1">{chainlinkStatusLabel}</p>
+                  <p className="text-[11px] font-mono text-[var(--text-secondary)] mt-1">
+                    {trustStack?.chainlink?.network || "oracle lane ready"}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {(chainlinkProof || trustStack?.chainlink?.configured) && (
               <Card accent="amber" className="p-4 sm:p-5">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   <div className="min-w-0">
@@ -1336,28 +1403,36 @@ export default function Home() {
                     </p>
                     <div className="flex flex-wrap gap-2 mt-3 text-[10px] font-mono">
                       <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)] uppercase">
-                        Status: {chainlinkProof.status || "available"}
+                        Status: {chainlinkProof?.status || trustStack?.chainlink?.status || "available"}
                       </span>
-                      {chainlinkProof.network && (
+                      {(chainlinkProof?.network || trustStack?.chainlink?.network) && (
                         <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)] uppercase">
-                          Network: {chainlinkProof.network}
+                          Network: {chainlinkProof?.network || trustStack?.chainlink?.network}
                         </span>
                       )}
-                      {chainlinkProof.requestId && (
+                      {chainlinkProof?.requestId && (
                         <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">
                           Request: {String(chainlinkProof.requestId).slice(0, 14)}...
                         </span>
                       )}
-                      {chainlinkProof.txHash && (
+                      {chainlinkProof?.txHash && (
                         <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">
                           Tx: {String(chainlinkProof.txHash).slice(0, 10)}...{String(chainlinkProof.txHash).slice(-6)}
                         </span>
                       )}
+                      <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)] uppercase">
+                        Settlement: {chainlinkProof?.oracleSettlement || "not requested"}
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-1.5 text-[11px] font-mono text-[var(--text-secondary)]">
+                      <p>1. Request submitted to DON: {chainlinkProof?.txHash ? "yes" : "pending"}</p>
+                      <p>2. Oracle market staged: {chainlinkProof?.oracleSettlement === "staged" || chainlinkProof?.oracleSettlement === "requested" ? "yes" : "pending"}</p>
+                      <p>3. Resolution requested: {chainlinkProof?.oracleSettlement === "requested" ? "yes" : "pending"}</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    {chainlinkProof.explorerUrl && (
-                      <a href={chainlinkProof.explorerUrl} target="_blank" rel="noopener noreferrer">
+                    {(chainlinkProof?.explorerUrl || (chainlinkProof?.txHash ? `https://sepolia.basescan.org/tx/${chainlinkProof.txHash}` : null)) && (
+                      <a href={chainlinkProof?.explorerUrl || `https://sepolia.basescan.org/tx/${chainlinkProof?.txHash}`} target="_blank" rel="noopener noreferrer">
                         <Button variant="secondary" size="sm">
                           Open Explorer
                           <ExternalLink className="w-3.5 h-3.5 ml-1" />

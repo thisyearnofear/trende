@@ -195,6 +195,22 @@ export interface ResultsResponse {
       marketId?: string;
       oracleSettlement?: 'staged' | 'requested';
     } | null;
+    trustStack?: {
+      tee: {
+        status: 'pending' | 'ready' | 'signed';
+        provider?: string;
+      };
+      consensus: {
+        status: 'active' | 'degraded';
+        providers: string[];
+        agreementScore: number;
+      };
+      chainlink: {
+        status: 'not_configured' | 'available' | 'request_submitted' | 'market_staged' | 'resolution_requested';
+        configured: boolean;
+        network?: string;
+      };
+    };
   };
 }
 

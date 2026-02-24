@@ -392,6 +392,21 @@ def _extract_chainlink_proof(
     return proof
 
 
+def _derive_chainlink_stage(proof: dict[str, Any] | None, configured: bool) -> str:
+    if not configured:
+        return "not_configured"
+    if not proof:
+        return "available"
+    settlement = str(proof.get("oracleSettlement", "")).lower()
+    if settlement == "requested":
+        return "resolution_requested"
+    if settlement == "staged":
+        return "market_staged"
+    if proof.get("txHash"):
+        return "request_submitted"
+    return "available"
+
+
 def _task_runtime_alerts(task: dict[str, Any]) -> list[str]:
     alerts: list[str] = []
     status = str(task.get("status", "")).lower()
@@ -1394,6 +1409,16 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
 
     top_trends = _derive_top_trends_from_findings(raw_findings or [], limit=5)
     chainlink_proof = _extract_chainlink_proof(raw_findings or [], task)
+    chainlink_configured = False
+    try:
+        from backend.services.chainlink_service import chainlink_service  # lazy import
+
+        chainlink_configured = bool(chainlink_service.is_configured())
+    except Exception:
+        chainlink_configured = False
+    chainlink_stage = _derive_chainlink_stage(chainlink_proof, chainlink_configured)
+    tee_status = str((attestation_data or {}).get("status", "pending")).lower()
+    consensus_status = "active" if (consensus_data or {}).get("providers") else "degraded"
 
     # Construct response matching ResultsResponse in frontend/lib/types.ts
     return {
@@ -1457,6 +1482,22 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
                 "updated_at", task.get("updated_at", task.get("created_at", ""))
             ),
             "chainlinkProof": chainlink_proof,
+            "trustStack": {
+                "tee": {
+                    "status": "signed" if tee_status == "signed" else ("ready" if tee_status in {"ready", "signed"} else "pending"),
+                    "provider": (attestation_data or {}).get("provider", "eigen"),
+                },
+                "consensus": {
+                    "status": consensus_status,
+                    "providers": (consensus_data or {}).get("providers", []),
+                    "agreementScore": (consensus_data or {}).get("agreement_score", 0.0),
+                },
+                "chainlink": {
+                    "status": chainlink_stage,
+                    "configured": chainlink_configured,
+                    "network": (chainlink_proof or {}).get("network"),
+                },
+            },
         },
         "editorial": editorial_data,
     }
