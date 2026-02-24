@@ -112,10 +112,14 @@ export default function Home() {
   const handleSubmit = useCallback(
     async (request: QueryRequest) => {
       try {
-        setLastQuery(request);
+        const requestWithVisibility: QueryRequest = {
+          ...request,
+          visibility: saveVisibility,
+        };
+        setLastQuery(requestWithVisibility);
         setRunStartedAtMs(Date.now());
         setElapsedSeconds(0);
-        const response = await startAnalysis(request);
+        const response = await startAnalysis(requestWithVisibility);
         setQueryId(response.id);
         if (typeof window !== "undefined") {
           window.localStorage.setItem(LAST_QUERY_STORAGE_KEY, response.id);
@@ -124,7 +128,7 @@ export default function Home() {
         console.error("Failed to start analysis:", error);
       }
     },
-    [startAnalysis],
+    [saveVisibility, startAnalysis],
   );
 
   const handleSelectHistory = (id: string) => {

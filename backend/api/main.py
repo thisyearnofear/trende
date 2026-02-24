@@ -361,6 +361,7 @@ class QueryRequest(BaseModel):
     platforms: list[str] = Field(default_factory=lambda: ["twitter", "newsapi", "linkedin"])
     models: list[str] = Field(default_factory=lambda: ["venice", "aisa", "openrouter"])
     relevance_threshold: float | None = None
+    visibility: str = "public"
     payment: X402Payment | None = None
 
     @model_validator(mode="after")
@@ -369,6 +370,10 @@ class QueryRequest(BaseModel):
         if not resolved:
             raise ValueError("Either 'topic' or 'idea' is required")
         self.topic = resolved
+        visibility = (self.visibility or "public").strip().lower()
+        if visibility not in {"private", "unlisted", "public"}:
+            visibility = "public"
+        self.visibility = visibility
         return self
 
 
@@ -623,7 +628,7 @@ async def start_analysis(
         "sponsor_address": x_wallet_address,  # Track who funded this research
         "owner_address": x_wallet_address,
         "is_saved": False,
-        "visibility": "private",
+        "visibility": request.visibility,
         "saved_at": None,
         "ipfs_cid": None,
         "ipfs_uri": None,

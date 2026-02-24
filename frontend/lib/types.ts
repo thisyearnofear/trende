@@ -131,6 +131,7 @@ export interface QueryRequest {
   platforms: string[];
   models?: string[];
   relevanceThreshold?: number;
+  visibility?: 'private' | 'unlisted' | 'public';
 }
 
 export interface QueryResponse {
