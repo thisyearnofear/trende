@@ -288,11 +288,7 @@ def _find_matching_active_task(topic: str, platforms: list[str], models: list[st
             continue
         if _normalize_key_parts(task.get("models", []) or []) != models_key:
             continue
-        created_at_raw = task.get("created_at")
-        try:
-            created_at = datetime.datetime.fromisoformat(str(created_at_raw).replace("Z", "+00:00"))
-        except Exception:
-            created_at = now
+        created_at = _parse_iso(task.get("created_at")) or now
         if now - created_at > max_age:
             continue
         return existing_id
@@ -303,7 +299,10 @@ def _parse_iso(value: Any) -> datetime.datetime | None:
     if not value:
         return None
     try:
-        return datetime.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        parsed = datetime.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=datetime.timezone.utc)
+        return parsed
     except Exception:
         return None
 
