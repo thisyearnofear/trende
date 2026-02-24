@@ -437,22 +437,67 @@ class AIService:
 
         # Calculate initial agreement score
         agreement_score_hint = self._calculate_agreement_score(list(responses.values()))
-        
-        # Perform deeper consensus analysis
-        deep_analysis = await self._perform_deep_consensus_analysis(prompt, responses, agreement_score_hint)
-        
-        # Generate synthesis prompt with enhanced instructions
-        synthesis_prompt = self._build_enhanced_synthesis_prompt(prompt, responses, agreement_score_hint, deep_analysis)
-        synthesized = await self.get_response(
-            synthesis_prompt,
-            system_prompt=(
-                "You are a neutral, objective, and highly critical consensus aggregator. "
-                "You prioritize factual overlap, uncertainty disclosure, and source-grounded claims. "
-                "Provide a comprehensive analysis that identifies core truths, acknowledges disagreements, "
-                "and highlights areas of uncertainty."
-            ),
-            provider="auto",
+        runtime_warnings: List[str] = []
+        deep_timeout = max(10.0, float(os.getenv("CONSENSUS_DEEP_ANALYSIS_TIMEOUT_SECS", "45")))
+        synthesis_timeout = max(20.0, float(os.getenv("CONSENSUS_SYNTHESIS_TIMEOUT_SECS", "75")))
+
+        # Perform deeper consensus analysis with strict timeout budget.
+        try:
+            deep_analysis = await asyncio.wait_for(
+                self._perform_deep_consensus_analysis(prompt, responses, agreement_score_hint),
+                timeout=deep_timeout,
+            )
+        except asyncio.TimeoutError:
+            runtime_warnings.append(
+                f"Deep consensus analysis timed out after {int(deep_timeout)}s; continuing with shallow synthesis."
+            )
+            deep_analysis = {
+                "thematic_clusters": ["general_topic"],
+                "confidence_indicators": ["factual_claims"],
+                "uncertainty_markers": ["speculation"],
+                "cross_validation_points": ["common_facts"],
+                "nuanced_insights": ["initial_analysis"],
+                "potential_biases": ["model_specific_bias"],
+                "external_validation_sources": [],
+            }
+        except Exception as exc:
+            runtime_warnings.append(f"Deep consensus analysis failed ({exc}); continuing with shallow synthesis.")
+            deep_analysis = {
+                "thematic_clusters": ["general_topic"],
+                "confidence_indicators": ["factual_claims"],
+                "uncertainty_markers": ["speculation"],
+                "cross_validation_points": ["common_facts"],
+                "nuanced_insights": ["initial_analysis"],
+                "potential_biases": ["model_specific_bias"],
+                "external_validation_sources": [],
+            }
+
+        # Generate synthesis prompt with enhanced instructions.
+        synthesis_prompt = self._build_enhanced_synthesis_prompt(
+            prompt, responses, agreement_score_hint, deep_analysis
         )
+        try:
+            synthesized = await asyncio.wait_for(
+                self.get_response(
+                    synthesis_prompt,
+                    system_prompt=(
+                        "You are a neutral, objective, and highly critical consensus aggregator. "
+                        "You prioritize factual overlap, uncertainty disclosure, and source-grounded claims. "
+                        "Provide a comprehensive analysis that identifies core truths, acknowledges disagreements, "
+                        "and highlights areas of uncertainty."
+                    ),
+                    provider="auto",
+                ),
+                timeout=synthesis_timeout,
+            )
+        except asyncio.TimeoutError:
+            runtime_warnings.append(
+                f"Consensus synthesis timed out after {int(synthesis_timeout)}s; using strongest provider fallback."
+            )
+            synthesized = self._fallback_consensus_text(responses)
+        except Exception as exc:
+            runtime_warnings.append(f"Consensus synthesis failed ({exc}); using strongest provider fallback.")
+            synthesized = self._fallback_consensus_text(responses)
 
         # Extract and validate the consensus results
         agreement_score = self._calculate_agreement_score(list(responses.values()))
@@ -496,6 +541,7 @@ class AIService:
             agreement_score=agreement_score,
             provider_errors=provider_errors,
         )
+        warnings.extend(runtime_warnings)
         diversity_level = self._calculate_diversity_level(len(providers), agreement_score)
         
         # Enhance confidence based on agreement and diversity
