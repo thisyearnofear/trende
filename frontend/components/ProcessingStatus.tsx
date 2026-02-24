@@ -112,6 +112,15 @@ const WAIT_EXPLAINERS = [
   "Attestation is generated after synthesis to bind what was computed and how it was produced.",
 ];
 
+const WAIT_WAYPOINTS = [
+  "Mission parsed and execution lanes allocated.",
+  "Cross-platform connectors harvesting in parallel.",
+  "Evidence quality checks removing stale/off-topic noise.",
+  "Multi-model consensus measuring agreement vs divergence.",
+  "TEE attestation packaging report for verification.",
+  "Final report + proof manifest delivered to mission vault.",
+];
+
 // ============================================
 // STAGE CARD — single source of truth
 // ============================================
@@ -297,6 +306,46 @@ function MilestonePulse({
       </p>
       <p className="text-xs text-[var(--text-secondary)]">{text}</p>
     </motion.div>
+  );
+}
+
+function WaitWaypoints({
+  progress,
+  reducedMotion,
+}: {
+  progress: number;
+  reducedMotion: boolean;
+}) {
+  const activeIndex = Math.max(
+    0,
+    Math.min(WAIT_WAYPOINTS.length - 1, Math.floor((progress / 100) * WAIT_WAYPOINTS.length))
+  );
+  return (
+    <div className="mt-3 sm:mt-4 p-3 sm:p-4 rounded-xl border border-white/10 bg-black/20">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300 mb-2">
+        Mission Checkpoints
+      </p>
+      <div className="space-y-2">
+        {WAIT_WAYPOINTS.map((point, index) => {
+          const done = index < activeIndex;
+          const active = index === activeIndex;
+          return (
+            <div key={point} className="flex items-start gap-2">
+              <span
+                className={cn(
+                  "mt-1.5 h-2 w-2 rounded-full shrink-0",
+                  done ? "bg-emerald-400" : active ? "bg-cyan-300" : "bg-white/20",
+                  active && !reducedMotion && "animate-pulse"
+                )}
+              />
+              <p className={cn("text-xs", done ? "text-emerald-300/80" : active ? "text-cyan-100" : "text-[var(--text-secondary)]")}>
+                {point}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -581,6 +630,14 @@ export function ProcessingStatus({
             <div className="mb-3">
               <MilestonePulse key={`${currentStageId}-${stagePulseTick}`} text={milestoneText} reducedMotion={prefersReducedMotion} />
             </div>
+            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-2.5">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">
+                Mission Persistence
+              </p>
+              <p className="text-xs text-emerald-100/80">
+                Safe to leave this page. Your run is saved server-side and can be reopened from History or Commons.
+              </p>
+            </div>
 
             {/* Mobile: snap-scroll rail */}
             <div
@@ -663,6 +720,7 @@ export function ProcessingStatus({
               </p>
               <p className="text-xs text-[var(--text-secondary)]">{explainerText}</p>
             </motion.div>
+            <WaitWaypoints progress={progress} reducedMotion={prefersReducedMotion} />
           </Card>
         </div>
 

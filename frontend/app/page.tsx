@@ -159,6 +159,7 @@ export default function Home() {
   const { showToast } = useToast();
   const { isConnected } = useWallet();
   const missionFocusRef = useRef<HTMLDivElement | null>(null);
+  const commonsFocusRef = useRef<HTMLDivElement | null>(null);
 
   const handleStaleQuery = useCallback(
     (staleId: string) => {
@@ -193,6 +194,10 @@ export default function Home() {
   const [saveVisibility, setSaveVisibility] = useState<"private" | "unlisted" | "public">("private");
   const [isSavingResearch, setIsSavingResearch] = useState(false);
   const isRunActive = isProcessing || ["pending", "planning", "researching", "analyzing", "processing"].includes(status || "");
+  const latestCompletedQueryId = useMemo(
+    () => history.find((item) => item.status === "completed")?.id || null,
+    [history]
+  );
   const activeMissionProfileId = useMemo(() => {
     const platforms = lastQuery?.platforms ?? data?.query?.platforms ?? [];
     const models = lastQuery?.models;
@@ -983,7 +988,8 @@ export default function Home() {
         )}
 
         {/* Commons Snapshot */}
-        <Card accent="emerald" className="p-4 sm:p-5">
+        <div ref={commonsFocusRef}>
+          <Card accent="emerald" className="p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2">
               <ListTree className="w-4 h-4 text-[var(--accent-emerald)]" />
@@ -1120,7 +1126,8 @@ export default function Home() {
               )}
             </div>
           )}
-        </Card>
+          </Card>
+        </div>
 
         <div className={isRunActive ? "space-y-7 sm:space-y-8" : "space-y-4"}>
           {/* Query Input */}
@@ -1200,6 +1207,37 @@ export default function Home() {
               />
             )}
           </div>
+
+          {isRunActive && (
+            <Card accent="emerald" className="p-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent-emerald)]">
+                    While You Wait
+                  </p>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    Explore completed public runs or reopen a prior proof. Your current mission keeps running in the background.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => commonsFocusRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  >
+                    Explore Commons
+                  </Button>
+                  {latestCompletedQueryId && (
+                    <Link href={`/proof/${latestCompletedQueryId}`}>
+                      <Button variant="ghost" size="sm">
+                        Open Previous Forge
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* Results */}
