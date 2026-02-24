@@ -92,6 +92,23 @@ export default function Home() {
   const { showToast } = useToast();
   const { isConnected } = useWallet();
 
+  const handleStaleQuery = useCallback(
+    (staleId: string) => {
+      setQueryId((current) => (current === staleId ? null : current));
+      setLastQuery(null);
+      setRunStartedAtMs(null);
+      setElapsedSeconds(0);
+      if (typeof window !== "undefined") {
+        const stored = window.localStorage.getItem(LAST_QUERY_STORAGE_KEY);
+        if (stored === staleId) {
+          window.localStorage.removeItem(LAST_QUERY_STORAGE_KEY);
+        }
+      }
+      showToast("Previous mission was not found on backend. Please launch a new mission.", "info");
+    },
+    [showToast],
+  );
+
   const {
     status,
     data,
@@ -100,7 +117,7 @@ export default function Home() {
     events,
     startAnalysis,
     refresh,
-  } = useTrendData(queryId);
+  } = useTrendData(queryId, { onNotFound: handleStaleQuery });
   const activeQueryId = data?.query?.id || queryId;
   const { queries: history, isLoading: historyLoading, refresh: refreshHistory } = useTrendHistory();
   const { saved: savedResearch, isLoading: savedLoading, refresh: refreshSaved } = useSavedResearch(isConnected);

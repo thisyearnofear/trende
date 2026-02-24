@@ -5,7 +5,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import useSWR from 'swr';
 import { api, ApiError } from '@/lib/api';
-import { useTheme } from '@/components/ThemeProvider';
 import { 
   QueryRequest, 
   QueryResponse, 
@@ -23,6 +22,8 @@ interface UseTrendDataOptions {
   pollInterval?: number;
   /** Enable SSE for real-time updates */
   sse?: boolean;
+  /** Called when backend reports the query id no longer exists (404). */
+  onNotFound?: (queryId: string) => void;
 }
 
 interface UseTrendDataReturn {
@@ -53,14 +54,14 @@ export function useTrendData(
   queryId: string | null,
   options: UseTrendDataOptions = {}
 ): UseTrendDataReturn {
-  const { sse = true } = options;
-  const { isSoft } = useTheme();
+  const { sse = true, onNotFound } = options;
   
   const [optimisticStatus, setOptimisticStatus] = useState<QueryStatus | null>(null);
   const [progress, setProgress] = useState(0);
   const [events, setEvents] = useState<StreamEvent[]>([]);
   
   const sseCleanupRef = useRef<(() => void) | null>(null);
+  const lastNotFoundQueryIdRef = useRef<string | null>(null);
 
   // Determine if we should poll based on queryId
   const shouldFetch = !!queryId;
@@ -86,6 +87,23 @@ export function useTrendData(
     }
   );
   const { data, error, isLoading, mutate } = swrResult;
+
+  useEffect(() => {
+    if (!queryId || !error) return;
+    const isNotFound = error instanceof ApiError && error.status === 404;
+    if (!isNotFound) return;
+    if (lastNotFoundQueryIdRef.current === queryId) return;
+
+    lastNotFoundQueryIdRef.current = queryId;
+    const resetTimer = window.setTimeout(() => {
+      setOptimisticStatus(null);
+      setProgress(0);
+      setEvents([]);
+      sseCleanupRef.current?.();
+      onNotFound?.(queryId);
+    }, 0);
+    return () => window.clearTimeout(resetTimer);
+  }, [queryId, error, onNotFound]);
 
   // Determine processing status from data
   const currentStatus = data?.query?.status;
