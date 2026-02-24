@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 from io import BytesIO
 from typing import Any
 
@@ -29,6 +30,74 @@ def _iso_to_human(value: str | None) -> str:
         return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
     except Exception:
         return value
+
+
+def _section_title(pdf: FPDF, title: str) -> None:
+    pdf.set_fill_color(16, 24, 40)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, _safe_text(title.upper()), ln=1, fill=True)
+    pdf.set_text_color(20, 20, 20)
+    pdf.ln(1)
+
+
+def _key_value(pdf: FPDF, key: str, value: str, width: float) -> None:
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(35, 6, _safe_text(f"{key}:"))
+    pdf.set_font("Helvetica", "", 10)
+    pdf.multi_cell(width - 35, 6, _wrap_hard_tokens(_safe_text(value), chunk=40))
+
+
+def _render_markdown_block(pdf: FPDF, markdown: str, width: float) -> None:
+    lines = markdown.splitlines()
+    for raw_line in lines:
+        line = _safe_text(raw_line.rstrip())
+        if not line:
+            pdf.ln(2)
+            continue
+
+        if line.startswith("### "):
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.set_text_color(0, 71, 171)
+            pdf.multi_cell(width, 6, _wrap_hard_tokens(line[4:], chunk=38))
+            pdf.set_text_color(20, 20, 20)
+            continue
+
+        if line.startswith("## "):
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.set_text_color(7, 47, 90)
+            pdf.multi_cell(width, 7, _wrap_hard_tokens(line[3:], chunk=38))
+            pdf.set_text_color(20, 20, 20)
+            continue
+
+        if line.startswith("# "):
+            pdf.set_font("Helvetica", "B", 14)
+            pdf.set_text_color(7, 47, 90)
+            pdf.multi_cell(width, 8, _wrap_hard_tokens(line[2:], chunk=38))
+            pdf.set_text_color(20, 20, 20)
+            continue
+
+        if re.match(r"^\s*[-*]\s+", line):
+            cleaned = re.sub(r"^\s*[-*]\s+", "", line)
+            pdf.set_font("Helvetica", "", 10)
+            pdf.multi_cell(width, 5.5, _wrap_hard_tokens(f"- {cleaned}", chunk=40))
+            continue
+
+        if re.match(r"^\s*\d+\.\s+", line):
+            pdf.set_font("Helvetica", "", 10)
+            pdf.multi_cell(width, 5.5, _wrap_hard_tokens(line, chunk=40))
+            continue
+
+        if line.startswith("|") and line.endswith("|"):
+            # Render markdown table rows in monospace for readability.
+            if set(line.replace("|", "").strip()) == {"-"}:
+                continue
+            pdf.set_font("Courier", "", 8)
+            pdf.multi_cell(width, 4.8, _wrap_hard_tokens(line, chunk=72))
+            continue
+
+        pdf.set_font("Helvetica", "", 10)
+        pdf.multi_cell(width, 5.5, _wrap_hard_tokens(line, chunk=42))
 
 
 def build_export_payload(task_id: str, task: dict[str, Any]) -> dict[str, Any]:
@@ -143,49 +212,46 @@ def render_pdf_report(payload: dict[str, Any]) -> bytes:
     consensus = payload.get("consensus") or {}
     attestation = payload.get("attestation") or {}
 
-    pdf.set_font("Helvetica", "B", 18)
-    pdf.multi_cell(0, 10, f"Trende Report: {topic}")
+    content_width = pdf.w - pdf.l_margin - pdf.r_margin
+    pdf.set_fill_color(7, 47, 90)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 17)
+    pdf.multi_cell(0, 11, f"TRENDE REPORT\n{topic}", fill=True)
     pdf.ln(1)
 
-    pdf.set_font("Helvetica", "", 10)
-    content_width = pdf.w - pdf.l_margin - pdf.r_margin
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Task ID: {payload.get('task_id')}")))
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Generated: {_iso_to_human(payload.get('updated_at'))}")))
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Platforms: {', '.join(payload.get('platforms') or []) or 'n/a'}")))
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Models: {', '.join(payload.get('models') or []) or 'n/a'}")))
+    pdf.set_text_color(20, 20, 20)
+    _section_title(pdf, "Mission Metadata")
+    _key_value(pdf, "Task ID", str(payload.get("task_id", "n/a")), content_width)
+    _key_value(pdf, "Generated", _iso_to_human(payload.get("updated_at")), content_width)
+    _key_value(pdf, "Platforms", ", ".join(payload.get("platforms") or []) or "n/a", content_width)
+    _key_value(pdf, "Models", ", ".join(payload.get("models") or []) or "n/a", content_width)
     pdf.ln(2)
 
-    pdf.set_font("Helvetica", "B", 13)
-    pdf.multi_cell(content_width, 8, "Summary")
-    pdf.set_font("Helvetica", "", 11)
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(summary))
+    _section_title(pdf, "Executive Summary")
+    pdf.set_font("Helvetica", "", 10.5)
+    pdf.multi_cell(content_width, 5.8, _wrap_hard_tokens(summary, chunk=42))
     pdf.ln(2)
 
-    pdf.set_font("Helvetica", "B", 13)
-    pdf.multi_cell(content_width, 8, "Consensus")
-    pdf.set_font("Helvetica", "", 10)
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Providers: {', '.join(consensus.get('providers') or []) or 'n/a'}")))
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Agreement Score: {consensus.get('agreement_score', 0.0)}")))
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Diversity: {consensus.get('diversity_level', 'n/a')}")))
+    _section_title(pdf, "Consensus Signals")
+    providers = ", ".join(consensus.get("providers") or []) or "n/a"
+    _key_value(pdf, "Providers", providers, content_width)
+    _key_value(pdf, "Agreement", str(consensus.get("agreement_score", 0.0)), content_width)
+    _key_value(pdf, "Diversity", str(consensus.get("diversity_level", "n/a")), content_width)
     warnings = consensus.get("warnings") or []
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Warnings: {', '.join(warnings) if warnings else 'none'}")))
+    _key_value(pdf, "Warnings", ", ".join(warnings) if warnings else "none", content_width)
     pdf.ln(2)
 
-    pdf.set_font("Helvetica", "B", 13)
-    pdf.multi_cell(content_width, 8, "Attestation")
-    pdf.set_font("Helvetica", "", 10)
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Provider: {attestation.get('provider') or 'n/a'}")))
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Method: {attestation.get('method') or 'n/a'}")))
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Status: {attestation.get('status') or 'n/a'}")))
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Attestation ID: {attestation.get('attestation_id') or 'n/a'}")))
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Input Hash: {attestation.get('input_hash') or 'n/a'}")))
-    pdf.multi_cell(content_width, 6, _wrap_hard_tokens(_safe_text(f"Generated At: {_iso_to_human(attestation.get('generated_at'))}")))
+    _section_title(pdf, "TEE Attestation")
+    _key_value(pdf, "Provider", str(attestation.get("provider") or "n/a"), content_width)
+    _key_value(pdf, "Method", str(attestation.get("method") or "n/a"), content_width)
+    _key_value(pdf, "Status", str(attestation.get("status") or "n/a"), content_width)
+    _key_value(pdf, "Attestation ID", str(attestation.get("attestation_id") or "n/a"), content_width)
+    _key_value(pdf, "Input Hash", str(attestation.get("input_hash") or "n/a"), content_width)
+    _key_value(pdf, "Generated At", _iso_to_human(attestation.get("generated_at")), content_width)
     pdf.ln(2)
 
-    pdf.set_font("Helvetica", "B", 13)
-    pdf.multi_cell(content_width, 8, "Final Report (Markdown)")
-    pdf.set_font("Helvetica", "", 9)
-    pdf.multi_cell(content_width, 5, _wrap_hard_tokens(report_md, chunk=48))
+    _section_title(pdf, "Full Intelligence Report")
+    _render_markdown_block(pdf, report_md, content_width)
 
     out = BytesIO()
     rendered = pdf.output(dest="S")

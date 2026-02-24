@@ -814,7 +814,8 @@ async def analyzer_node(state: GraphState) -> GraphState:
     )
     report = str(consensus_bundle.get("consensus_report", ""))
     state["final_report_md"] = report
-    state["summary"] = report[:500] + "..." if report else "No report generated."
+    # Keep full summary text to avoid clipped UI/report exports.
+    state["summary"] = report if report else "No report generated."
     state["consensus_data"] = {
         "providers": consensus_bundle.get("providers", []),
         "provider_errors": consensus_bundle.get("provider_errors", []),

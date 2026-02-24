@@ -31,6 +31,8 @@ OPENROUTER_VARIANTS: Tuple[Tuple[str, str], ...] = (
     ("openrouter_aurora", "openrouter/aurora-alpha"),
 )
 MAX_EXCERPT_CHARS = 600
+DEFAULT_MAX_TOKENS = max(700, int(os.getenv("LLM_MAX_TOKENS", "1800")))
+CONSENSUS_MAX_TOKENS = max(1000, int(os.getenv("CONSENSUS_SYNTHESIS_MAX_TOKENS", "2600")))
 
 
 class AIService:
@@ -63,20 +65,30 @@ class AIService:
         prompt: str,
         system_prompt: Optional[str],
         model: str = "llama-3.3-70b",
+        **kwargs,
     ) -> Optional[str]:
         if not os.getenv("VENICE_API_KEY"):
             return None
+        kwargs.setdefault("max_tokens", DEFAULT_MAX_TOKENS)
         return await venice_service.chat_completion(
             model=model,
             messages=self._build_messages(prompt, system_prompt),
+            **kwargs,
         )
 
-    async def _call_aisa(self, prompt: str, system_prompt: Optional[str]) -> Optional[str]:
+    async def _call_aisa(
+        self,
+        prompt: str,
+        system_prompt: Optional[str],
+        **kwargs,
+    ) -> Optional[str]:
         if not os.getenv("AISA_API_KEY"):
             return None
+        kwargs.setdefault("max_tokens", DEFAULT_MAX_TOKENS)
         return await aisa_service.chat_completion(
             model="gpt-4o",
             messages=self._build_messages(prompt, system_prompt),
+            **kwargs,
         )
 
     async def _call_openrouter(
@@ -84,12 +96,15 @@ class AIService:
         prompt: str,
         system_prompt: Optional[str],
         model: str,
+        **kwargs,
     ) -> Optional[str]:
         if not os.getenv("OPENROUTER_API_KEY"):
             return None
+        kwargs.setdefault("max_tokens", DEFAULT_MAX_TOKENS)
         return await openrouter_service.chat_completion(
             model=model,
             messages=self._build_messages(prompt, system_prompt),
+            **kwargs,
         )
 
     async def _call_gemini(self, prompt: str, system_prompt: Optional[str]) -> Optional[str]:
@@ -113,6 +128,7 @@ class AIService:
         prompt: str,
         system_prompt: Optional[str] = None,
         provider: str = "auto",
+        request_kwargs: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Gets a response from AI providers.
@@ -125,12 +141,16 @@ class AIService:
         explicit_result = None
 
         if provider_key not in {"", "auto"}:
-            explicit_result = await self._fetch_from_provider(provider_key, prompt, system_prompt)
+            explicit_result = await self._fetch_from_provider(
+                provider_key, prompt, system_prompt, request_kwargs=request_kwargs
+            )
             if explicit_result:
                 return explicit_result
 
         for fallback in DEFAULT_PROVIDER_ORDER:
-            result = await self._fetch_from_provider(fallback, prompt, system_prompt)
+            result = await self._fetch_from_provider(
+                fallback, prompt, system_prompt, request_kwargs=request_kwargs
+            )
             if result:
                 return result
 
@@ -141,26 +161,29 @@ class AIService:
         provider: str,
         prompt: str,
         system_prompt: Optional[str],
+        request_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Optional[str]:
+        request_kwargs = request_kwargs or {}
         if provider == "venice":
-            return await self._call_venice(prompt, system_prompt)
+            return await self._call_venice(prompt, system_prompt, **request_kwargs)
         if provider == "aisa":
-            return await self._call_aisa(prompt, system_prompt)
+            return await self._call_aisa(prompt, system_prompt, **request_kwargs)
         if provider == "openrouter":
             return await self._call_openrouter(
                 prompt,
                 system_prompt,
                 model="google/gemini-2.0-flash-001",
+                **request_kwargs,
             )
         if provider == "gemini":
             return await self._call_gemini(prompt, system_prompt)
 
         for label, model in OPENROUTER_VARIANTS:
             if provider == label:
-                return await self._call_openrouter(prompt, system_prompt, model=model)
+                return await self._call_openrouter(prompt, system_prompt, model=model, **request_kwargs)
         for label, model in VENICE_VARIANTS:
             if provider == label:
-                return await self._call_venice(prompt, system_prompt, model=model)
+                return await self._call_venice(prompt, system_prompt, model=model, **request_kwargs)
 
         return None
 
@@ -487,6 +510,7 @@ class AIService:
                         "and highlights areas of uncertainty."
                     ),
                     provider="auto",
+                    request_kwargs={"max_tokens": CONSENSUS_MAX_TOKENS},
                 ),
                 timeout=synthesis_timeout,
             )
