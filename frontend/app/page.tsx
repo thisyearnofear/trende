@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useTrendData, useTrendHistory, useCommons, useSavedResearch } from "@/hooks/useTrendData";
-import { QueryInput } from "@/components/QueryInput";
+import { QueryInput, MISSION_PROFILES } from "@/components/QueryInput";
 import { PlatformTabs } from "@/components/PlatformTabs";
 import { TrendSummary } from "@/components/TrendSummary";
 import { ProcessingStatus } from "@/components/ProcessingStatus";
@@ -43,6 +43,7 @@ import { useWallet } from "@/components/WalletProvider";
 import { useTheme } from "@/components/ThemeProvider";
 import { ParagraphConnectModal } from "@/components/integrations/ParagraphConnectModal";
 import { WalletButton } from "@/components/WalletButton";
+import { RunFlowDivider } from "@/components/RunFlowDivider";
 
 const LAST_QUERY_STORAGE_KEY = "trende:last_query_id";
 
@@ -72,6 +73,71 @@ const INTELLIGENCE_ENGINE_STEPS = [
     icon: FileCheck,
   },
 ];
+
+function ResultsFlowDivider({
+  title,
+  body,
+  icon,
+}: {
+  title: string;
+  body: string;
+  icon: "brief" | "forge" | "feed";
+}) {
+  const Icon = icon === "brief" ? Sparkles : icon === "forge" ? Shield : Radio;
+  return (
+    <div className="md:col-span-2 relative py-1 sm:py-2">
+      <div className="absolute left-0 right-0 top-1/2 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+      <div className="relative mx-auto max-w-3xl">
+        <div className="glass border-white/10 rounded-xl px-4 py-3 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-center shrink-0">
+            <Icon className="w-4 h-4 text-cyan-300" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">{title}</p>
+            <p className="text-xs text-[var(--text-secondary)]">{body}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function inferMissionProfileId(input: {
+  platforms: string[];
+  models?: string[];
+  threshold?: number;
+}): string | null {
+  const platforms = input.platforms || [];
+  if (platforms.length === 0) return null;
+  const models = input.models || [];
+  const threshold = input.threshold ?? 0.6;
+
+  let bestId: string | null = null;
+  let bestScore = -1;
+
+  for (const profile of MISSION_PROFILES) {
+    const sharedPlatforms = profile.platforms.filter((p) => platforms.includes(p)).length;
+    const platformUnion = new Set([...profile.platforms, ...platforms]).size;
+    const platformScore = platformUnion > 0 ? (sharedPlatforms / platformUnion) * 5 : 0;
+
+    let modelScore = 0;
+    if (models.length > 0) {
+      const sharedModels = profile.models.filter((m) => models.includes(m)).length;
+      const modelUnion = new Set([...profile.models, ...models]).size;
+      modelScore = modelUnion > 0 ? (sharedModels / modelUnion) * 3 : 0;
+    }
+
+    const thresholdScore = Math.max(0, 2 - Math.abs(profile.threshold - threshold) * 4);
+    const score = platformScore + modelScore + thresholdScore;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestId = profile.id;
+    }
+  }
+
+  return bestScore >= 2.5 ? bestId : null;
+}
 
 export default function Home() {
   const { isSoft } = useTheme();
@@ -127,6 +193,33 @@ export default function Home() {
   const [saveVisibility, setSaveVisibility] = useState<"private" | "unlisted" | "public">("private");
   const [isSavingResearch, setIsSavingResearch] = useState(false);
   const isRunActive = isProcessing || ["pending", "planning", "researching", "analyzing", "processing"].includes(status || "");
+  const activeMissionProfileId = useMemo(() => {
+    const platforms = lastQuery?.platforms ?? data?.query?.platforms ?? [];
+    const models = lastQuery?.models;
+    const threshold = lastQuery?.relevanceThreshold ?? data?.query?.relevanceThreshold;
+    return inferMissionProfileId({ platforms, models, threshold });
+  }, [lastQuery, data?.query?.platforms, data?.query?.relevanceThreshold]);
+  const resultsFlowCopy = useMemo(() => {
+    if (activeMissionProfileId === "due-diligence") {
+      return {
+        brief: "Technical conviction, reliability gating, and proof-led findings.",
+        forge: "Consensus integrity checks and attestation-ready synthesis for verifiable use.",
+        feed: "Source-level evidence prioritized for reproducibility and deep validation.",
+      };
+    }
+    if (activeMissionProfileId === "market-intel") {
+      return {
+        brief: "Macro narrative, market context, and directional confidence summary.",
+        forge: "Model divergence compressed into actionable market intelligence pathways.",
+        feed: "Platform-by-platform signal tape with market-relevant evidence trails.",
+      };
+    }
+    return {
+      brief: "Top-line thesis, confidence drivers, and reliability gaps.",
+      forge: "Consensus outputs prepared for attestation and downstream actions.",
+      feed: "Source-level signal feed and platform breakdown.",
+    };
+  }, [activeMissionProfileId]);
 
   const handleSubmit = useCallback(
     async (request: QueryRequest) => {
@@ -1029,64 +1122,84 @@ export default function Home() {
           )}
         </Card>
 
-        {/* Query Input */}
-        <QueryInput
-          onSubmit={handleSubmit}
-          isLoading={isRunActive}
-          disabled={isRunActive}
-        />
+        <div className={isRunActive ? "space-y-7 sm:space-y-8" : "space-y-4"}>
+          {/* Query Input */}
+          <QueryInput
+            onSubmit={handleSubmit}
+            isLoading={isRunActive}
+            disabled={isRunActive}
+          />
 
-        {!isRunActive && (
-          <Card accent="violet" className="p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  Mission Visibility
-                </p>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  Set default visibility before launch. Public helps Community Commons discover high-signal runs.
-                </p>
-              </div>
-              <select
-                value={saveVisibility}
-                onChange={(event) => setSaveVisibility(event.target.value as "private" | "unlisted" | "public")}
-                className="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-xs font-black uppercase tracking-widest text-[var(--text-primary)] focus:outline-none"
-              >
-                <option value="public" className="bg-black">Public</option>
-                <option value="unlisted" className="bg-black">Unlisted</option>
-                <option value="private" className="bg-black">Private</option>
-              </select>
-            </div>
-          </Card>
-        )}
-
-        {/* Processing Status */}
-        <div ref={missionFocusRef}>
           {isRunActive && (
-            <ProcessingStatus
-              status={status}
+            <RunFlowDivider
+              stage="dispatch"
               progress={progress}
-              events={events}
-              isProcessing={isProcessing}
               elapsedSeconds={elapsedSeconds}
-              queryData={
-                lastQuery
-                  ? {
-                    topic: lastQuery.idea,
-                    platforms: lastQuery.platforms,
-                    models: lastQuery.models,
-                    threshold: lastQuery.relevanceThreshold,
-                  }
-                  : data?.query
-                    ? {
-                      topic: data.query.idea,
-                      platforms: data.query.platforms,
-                      threshold: data.query.relevanceThreshold,
-                    }
-                    : undefined
-              }
+              profileId={activeMissionProfileId}
             />
           )}
+
+          {!isRunActive && (
+            <Card accent="violet" className="p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                    Mission Visibility
+                  </p>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    Set default visibility before launch. Public helps Community Commons discover high-signal runs.
+                  </p>
+                </div>
+                <select
+                  value={saveVisibility}
+                  onChange={(event) => setSaveVisibility(event.target.value as "private" | "unlisted" | "public")}
+                  className="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-xs font-black uppercase tracking-widest text-[var(--text-primary)] focus:outline-none"
+                >
+                  <option value="public" className="bg-black">Public</option>
+                  <option value="unlisted" className="bg-black">Unlisted</option>
+                  <option value="private" className="bg-black">Private</option>
+                </select>
+              </div>
+            </Card>
+          )}
+
+          {isRunActive && (
+            <RunFlowDivider
+              stage="processing"
+              progress={progress}
+              elapsedSeconds={elapsedSeconds}
+              profileId={activeMissionProfileId}
+            />
+          )}
+
+          {/* Processing Status */}
+          <div ref={missionFocusRef}>
+            {isRunActive && (
+              <ProcessingStatus
+                status={status}
+                progress={progress}
+                events={events}
+                isProcessing={isProcessing}
+                elapsedSeconds={elapsedSeconds}
+                queryData={
+                  lastQuery
+                    ? {
+                      topic: lastQuery.idea,
+                      platforms: lastQuery.platforms,
+                      models: lastQuery.models,
+                      threshold: lastQuery.relevanceThreshold,
+                    }
+                    : data?.query
+                      ? {
+                        topic: data.query.idea,
+                        platforms: data.query.platforms,
+                        threshold: data.query.relevanceThreshold,
+                      }
+                      : undefined
+                }
+              />
+            )}
+          </div>
         </div>
 
         {/* Results */}
@@ -1172,7 +1285,13 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+              <ResultsFlowDivider
+                title="Conviction Layer"
+                body={resultsFlowCopy.brief}
+                icon="brief"
+              />
+
               <div className="md:col-span-2">
                 <details open={briefOpen} onToggle={(e) => setBriefOpen(e.currentTarget.open)} className="group" id="brief">
                   <summary className="list-none cursor-pointer">
@@ -1208,6 +1327,12 @@ export default function Home() {
                   </div>
                 </details>
               </div>
+
+              <ResultsFlowDivider
+                title="Forge Layer"
+                body={resultsFlowCopy.forge}
+                icon="forge"
+              />
 
               <div className="md:col-span-1">
                 <details className="group" id="drivers" open={true}>
@@ -1419,6 +1544,12 @@ export default function Home() {
                   </div>
                 </div>
               )}
+
+              <ResultsFlowDivider
+                title="Evidence Layer"
+                body={resultsFlowCopy.feed}
+                icon="feed"
+              />
 
               <div className="md:col-span-2">
                 <details open className="group" id="feed">

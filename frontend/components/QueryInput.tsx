@@ -44,7 +44,7 @@ const PLATFORM_OPTIONS: PlatformOption[] = [
   { id: 'tinyfish', label: 'TinyFish 🤖', hint: 'AI agent that reads primary sources for deep research', isPremium: true, enabled: true },
 ];
 
-const MISSION_PROFILES = [
+export const MISSION_PROFILES = [
   {
     id: 'alpha-hunter',
     label: 'Standard Research',
