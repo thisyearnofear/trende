@@ -355,6 +355,60 @@ def _task_runtime_alerts(task: dict[str, Any]) -> list[str]:
     return alerts
 
 
+def _derive_top_trends_from_findings(
+    raw_findings: list[Any],
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    seen: set[tuple[str, str]] = set()
+    ranked: list[tuple[float, dict[str, Any]]] = []
+
+    for entry in raw_findings or []:
+        item = entry.model_dump() if hasattr(entry, "model_dump") else entry
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title") or "").strip()
+        content = str(item.get("content") or "").strip()
+        if not title and not content:
+            continue
+
+        platform = str(item.get("platform") or "unknown").strip().lower()
+        dedupe_key = (platform, (item.get("url") or title or content[:120]).strip().lower())
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+
+        relevance = item.get("relevance_score")
+        try:
+            relevance_score = float(relevance) if relevance is not None else 0.0
+        except Exception:
+            relevance_score = 0.0
+
+        metrics = item.get("metrics") or {}
+        engagement = 0
+        if isinstance(metrics, dict):
+            for key in ("likes", "shares", "comments", "views"):
+                try:
+                    engagement += int(metrics.get(key) or 0)
+                except Exception:
+                    pass
+
+        ranked.append(
+            (
+                relevance_score * 1000 + engagement,
+                {
+                    "title": title or content[:120],
+                    "platform": platform,
+                    "url": str(item.get("url") or ""),
+                    "author": str(item.get("author") or ""),
+                    "timestamp": str(item.get("timestamp") or ""),
+                },
+            )
+        )
+
+    ranked.sort(key=lambda pair: pair[0], reverse=True)
+    return [item for _, item in ranked[:limit]]
+
+
 class QueryRequest(BaseModel):
     topic: str | None = None
     idea: str | None = None
@@ -1262,6 +1316,8 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
         run_telemetry = res_node.get("run_telemetry", task.get("run_telemetry", {}))
         editorial_data = res_node.get("editorial_data", task.get("editorial_data"))
 
+    top_trends = _derive_top_trends_from_findings(raw_findings or [], limit=5)
+
     # Construct response matching ResultsResponse in frontend/lib/types.ts
     return {
         "query": {
@@ -1285,8 +1341,8 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
         "results": results,
         "summary": {
             "overview": summary_text,
-            "keyThemes": [],  # TODO: Extract from report
-            "topTrends": [],  # TODO: Extract from report
+            "keyThemes": [],
+            "topTrends": top_trends,
             "sentiment": "neutral",
             "confidenceScore": confidence_score,
             "validationResults": validation_results,

@@ -185,7 +185,10 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
               <h4 className="text-xs font-black uppercase tracking-wider text-[var(--text-secondary)]">High-Impact Signals</h4>
             </div>
             <div className="space-y-2">
-              {summary.topTrends.slice(0, 3).map((trend, index) => (
+              {(summary.topTrends && summary.topTrends.length > 0
+                ? summary.topTrends.slice(0, 3)
+                : (summary.validationResults || []).slice(0, 3).map((log) => ({ title: log }))
+              ).map((trend, index) => (
                 <div key={index} className={cn(
                   "flex items-start gap-3 p-3 rounded-lg group/item transition-colors",
                   isSoft ? "soft-ui-out" : "glass-cyan border-cyan-500/10 hover:bg-cyan-500/10"
