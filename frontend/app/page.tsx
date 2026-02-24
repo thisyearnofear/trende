@@ -85,6 +85,7 @@ export default function Home() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [runStartedAtMs, setRunStartedAtMs] = useState<number | null>(null);
   const [showForgeInline, setShowForgeInline] = useState(false);
+  const forgeAutoInitForQueryRef = useRef<string | null>(null);
   const [briefOpen, setBriefOpen] = useState(true);
   const [showCommons, setShowCommons] = useState(true);
   const [commonsSearch, setCommonsSearch] = useState("");
@@ -333,6 +334,20 @@ export default function Home() {
   );
 
   const startedAt = data?.query?.createdAt ? new Date(data.query.createdAt).getTime() : runStartedAtMs;
+  const forgeAgreement = data?.summary?.consensusData?.agreement_score || 0;
+  const forgeAttestationStatus = String(data?.summary?.attestationData?.status || "").toLowerCase();
+  const shouldDefaultOpenForge =
+    status === "completed" &&
+    forgeAgreement >= 0.65 &&
+    (forgeAttestationStatus === "ready" || forgeAttestationStatus === "signed");
+
+  useEffect(() => {
+    if (!activeQueryId || status !== "completed") return;
+    if (forgeAutoInitForQueryRef.current === activeQueryId) return;
+    forgeAutoInitForQueryRef.current = activeQueryId;
+    setShowForgeInline(shouldDefaultOpenForge);
+  }, [activeQueryId, status, shouldDefaultOpenForge]);
+
   const dataHealth = useMemo(() => {
     const telemetry = data?.telemetry;
     const level = telemetry?.dataSufficiency || (sourceCount === 0 ? "sparse" : sourceCount < 5 ? "partial" : "healthy");
@@ -1331,32 +1346,6 @@ export default function Home() {
                 </details>
               </div>
 
-              <div className="md:col-span-2">
-                <details open className="group" id="feed">
-                  <summary className="list-none cursor-pointer">
-                    <div className="flex items-center justify-between p-4 glass rounded-xl border-white/5 hover:border-white/20 transition-all">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
-                          <Radio className="w-5 h-5 text-cyan-400" />
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-sm font-black uppercase tracking-widest text-white block">
-                            Signal Feed
-                          </span>
-                          <span className="text-[10px] font-mono text-cyan-400/50 block truncate uppercase tracking-tighter">
-                            {panelSummaries.feed}
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronDown className="w-5 h-5 text-white/20 transition-transform group-open:rotate-180" />
-                    </div>
-                  </summary>
-                  <div className="mt-4 animate-in fade-in slide-in-from-bottom-2">
-                    <PlatformTabs results={data.results} sourceIndexById={sourceIndexById} />
-                  </div>
-                </details>
-              </div>
-
               {data.summary && activeQueryId && (
                 <div className="md:col-span-2">
                   <div className="p-6 glass rounded-2xl border-white/10 relative overflow-hidden group">
@@ -1388,7 +1377,9 @@ export default function Home() {
                         <div className="w-px h-8 bg-white/5" />
                         <div className="text-center">
                           <p className="text-[9px] uppercase font-black text-white/20 tracking-widest mb-1">Attestation</p>
-                          <p className="text-sm font-black text-emerald-400">READY</p>
+                          <p className="text-sm font-black text-emerald-400">
+                            {forgeAttestationStatus === "signed" || forgeAttestationStatus === "ready" ? "READY" : "PENDING"}
+                          </p>
                         </div>
                         <div className="w-px h-8 bg-white/5" />
                         
@@ -1428,6 +1419,32 @@ export default function Home() {
                   </div>
                 </div>
               )}
+
+              <div className="md:col-span-2">
+                <details open className="group" id="feed">
+                  <summary className="list-none cursor-pointer">
+                    <div className="flex items-center justify-between p-4 glass rounded-xl border-white/5 hover:border-white/20 transition-all">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
+                          <Radio className="w-5 h-5 text-cyan-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-sm font-black uppercase tracking-widest text-white block">
+                            Signal Feed
+                          </span>
+                          <span className="text-[10px] font-mono text-cyan-400/50 block truncate uppercase tracking-tighter">
+                            {panelSummaries.feed}
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronDown className="w-5 h-5 text-white/20 transition-transform group-open:rotate-180" />
+                    </div>
+                  </summary>
+                  <div className="mt-4 animate-in fade-in slide-in-from-bottom-2">
+                    <PlatformTabs results={data.results} sourceIndexById={sourceIndexById} />
+                  </div>
+                </details>
+              </div>
             </div>
           </div>
         )}
