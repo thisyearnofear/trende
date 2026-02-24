@@ -708,16 +708,22 @@ async def analyzer_node(state: GraphState) -> GraphState:
 
     enriched_context = []
     enrich_per_source_timeout = max(
-        10,
-        int(os.getenv("ENRICH_PER_SOURCE_TIMEOUT_SECS", "75")),
+        8,
+        int(os.getenv("ENRICH_PER_SOURCE_TIMEOUT_SECS", "35")),
     )
     enrich_total_budget = max(
         enrich_per_source_timeout,
-        int(os.getenv("ENRICH_TOTAL_BUDGET_SECS", "240")),
+        int(os.getenv("ENRICH_TOTAL_BUDGET_SECS", "90")),
     )
+    max_enrich_items = max(0, int(os.getenv("ENRICH_MAX_ITEMS", "1")))
+    if "tinyfish" in (state.get("platforms") or []):
+        # Allow slightly deeper enrichment when TinyFish is explicitly selected.
+        max_enrich_items = max(max_enrich_items, 2)
+    if os.getenv("DISABLE_ANALYZER_ENRICH", "0") == "1":
+        max_enrich_items = 0
     enrich_started_at = datetime.datetime.now(datetime.timezone.utc)
     # Sort by metrics (e.g. likes/retweets) or just take first few
-    to_enrich = [f for f in findings_to_use if f.url and len(f.content) < 500][:3]
+    to_enrich = [f for f in findings_to_use if f.url and len(f.content) < 500][:max_enrich_items]
 
     if to_enrich:
         state["logs"].append(f"🔬 DEEP DIVE: Enriching {len(to_enrich)} key findings with agentic full-text analysis...")
