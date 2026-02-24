@@ -3,6 +3,7 @@ import json
 import datetime
 import os
 import uuid
+import re
 from typing import Any, Awaitable, Callable, Optional
 
 from langgraph.graph import END, StateGraph
@@ -68,6 +69,88 @@ def _select_validator_sample(findings: list[Any], limit: int) -> list[Any]:
             break
 
     return sample
+
+
+_PLACEHOLDER_PATTERNS = (
+    "unknown news",
+    "web source",
+    "collected 1 web sources for this query",
+    "task failed:",
+    "duckduckgo",
+)
+_STOPWORDS = {
+    "the", "and", "or", "with", "what", "when", "where", "which", "that", "this", "from", "into",
+    "about", "over", "under", "across", "at", "is", "are", "was", "were", "be", "to", "of", "for", "in",
+}
+_HISTORICAL_HINTS = {"history", "historical", "timeline", "since", "from", "between", "in 20", "201", "2020", "2021", "2022", "2023"}
+
+
+def _topic_wants_historical(topic: str) -> bool:
+    t = _normalize_text(topic)
+    if any(h in t for h in _HISTORICAL_HINTS):
+        return True
+    # Explicit year mention implies historical intent.
+    return bool(re.search(r"\b(19|20)\d{2}\b", topic or ""))
+
+
+def _extract_topic_keywords(topic: str) -> set[str]:
+    tokens = re.findall(r"[a-zA-Z0-9_+-]{3,}", (topic or "").lower())
+    return {t for t in tokens if t not in _STOPWORDS}
+
+
+def _is_placeholder_item(item: Any) -> bool:
+    title = _normalize_text(str(getattr(item, "title", "") or ""))
+    content = _normalize_text(str(getattr(item, "content", "") or ""))
+    combined = f"{title} {content}"
+    return any(pattern in combined for pattern in _PLACEHOLDER_PATTERNS)
+
+
+def _is_stale_for_topic(item: Any, topic: str, now_ts: float) -> bool:
+    if _topic_wants_historical(topic):
+        return False
+    ts = _timestamp_rank(item)
+    if ts <= 0:
+        return False
+    age_days = (now_ts - ts) / 86400
+    return age_days > float(os.getenv("FINDING_MAX_AGE_DAYS", "540"))
+
+
+def _keyword_overlap_ratio(item: Any, topic_keywords: set[str]) -> float:
+    if not topic_keywords:
+        return 1.0
+    text = " ".join(
+        [
+            str(getattr(item, "title", "") or ""),
+            str(getattr(item, "content", "") or ""),
+            str(getattr(item, "author", "") or ""),
+            str(getattr(item, "platform", "") or ""),
+        ]
+    ).lower()
+    item_tokens = set(re.findall(r"[a-zA-Z0-9_+-]{3,}", text))
+    if not item_tokens:
+        return 0.0
+    overlap = len(topic_keywords.intersection(item_tokens))
+    return overlap / max(1, min(6, len(topic_keywords)))
+
+
+def _apply_finding_quality_filters(findings: list[Any], topic: str) -> tuple[list[Any], dict[str, int]]:
+    now_ts = datetime.datetime.now(datetime.timezone.utc).timestamp()
+    topic_keywords = _extract_topic_keywords(topic)
+    min_overlap = float(os.getenv("FINDING_MIN_TOPIC_OVERLAP", "0.12"))
+    stats = {"placeholder": 0, "stale": 0, "off_topic": 0}
+    kept: list[Any] = []
+    for item in findings:
+        if _is_placeholder_item(item):
+            stats["placeholder"] += 1
+            continue
+        if _is_stale_for_topic(item, topic, now_ts):
+            stats["stale"] += 1
+            continue
+        if _keyword_overlap_ratio(item, topic_keywords) < min_overlap:
+            stats["off_topic"] += 1
+            continue
+        kept.append(item)
+    return kept, stats
 
 
 async def _generate_follow_up_directions(
@@ -441,6 +524,17 @@ async def researcher_node(state: GraphState) -> GraphState:
             deduped_new_items.append(item)
 
         state["raw_findings"].extend(deduped_new_items)
+        filtered_initial, initial_filter_stats = _apply_finding_quality_filters(
+            state["raw_findings"], state["topic"]
+        )
+        if len(filtered_initial) != len(state["raw_findings"]):
+            state["logs"].append(
+                "🧹 QUALITY FILTER: "
+                f"dropped {len(state['raw_findings']) - len(filtered_initial)} findings "
+                f"(placeholder={initial_filter_stats['placeholder']}, "
+                f"stale={initial_filter_stats['stale']}, off_topic={initial_filter_stats['off_topic']})."
+            )
+            state["raw_findings"] = filtered_initial
         if all_items:
             state["logs"].append(
                 f"📊 AGGREGATION COMPLETE: Total signals acquired: {len(all_items)}; added {len(deduped_new_items)} net-new. Commencing neural validation..."
@@ -452,7 +546,7 @@ async def researcher_node(state: GraphState) -> GraphState:
         else:
             state["logs"].append("🚨 CRITICAL: No data harvested from any source. Synthesis will be based on limited context.")
 
-        min_findings_required = max(3, int(os.getenv("MIN_FINDINGS_PER_RUN", "8")))
+        min_findings_required = max(4, int(os.getenv("MIN_FINDINGS_PER_RUN", "10")))
         current_count = len(state["raw_findings"])
         if current_count < min_findings_required:
             state["logs"].append(
@@ -477,17 +571,25 @@ async def researcher_node(state: GraphState) -> GraphState:
                     if err:
                         state["logs"].append(f"⚠️ BACKFILL MISS: {label} failed: {err}")
                     continue
+                kept_items, backfill_filter_stats = _apply_finding_quality_filters(items, state["topic"])
                 added = 0
-                for item in items:
+                for item in kept_items:
                     key = _finding_dedupe_key(item)
                     if key in existing_keys:
                         continue
                     existing_keys.add(key)
                     state["raw_findings"].append(item)
                     added += 1
+                dropped_backfill = len(items) - len(kept_items)
                 if added > 0:
                     state["logs"].append(
                         f"✅ BACKFILL SUCCESS: {label} added {added} new findings ({len(state['raw_findings'])}/{min_findings_required})."
+                    )
+                if dropped_backfill > 0:
+                    state["logs"].append(
+                        f"🧹 BACKFILL FILTER: {label} dropped {dropped_backfill} low-quality items "
+                        f"(placeholder={backfill_filter_stats['placeholder']}, stale={backfill_filter_stats['stale']}, "
+                        f"off_topic={backfill_filter_stats['off_topic']})."
                     )
 
             if len(state["raw_findings"]) < min_findings_required:
@@ -681,9 +783,19 @@ async def analyzer_node(state: GraphState) -> GraphState:
     - Relevance Score (1-10)
     - Confidence Analysis (based on the provided research confidence)
     - Bias Mitigation: Briefly explain how multi-model consensus was used to ensure neutrality.
+    - A strict Coverage Matrix answering these dimensions explicitly:
+      1) emergent agent skills
+      2) agent commerce protocols
+      3) primitives
+      4) agentic workflows
+      For each dimension include: coverage (full/partial/missing), evidence_count, and concrete examples.
+      If evidence is weak, mark PARTIAL or MISSING rather than inferring.
 
     Output format:
     # Trend Report: {state["topic"]}
+    ## Coverage Matrix
+    | Dimension | Coverage | Evidence Count | Concrete Examples |
+    | ... |
     ... (Markdown Content) ...
     """
 
