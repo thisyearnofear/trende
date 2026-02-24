@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useTrendData, useTrendHistory, useCommons, useSavedResearch } from "@/hooks/useTrendData";
 import { QueryInput } from "@/components/QueryInput";
 import { PlatformTabs } from "@/components/PlatformTabs";
@@ -91,6 +91,7 @@ export default function Home() {
   const [commonsVisibleCount, setCommonsVisibleCount] = useState(6);
   const { showToast } = useToast();
   const { isConnected } = useWallet();
+  const missionFocusRef = useRef<HTMLDivElement | null>(null);
 
   const handleStaleQuery = useCallback(
     (staleId: string) => {
@@ -141,6 +142,9 @@ export default function Home() {
         if (typeof window !== "undefined") {
           window.localStorage.setItem(LAST_QUERY_STORAGE_KEY, response.id);
         }
+        window.setTimeout(() => {
+          missionFocusRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 150);
       } catch (error) {
         console.error("Failed to start analysis:", error);
       }
@@ -167,6 +171,9 @@ export default function Home() {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(LAST_QUERY_STORAGE_KEY, id);
       }
+      window.setTimeout(() => {
+        missionFocusRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 150);
       showToast("Loaded commons run into current workspace.", "success");
     },
     [showToast],
@@ -1039,31 +1046,33 @@ export default function Home() {
         )}
 
         {/* Processing Status */}
-        {isRunActive && (
-          <ProcessingStatus
-            status={status}
-            progress={progress}
-            events={events}
-            isProcessing={isProcessing}
-            elapsedSeconds={elapsedSeconds}
-            queryData={
-              lastQuery
-                ? {
-                  topic: lastQuery.idea,
-                  platforms: lastQuery.platforms,
-                  models: lastQuery.models,
-                  threshold: lastQuery.relevanceThreshold,
-                }
-                : data?.query
+        <div ref={missionFocusRef}>
+          {isRunActive && (
+            <ProcessingStatus
+              status={status}
+              progress={progress}
+              events={events}
+              isProcessing={isProcessing}
+              elapsedSeconds={elapsedSeconds}
+              queryData={
+                lastQuery
                   ? {
-                    topic: data.query.idea,
-                    platforms: data.query.platforms,
-                    threshold: data.query.relevanceThreshold,
+                    topic: lastQuery.idea,
+                    platforms: lastQuery.platforms,
+                    models: lastQuery.models,
+                    threshold: lastQuery.relevanceThreshold,
                   }
-                  : undefined
-            }
-          />
-        )}
+                  : data?.query
+                    ? {
+                      topic: data.query.idea,
+                      platforms: data.query.platforms,
+                      threshold: data.query.relevanceThreshold,
+                    }
+                    : undefined
+              }
+            />
+          )}
+        </div>
 
         {/* Results */}
 
