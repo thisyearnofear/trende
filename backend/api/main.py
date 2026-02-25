@@ -1575,7 +1575,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             "relevanceThreshold": 0.5,
             "isSaved": bool(task.get("is_saved")),
             "visibility": task.get("visibility", "private"),
-            "augmentation": task.get("augmentation", {}),
+            "augmentation": task.get("augmentation") or {},
             "savedAt": task.get("saved_at"),
             "ipfsUri": task.get("ipfs_uri"),
             "saveLabel": task.get("save_label"),
