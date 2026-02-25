@@ -729,6 +729,33 @@ def _tokenize_market_text(value: str) -> set[str]:
     return {token for token in re.findall(r"[a-z0-9]{3,}", value.lower()) if token not in {"with", "from", "this", "that", "will", "have", "where", "what"}}
 
 
+def _has_market_intent(topic_tokens: set[str]) -> bool:
+    market_intent_tokens = {
+        "market",
+        "markets",
+        "prediction",
+        "predictions",
+        "price",
+        "prices",
+        "trading",
+        "trade",
+        "token",
+        "tokens",
+        "btc",
+        "bitcoin",
+        "eth",
+        "ethereum",
+        "sol",
+        "solana",
+        "forecast",
+        "odds",
+        "probability",
+        "liquidity",
+        "volatility",
+    }
+    return len(topic_tokens & market_intent_tokens) > 0
+
+
 def _normalize_probability(value: Any) -> float | None:
     try:
         if value is None:
@@ -770,8 +797,10 @@ def _score_market_fit(
     text_blob = f"{market.get('title', '')} {market.get('description', '')}".lower()
     market_tokens = _tokenize_market_text(text_blob)
 
-    semantic_overlap = len(topic_tokens & market_tokens) / max(len(topic_tokens), 1)
-    evidence_overlap = len(evidence_tokens & market_tokens) / max(len(evidence_tokens), 1)
+    semantic_hits = len(topic_tokens & market_tokens)
+    evidence_hits = len(evidence_tokens & market_tokens)
+    semantic_overlap = semantic_hits / max(len(topic_tokens), 1)
+    evidence_overlap = evidence_hits / max(len(evidence_tokens), 1)
 
     volume = market.get("volume")
     try:
@@ -830,6 +859,10 @@ def _score_market_fit(
     return {
         "fitScore": fit_percent,
         "fitLabel": fit_label,
+        "semanticHits": semantic_hits,
+        "evidenceHits": evidence_hits,
+        "semanticOverlap": round(semantic_overlap, 3),
+        "evidenceOverlap": round(evidence_overlap, 3),
         "liquidityScore": round(liquidity_score * 100),
         "daysToResolution": round(days_to_resolution, 1) if days_to_resolution is not None else None,
         "impliedProbability": probability,
@@ -948,6 +981,27 @@ async def _extract_related_prediction_markets(
     related: list[dict[str, Any]] = []
     seen_urls: set[str] = set()
     suppression_reasons: list[str] = []
+    has_market_evidence = any(
+        isinstance(trend, dict)
+        and "url" in trend
+        and isinstance(trend.get("url"), str)
+        and ("polymarket.com" in trend.get("url", "").lower() or "kalshi.com" in trend.get("url", "").lower())
+        for trend in top_trends
+    )
+    include_market_fallback = _env_flag("MARKET_INCLUDE_SEARCH_FALLBACK", "false")
+    market_intent_required = _env_flag("MARKET_INTENT_REQUIRED", "true")
+    if market_intent_required and not _has_market_intent(topic_tokens) and not has_market_evidence:
+        return {
+            "markets": [],
+            "gating": {
+                "actionable": False,
+                "dataSufficiency": data_sufficiency,
+                "findingsCount": findings_count,
+                "agreementScore": round(agreement_score, 3),
+                "minFitScore": int(os.getenv("MARKET_MIN_FIT_SCORE", "55")),
+            },
+            "suppressionReasons": ["market_intent_gate:not_applicable_to_topic"],
+        }
 
     def append_market(item: dict[str, Any]) -> None:
         normalized_url = str(item.get("url") or "").strip()
@@ -1031,7 +1085,7 @@ async def _extract_related_prediction_markets(
                 }
             )
 
-    if not related:
+    if not related and include_market_fallback:
         topic_slug = quote_plus(topic[:120])
         append_market(
             {
@@ -1090,9 +1144,22 @@ async def _extract_related_prediction_markets(
             f"Run gated: sufficiency={data_sufficiency}, findings={findings_count}, agreement={agreement_score:.2f}"
         )
 
-    min_fit = int(os.getenv("MARKET_MIN_FIT_SCORE", "45"))
+    min_fit = int(os.getenv("MARKET_MIN_FIT_SCORE", "55"))
+    min_semantic_hits = int(os.getenv("MARKET_MIN_SEMANTIC_HITS", "1"))
+    min_semantic_overlap = float(os.getenv("MARKET_MIN_SEMANTIC_OVERLAP", "0.06"))
+    min_evidence_overlap = float(os.getenv("MARKET_MIN_EVIDENCE_OVERLAP", "0.0"))
+    strict_relevance_gate = _env_flag("MARKET_STRICT_RELEVANCE_GATE", "true")
+    filtered: list[dict[str, Any]] = []
     for market in enriched:
-        market_actionable = run_actionable and int(market.get("fitScore", 0)) >= min_fit
+        semantic_hits = int(market.get("semanticHits", 0))
+        semantic_overlap = float(market.get("semanticOverlap", 0.0))
+        evidence_overlap = float(market.get("evidenceOverlap", 0.0))
+        relevance_ok = (
+            semantic_hits >= min_semantic_hits
+            and semantic_overlap >= min_semantic_overlap
+            and evidence_overlap >= min_evidence_overlap
+        )
+        market_actionable = run_actionable and int(market.get("fitScore", 0)) >= min_fit and relevance_ok
         market["actionable"] = market_actionable
         market["fitLabel"] = market.get("fitLabel", "weak")
         if not market_actionable:
@@ -1101,12 +1168,17 @@ async def _extract_related_prediction_markets(
                 reasons.append("Run quality gate not met")
             if int(market.get("fitScore", 0)) < min_fit:
                 reasons.append(f"fit<{min_fit}")
+            if not relevance_ok:
+                reasons.append("low_topic_overlap")
             if int(market.get("liquidityScore", 0)) < int(os.getenv("MARKET_MIN_LIQ_SCORE", "20")):
                 reasons.append("low_liquidity")
             market["suppressionReasons"] = reasons
             suppression_reasons.extend([f"{market.get('provider')}:{market.get('title')[:40]}:{reason}" for reason in reasons])
         else:
             market["suppressionReasons"] = []
+        if relevance_ok or not strict_relevance_gate:
+            filtered.append(market)
+    enriched = filtered
 
     return {
         "markets": enriched[:limit],
