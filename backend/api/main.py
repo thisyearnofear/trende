@@ -897,10 +897,13 @@ async def run_agent_workflow(
                     dict.fromkeys((consensus_data.get("warnings", []) or []) + guardrail_alerts)
                 )
                 findings_count = len(tasks[task_id].get("raw_findings") or [])
+                quality_assessment = tasks[task_id].get("quality_assessment") or {}
                 data_sufficiency = "healthy"
                 if findings_count == 0:
                     data_sufficiency = "sparse"
                 elif findings_count < 5:
+                    data_sufficiency = "partial"
+                if quality_assessment and not quality_assessment.get("passed", True):
                     data_sufficiency = "partial"
                 tasks[task_id]["run_telemetry"] = {
                     "run_id": task_id,
@@ -915,6 +918,7 @@ async def run_agent_workflow(
                     "duration_seconds": duration_seconds,
                     "logs": tasks[task_id].get("logs", [])[-12:],
                     "updated_at": tasks[task_id]["updated_at"],
+                    "quality_gate": quality_assessment,
                 }
 
                 # Log the node completion
@@ -1481,6 +1485,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             "updatedAt": run_telemetry.get(
                 "updated_at", task.get("updated_at", task.get("created_at", ""))
             ),
+            "qualityGate": run_telemetry.get("quality_gate", task.get("quality_assessment", {})),
             "chainlinkProof": chainlink_proof,
             "trustStack": {
                 "tee": {

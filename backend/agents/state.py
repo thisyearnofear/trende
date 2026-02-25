@@ -40,5 +40,6 @@ class GraphState(TypedDict):
     current_depth: int
     max_depth: int
     follow_up_directions: List[str]
+    quality_assessment: Optional[Dict[str, Any]]
     
     error: Optional[str]

@@ -153,6 +153,161 @@ def _apply_finding_quality_filters(findings: list[Any], topic: str) -> tuple[lis
     return kept, stats
 
 
+def _count_platform_diversity(findings: list[Any]) -> int:
+    platforms = {
+        _normalize_text(str(getattr(item, "platform", "") or "unknown"))
+        for item in findings
+        if item is not None
+    }
+    return len({p for p in platforms if p})
+
+
+def _coverage_status_counts(report_md: str) -> dict[str, int]:
+    lowered = (report_md or "").lower()
+    lines = [line.strip().lower() for line in (report_md or "").splitlines() if line.strip()]
+    dimension_tokens = {
+        "skills": ("emergent agent skills", "agent skills"),
+        "protocols": ("agent commerce protocols", "commerce protocols", "protocols"),
+        "primitives": ("primitives",),
+        "workflows": ("agentic workflows", "workflows"),
+    }
+    counts = {"full": 0, "partial": 0, "missing": 0}
+
+    for _, tokens in dimension_tokens.items():
+        status = "missing"
+        candidate_line = ""
+        for line in lines:
+            if any(token in line for token in tokens):
+                candidate_line = line
+                break
+
+        # Fallback: search globally in report text if dimension is mentioned outside a row.
+        if not candidate_line and any(token in lowered for token in tokens):
+            candidate_line = lowered
+
+        if candidate_line:
+            if "missing" in candidate_line:
+                status = "missing"
+            elif "partial" in candidate_line:
+                status = "partial"
+            elif "full" in candidate_line:
+                status = "full"
+            else:
+                # Mentioned without explicit status = partial confidence.
+                status = "partial"
+
+        counts[status] += 1
+    return counts
+
+
+def _evaluate_quality_gate(state: GraphState, report_md: str) -> dict[str, Any]:
+    findings = state.get("raw_findings") or []
+    consensus = state.get("consensus_data") or {}
+    provider_errors = consensus.get("provider_errors") or []
+    coverage = _coverage_status_counts(report_md)
+
+    min_sources = max(4, int(os.getenv("QUALITY_MIN_SOURCES", "8")))
+    min_platforms = max(2, int(os.getenv("QUALITY_MIN_PLATFORMS", "3")))
+    min_models = max(2, int(os.getenv("QUALITY_MIN_MODELS", "4")))
+    min_agreement = max(0.3, float(os.getenv("QUALITY_MIN_AGREEMENT", "0.60")))
+    target_score = max(0.5, float(os.getenv("QUALITY_TARGET_SCORE", "0.80")))
+
+    source_count = len(findings)
+    platform_count = _count_platform_diversity(findings)
+    model_count = len(consensus.get("providers") or [])
+    agreement = float(consensus.get("agreement_score", 0.0) or 0.0)
+    missing_coverage = int(coverage.get("missing", 0))
+    partial_coverage = int(coverage.get("partial", 0))
+
+    source_score = min(1.0, source_count / max(1, min_sources))
+    platform_score = min(1.0, platform_count / max(1, min_platforms))
+    model_score = min(1.0, model_count / max(1, min_models))
+    agreement_score = min(1.0, agreement / max(0.01, min_agreement))
+    coverage_penalty = min(1.0, (missing_coverage * 0.5) + (partial_coverage * 0.2))
+    coverage_score = max(0.0, 1.0 - coverage_penalty)
+
+    quality_score = (
+        (source_score * 0.25)
+        + (platform_score * 0.20)
+        + (model_score * 0.20)
+        + (agreement_score * 0.20)
+        + (coverage_score * 0.15)
+    )
+
+    checks = {
+        "sources": source_count >= min_sources,
+        "platforms": platform_count >= min_platforms,
+        "models": model_count >= min_models,
+        "agreement": agreement >= min_agreement,
+        "coverage_missing": missing_coverage == 0,
+    }
+    passed = all(checks.values()) and quality_score >= target_score
+
+    return {
+        "passed": passed,
+        "score": round(quality_score, 3),
+        "target": round(target_score, 3),
+        "checks": checks,
+        "metrics": {
+            "source_count": source_count,
+            "platform_count": platform_count,
+            "model_count": model_count,
+            "agreement_score": round(agreement, 3),
+            "missing_coverage": missing_coverage,
+            "partial_coverage": partial_coverage,
+            "provider_errors": len(provider_errors),
+        },
+        "thresholds": {
+            "min_sources": min_sources,
+            "min_platforms": min_platforms,
+            "min_models": min_models,
+            "min_agreement": min_agreement,
+        },
+    }
+
+
+def _build_quality_follow_up_directions(state: GraphState, quality: dict[str, Any]) -> list[str]:
+    checks = quality.get("checks", {})
+    metrics = quality.get("metrics", {})
+    directions: list[str] = []
+
+    if not checks.get("sources", True):
+        directions.append(
+            "Collect at least 4 fresh, source-backed findings focused on concrete entities, not opinion summaries."
+        )
+    if not checks.get("platforms", True):
+        directions.append(
+            "Expand to additional platforms and gather at least one corroborating signal per platform."
+        )
+    if not checks.get("models", True):
+        directions.append(
+            "Run a broader consensus pass using more model routes and capture provider-level disagreements."
+        )
+    if not checks.get("agreement", True):
+        directions.append(
+            "Resolve conflicting claims with explicit source-level evidence and quote-level specifics."
+        )
+    if not checks.get("coverage_missing", True):
+        directions.append(
+            "Fill missing Coverage Matrix dimensions with explicit full/partial/missing labels and evidence_count."
+        )
+
+    if not directions:
+        directions.append(
+            "Increase specificity: include named examples, quantitative datapoints, and explicit uncertainty bounds."
+        )
+
+    # Include one deterministic reminder with current metric snapshot for planner context.
+    directions.append(
+        "Current quality snapshot: "
+        f"sources={metrics.get('source_count', 0)}, "
+        f"platforms={metrics.get('platform_count', 0)}, "
+        f"models={metrics.get('model_count', 0)}, "
+        f"agreement={metrics.get('agreement_score', 0.0)}."
+    )
+    return directions[:4]
+
+
 async def _generate_follow_up_directions(
     topic: str, validation_logs: list[str], findings: list[Any]
 ) -> list[str]:
@@ -836,6 +991,32 @@ async def analyzer_node(state: GraphState) -> GraphState:
         f"🤝 SYNTHESIS COMPLETE: Generated consensus from {len(state['consensus_data'].get('providers', []))} AI models."
     )
 
+    quality = _evaluate_quality_gate(state, report)
+    state["quality_assessment"] = quality
+    state["logs"].append(
+        "🧪 QUALITY GATE: "
+        f"score={quality['score']:.2f}/{quality['target']:.2f} "
+        f"(sources={quality['metrics']['source_count']}, "
+        f"platforms={quality['metrics']['platform_count']}, "
+        f"models={quality['metrics']['model_count']}, "
+        f"agreement={quality['metrics']['agreement_score']:.2f}, "
+        f"missing_coverage={quality['metrics']['missing_coverage']})."
+    )
+
+    if (not quality.get("passed", False)) and state.get("current_depth", 0) < state.get("max_depth", 1):
+        state["follow_up_directions"] = _build_quality_follow_up_directions(state, quality)
+        state["logs"].append(
+            "🔁 QUALITY RETRY: Gate not met. Triggering autonomous refinement pass before finalization."
+        )
+        # Keep run in progress; graph edge will loop back to planner.
+        state["status"] = QueryStatus.PROCESSING
+        return state
+    state["follow_up_directions"] = []
+    if not quality.get("passed", False):
+        state["logs"].append(
+            "⚠️ QUALITY EXCEPTION: Max research depth reached; finalizing below target quality threshold."
+        )
+
     # Persist findings to Vector Store for future RAG
     try:
         vector_store.add_findings(findings_to_use, state["query_id"])
@@ -865,6 +1046,11 @@ def create_workflow() -> Any:
             return "planner"
         return "analyzer"
 
+    def should_finalize_after_analyzer(state: GraphState):
+        if state.get("follow_up_directions") and state.get("current_depth", 0) < state.get("max_depth", 1):
+            return "planner"
+        return "architect"
+
     workflow.set_entry_point("planner")
     workflow.add_edge("planner", "researcher")
     workflow.add_edge("researcher", "validator")
@@ -876,7 +1062,14 @@ def create_workflow() -> Any:
             "analyzer": "analyzer"
         }
     )
-    workflow.add_edge("analyzer", "architect")
+    workflow.add_conditional_edges(
+        "analyzer",
+        should_finalize_after_analyzer,
+        {
+            "planner": "planner",
+            "architect": "architect",
+        },
+    )
     workflow.add_edge("architect", END)
 
     return workflow.compile()
@@ -923,6 +1116,7 @@ async def run_trend_analysis(
         "current_depth": 0,
         "max_depth": 2 if "tinyfish" in (platforms or []) or "web" in (platforms or []) else 1,
         "follow_up_directions": [],
+        "quality_assessment": None,
         "error": None,
     }
 
@@ -985,6 +1179,7 @@ async def run_editorial_task(
         "current_depth": 0,
         "max_depth": 1,
         "follow_up_directions": [],
+        "quality_assessment": None,
         "error": None,
     }
     
