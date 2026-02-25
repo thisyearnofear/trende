@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Sparkles, Loader2, Compass, Layers, Zap, Shield, BarChart3, Rocket, Activity } from 'lucide-react';
 import { QueryRequest } from '@/lib/types';
 import { Card, Button } from './DesignSystem';
@@ -23,6 +23,48 @@ interface PlatformOption {
 
 type AugmentMode = 'auto' | 'on' | 'off';
 type ComposerStage = 'directive' | 'setup' | 'launch';
+
+const DEFAULT_PLATFORM_SELECTION = ['newsapi', 'web', 'hackernews', 'stackexchange'] as const;
+const DEFAULT_MODEL_SELECTION = ['venice_default', 'venice_mistral', 'openrouter_llama_70b', 'openrouter_hermes', 'aisa'] as const;
+const DEFAULT_THRESHOLD = 0.6;
+const DEFAULT_AUGMENTATION = { firecrawl: 'auto' as AugmentMode, synthdata: 'auto' as AugmentMode };
+
+const SOURCE_RUNTIME_SECONDS: Record<string, number> = {
+  newsapi: 75,
+  web: 120,
+  hackernews: 55,
+  stackexchange: 65,
+  coingecko: 45,
+  tinyfish: 180,
+  twitter: 80,
+  linkedin: 80,
+  gdelt: 90,
+};
+
+const MODEL_RUNTIME_SECONDS: Record<string, number> = {
+  venice_default: 48,
+  venice_uncensored: 44,
+  venice_mistral: 34,
+  venice_glm: 46,
+  openrouter_llama_70b: 52,
+  openrouter_hermes: 56,
+  openrouter_stepfun: 28,
+  aisa: 24,
+};
+
+type MissionEvent = {
+  name: string;
+  payload: Record<string, unknown>;
+};
+
+function emitMissionEvent(event: MissionEvent) {
+  if (typeof window === 'undefined') return;
+  const detail = { ...event, ts: new Date().toISOString() };
+  window.dispatchEvent(new CustomEvent('trende:mission_event', { detail }));
+  if (process.env.NODE_ENV !== 'production') {
+    console.debug('[trende:mission_event]', detail);
+  }
+}
 
 const MODEL_OPTIONS = [
   { id: 'venice_default', label: 'Venice AI', hint: 'Primary privacy-first consensus lane', quality: 95, cost: 0.002, enabled: true },
@@ -92,20 +134,22 @@ const SUGGESTIONS = [
 
 export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [idea, setIdea] = useState('');
-  const [platforms, setPlatforms] = useState<string[]>(['newsapi', 'web', 'hackernews', 'stackexchange']);
-  const [models, setModels] = useState<string[]>(['venice_default', 'venice_mistral', 'openrouter_llama_70b', 'openrouter_hermes', 'aisa']);
-  const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
+  const [platforms, setPlatforms] = useState<string[]>([...DEFAULT_PLATFORM_SELECTION]);
+  const [models, setModels] = useState<string[]>([...DEFAULT_MODEL_SELECTION]);
+  const [relevanceThreshold, setRelevanceThreshold] = useState(DEFAULT_THRESHOLD);
   const [composerStage, setComposerStage] = useState<ComposerStage>('directive');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [augmentation, setAugmentation] = useState<{ firecrawl: AugmentMode; synthdata: AugmentMode }>({
-    firecrawl: 'auto',
-    synthdata: 'auto',
+    firecrawl: DEFAULT_AUGMENTATION.firecrawl,
+    synthdata: DEFAULT_AUGMENTATION.synthdata,
   });
   const [advancedSeen, setAdvancedSeen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('trende:advanced_controls_seen') === '1';
   });
   const [highlightSelections, setHighlightSelections] = useState(false);
+  const mountTimeRef = useRef<number>(0);
+  const submittedRef = useRef(false);
 
   const activeProfile = useMemo(() => {
     return MISSION_PROFILES.find(p =>
@@ -127,12 +171,6 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
 
   const hasPlatforms = platforms.length > 0;
   const hasModels = models.length > 0;
-
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    if (!idea.trim() || isLoading || disabled || !hasPlatforms || !hasModels) return;
-    onSubmit({ idea: idea.trim(), platforms, models, relevanceThreshold, augmentation });
-  }, [idea, platforms, models, relevanceThreshold, augmentation, onSubmit, isLoading, disabled, hasPlatforms, hasModels]);
 
   const togglePlatform = (platform: string, isEnabled: boolean) => {
     if (!isEnabled) return;
@@ -196,6 +234,151 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
     }
   }, [markAdvancedSeen]);
   const effectiveShowAdvanced = composerStage !== 'directive' || showAdvanced;
+  const runtimeEstimate = useMemo(() => {
+    const sourceDurations = platforms.map((platform) => SOURCE_RUNTIME_SECONDS[platform] || 60);
+    const modelDurations = models.map((model) => MODEL_RUNTIME_SECONDS[model] || 35);
+    const maxSource = sourceDurations.length ? Math.max(...sourceDurations) : 0;
+    const maxModel = modelDurations.length ? Math.max(...modelDurations) : 0;
+    const base = 120;
+    let minSeconds = base + maxSource * 0.8 + maxModel * 0.8 + platforms.length * 12 + models.length * 6;
+    let maxSeconds = base + maxSource * 1.45 + maxModel * 1.5 + platforms.length * 26 + models.length * 12;
+
+    if (platforms.includes('tinyfish')) {
+      minSeconds += 60;
+      maxSeconds += 160;
+    }
+    if (augmentation.firecrawl === 'on') {
+      maxSeconds += 35;
+    }
+    if (augmentation.synthdata === 'on' && platforms.includes('coingecko')) {
+      maxSeconds += 30;
+    }
+    if (Math.abs(relevanceThreshold - 0.8) < 0.001) {
+      maxSeconds += 70;
+    }
+
+    return {
+      minSeconds: Math.round(Math.max(minSeconds, 150)),
+      maxSeconds: Math.round(Math.max(maxSeconds, minSeconds + 120)),
+    };
+  }, [platforms, models, augmentation.firecrawl, augmentation.synthdata, relevanceThreshold]);
+  const defaultCost = useMemo(
+    () => DEFAULT_MODEL_SELECTION.reduce((sum, model) => sum + (MODEL_OPTIONS.find((opt) => opt.id === model)?.cost || 0), 0),
+    []
+  );
+  const defaultRuntimeEstimate = useMemo(() => {
+    const sourceDurations = DEFAULT_PLATFORM_SELECTION.map((platform) => SOURCE_RUNTIME_SECONDS[platform] || 60);
+    const modelDurations = DEFAULT_MODEL_SELECTION.map((model) => MODEL_RUNTIME_SECONDS[model] || 35);
+    const maxSource = sourceDurations.length ? Math.max(...sourceDurations) : 0;
+    const maxModel = modelDurations.length ? Math.max(...modelDurations) : 0;
+    return {
+      minSeconds: Math.round(120 + maxSource * 0.8 + maxModel * 0.8 + DEFAULT_PLATFORM_SELECTION.length * 12 + DEFAULT_MODEL_SELECTION.length * 6),
+      maxSeconds: Math.round(120 + maxSource * 1.45 + maxModel * 1.5 + DEFAULT_PLATFORM_SELECTION.length * 26 + DEFAULT_MODEL_SELECTION.length * 12),
+    };
+  }, []);
+  const runtimeDelta = runtimeEstimate.maxSeconds - defaultRuntimeEstimate.maxSeconds;
+  const costDelta = totalCost - defaultCost;
+  const configDiff = useMemo(() => {
+    const sourceAdded = platforms.filter((platform) => !DEFAULT_PLATFORM_SELECTION.includes(platform as (typeof DEFAULT_PLATFORM_SELECTION)[number]));
+    const sourceRemoved = DEFAULT_PLATFORM_SELECTION.filter((platform) => !platforms.includes(platform));
+    const modelAdded = models.filter((model) => !DEFAULT_MODEL_SELECTION.includes(model as (typeof DEFAULT_MODEL_SELECTION)[number]));
+    const modelRemoved = DEFAULT_MODEL_SELECTION.filter((model) => !models.includes(model));
+    const thresholdChanged = Math.abs(relevanceThreshold - DEFAULT_THRESHOLD) > 0.001;
+    const augmentationChanged =
+      augmentation.firecrawl !== DEFAULT_AUGMENTATION.firecrawl ||
+      augmentation.synthdata !== DEFAULT_AUGMENTATION.synthdata;
+    const changesCount =
+      sourceAdded.length +
+      sourceRemoved.length +
+      modelAdded.length +
+      modelRemoved.length +
+      (thresholdChanged ? 1 : 0) +
+      (augmentationChanged ? 1 : 0);
+
+    return {
+      sourceAdded,
+      sourceRemoved,
+      modelAdded,
+      modelRemoved,
+      thresholdChanged,
+      augmentationChanged,
+      changesCount,
+      isDefault: changesCount === 0,
+    };
+  }, [platforms, models, relevanceThreshold, augmentation.firecrawl, augmentation.synthdata]);
+  const formatDuration = useCallback((seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs}s`;
+  }, []);
+
+  useEffect(() => {
+    emitMissionEvent({
+      name: 'composer_stage_view',
+      payload: {
+        stage: composerStage,
+        sources: platforms.length,
+        models: models.length,
+        threshold: relevanceThreshold,
+      },
+    });
+  }, [composerStage, platforms.length, models.length, relevanceThreshold]);
+
+  useEffect(() => {
+    mountTimeRef.current = Date.now();
+  }, []);
+
+  useEffect(() => {
+    const startedAt = mountTimeRef.current;
+    return () => {
+      if (!submittedRef.current && idea.trim()) {
+        emitMissionEvent({
+          name: 'composer_dropoff',
+          payload: {
+            stage: composerStage,
+            configuredSources: platforms.length,
+            configuredModels: models.length,
+            secondsInComposer: Math.round((Date.now() - startedAt) / 1000),
+          },
+        });
+      }
+    };
+  }, [composerStage, idea, platforms.length, models.length]);
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (!idea.trim() || isLoading || disabled || !hasPlatforms || !hasModels) return;
+    submittedRef.current = true;
+    emitMissionEvent({
+      name: 'composer_submit',
+      payload: {
+        stage: composerStage,
+        sources: platforms.length,
+        models: models.length,
+        threshold: relevanceThreshold,
+        estimatedMinSeconds: runtimeEstimate.minSeconds,
+        estimatedMaxSeconds: runtimeEstimate.maxSeconds,
+        projectedCostEth: totalCost,
+        secondsInComposer: Math.round((Date.now() - mountTimeRef.current) / 1000),
+      },
+    });
+    onSubmit({ idea: idea.trim(), platforms, models, relevanceThreshold, augmentation });
+  }, [
+    idea,
+    isLoading,
+    disabled,
+    hasPlatforms,
+    hasModels,
+    composerStage,
+    platforms,
+    models,
+    relevanceThreshold,
+    runtimeEstimate.minSeconds,
+    runtimeEstimate.maxSeconds,
+    totalCost,
+    onSubmit,
+    augmentation,
+  ]);
 
   return (
     <div className="relative group">
@@ -616,19 +799,68 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
 
               {composerStage === 'launch' && (
                 <div className="space-y-4 pt-6 border-t border-white/5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Launch Confirmation</p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="glass border border-white/10 rounded-xl p-3">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Directive</p>
-                      <p className="text-xs font-mono text-[var(--text-primary)] mt-2 line-clamp-4">{idea.trim() || "No directive set"}</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Mission Receipt</p>
+                  <div className="glass border border-white/10 rounded-xl p-4 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="glass border border-white/10 rounded-xl p-3">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Directive</p>
+                        <p className="text-xs font-mono text-[var(--text-primary)] mt-2 line-clamp-4">{idea.trim() || "No directive set"}</p>
+                      </div>
+                      <div className="glass border border-white/10 rounded-xl p-3">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Configuration Status</p>
+                        <p className="text-xs font-mono text-[var(--text-primary)] mt-2">
+                          {configDiff.isDefault ? "Using defaults" : `Customized (${configDiff.changesCount} changes)`}
+                        </p>
+                        {!configDiff.isDefault && (
+                          <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+                            {configDiff.sourceAdded.length > 0 ? `+${configDiff.sourceAdded.length} source(s) ` : ""}
+                            {configDiff.sourceRemoved.length > 0 ? `-${configDiff.sourceRemoved.length} source(s) ` : ""}
+                            {configDiff.modelAdded.length > 0 ? `+${configDiff.modelAdded.length} model(s) ` : ""}
+                            {configDiff.modelRemoved.length > 0 ? `-${configDiff.modelRemoved.length} model(s)` : ""}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="glass border border-white/10 rounded-xl p-3">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Sources</p>
-                      <p className="text-xs font-mono text-[var(--text-primary)] mt-2">{platforms.join(", ")}</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="glass border border-white/10 rounded-xl p-3">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Sources + Fallbacks</p>
+                        <p className="text-xs font-mono text-[var(--text-primary)] mt-2">{platforms.join(", ")}</p>
+                        <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+                          Firecrawl: {augmentation.firecrawl} • SynthData: {augmentation.synthdata}
+                        </p>
+                      </div>
+                      <div className="glass border border-white/10 rounded-xl p-3">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Consensus Models</p>
+                        <p className="text-xs font-mono text-[var(--text-primary)] mt-2">{models.join(", ")}</p>
+                        <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+                          Threshold: {Math.round(relevanceThreshold * 100)}%
+                        </p>
+                      </div>
+                      <div className="glass border border-white/10 rounded-xl p-3">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Estimated Runtime</p>
+                        <p className="text-xs font-mono text-[var(--text-primary)] mt-2">
+                          {formatDuration(runtimeEstimate.minSeconds)} - {formatDuration(runtimeEstimate.maxSeconds)}
+                        </p>
+                        <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+                          {runtimeDelta >= 0 ? "+" : ""}{formatDuration(Math.abs(runtimeDelta))} vs default
+                        </p>
+                      </div>
                     </div>
-                    <div className="glass border border-white/10 rounded-xl p-3">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Models</p>
-                      <p className="text-xs font-mono text-[var(--text-primary)] mt-2">{models.join(", ")}</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="glass border border-white/10 rounded-xl p-3">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Projected Cost (Internal)</p>
+                        <p className="text-xs font-mono text-amber-300 mt-2">{totalCost.toFixed(4)} ETH</p>
+                        <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+                          {costDelta >= 0 ? "+" : ""}{costDelta.toFixed(4)} ETH vs default
+                        </p>
+                      </div>
+                      <div className="glass border border-white/10 rounded-xl p-3">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">User Billing</p>
+                        <p className="text-xs font-mono text-emerald-300 mt-2">$0.00 (Beta)</p>
+                        <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">Final step is payment-ready for monetization rollout.</p>
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap justify-end gap-3">
