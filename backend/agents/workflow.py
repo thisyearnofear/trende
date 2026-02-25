@@ -162,6 +162,16 @@ def _count_platform_diversity(findings: list[Any]) -> int:
     return len({p for p in platforms if p})
 
 
+def _platform_counts(findings: list[Any]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in findings:
+        platform = _normalize_text(str(getattr(item, "platform", "") or "unknown"))
+        if not platform:
+            continue
+        counts[platform] = counts.get(platform, 0) + 1
+    return counts
+
+
 def _coverage_status_counts(report_md: str) -> dict[str, int]:
     lowered = (report_md or "").lower()
     lines = [line.strip().lower() for line in (report_md or "").splitlines() if line.strip()]
@@ -308,6 +318,39 @@ def _build_quality_follow_up_directions(state: GraphState, quality: dict[str, An
     return directions[:4]
 
 
+def _build_retry_platform_targets(state: GraphState, quality: dict[str, Any]) -> list[str]:
+    requested = [_normalize_text(p) for p in (state.get("platforms") or []) if p]
+    counts = _platform_counts(state.get("raw_findings") or [])
+    checks = quality.get("checks", {})
+    targets: list[str] = []
+
+    # Primary strategy: fill missing requested platform coverage first.
+    if not checks.get("platforms", True):
+        missing = [p for p in requested if counts.get(p, 0) == 0]
+        targets.extend(missing)
+
+    # If source breadth is weak, prioritize lowest-yield requested platforms.
+    if not checks.get("sources", True):
+        ranked = sorted(requested, key=lambda p: counts.get(p, 0))
+        for p in ranked[:2]:
+            if p not in targets:
+                targets.append(p)
+
+    # Coverage gaps often improve with broader web/news evidence.
+    if not checks.get("coverage_missing", True):
+        for p in ["web", "newsapi", "hackernews", "stackexchange", "coingecko", "tinyfish", "synthdata"]:
+            if p in requested and p not in targets:
+                targets.append(p)
+
+    if not targets:
+        ranked = sorted(requested, key=lambda p: counts.get(p, 0))
+        targets.extend(ranked[:2])
+
+    # Keep retries focused to control spend/latency.
+    max_targets = max(1, int(os.getenv("QUALITY_RETRY_MAX_PLATFORMS", "3")))
+    return targets[:max_targets]
+
+
 async def _generate_follow_up_directions(
     topic: str, validation_logs: list[str], findings: list[Any]
 ) -> list[str]:
@@ -431,6 +474,10 @@ async def planner_node(state: GraphState) -> GraphState:
 
     requested = [normalize_platform(p) for p in (state.get("platforms") or [])]
     requested_set = set(requested)
+    retry_targets = [normalize_platform(p) for p in (state.get("retry_platforms") or [])]
+    retry_mode = len(retry_targets) > 0
+    planner_targets = [p for p in requested if (not retry_mode or p in set(retry_targets))]
+    planner_target_set = set(planner_targets)
 
     try:
         # Simple extraction logic (could be more robust with regex)
@@ -445,15 +492,28 @@ async def planner_node(state: GraphState) -> GraphState:
             query = (sq.get("query") or state["topic"]).strip()
             if not platform or platform not in requested_set:
                 continue
+            if retry_mode and platform not in planner_target_set:
+                continue
+            if retry_mode and state.get("follow_up_directions"):
+                focus_hint = " ".join(state["follow_up_directions"][:1])[:120]
+                if focus_hint and focus_hint.lower() not in query.lower():
+                    query = f"{query} {focus_hint}".strip()
             cleaned_queries.append({"platform": platform, "query": query})
 
-        # Guarantee coverage for every requested platform.
+        # Guarantee coverage for every planner target platform.
         covered = {sq["platform"] for sq in cleaned_queries}
-        for platform in requested:
+        for platform in planner_targets:
             if platform not in covered:
-                cleaned_queries.append({"platform": platform, "query": state["topic"]})
+                fallback_query = state["topic"]
+                if retry_mode and state.get("follow_up_directions"):
+                    fallback_query = f"{fallback_query} {state['follow_up_directions'][0][:120]}".strip()
+                cleaned_queries.append({"platform": platform, "query": fallback_query})
 
         state["search_queries"] = cleaned_queries
+        if retry_mode:
+            state["logs"].append(
+                f"🎯 SMART RETRY PLAN: focusing on platforms [{', '.join(planner_targets)}] to close quality gaps."
+            )
         state["logs"].append(
             f"🎯 STRATEGY FORMULATED: Created {len(state['search_queries'])} precision-targeted queries for optimal coverage."
         )
@@ -466,9 +526,8 @@ async def planner_node(state: GraphState) -> GraphState:
     except Exception as e:
         state["logs"].append(f"⚠️  PLAN ADJUSTMENT: Failed to parse research plan, falling back to general queries. Error: {e}")
         # Fallback query
-        state["search_queries"] = [
-            {"platform": p, "query": state["topic"]} for p in state["platforms"]
-        ]
+        fallback_platforms = planner_targets if retry_mode else [normalize_platform(p) for p in state["platforms"]]
+        state["search_queries"] = [{"platform": p, "query": state["topic"]} for p in fallback_platforms]
         state["current_depth"] = depth + 1
 
     return state
@@ -478,19 +537,31 @@ async def researcher_node(state: GraphState) -> GraphState:
     state["status"] = QueryStatus.RESEARCHING
     deduped_queries: list[dict[str, str]] = []
     seen = set()
+    attempted = set(state.get("attempted_query_keys") or [])
+    skipped_attempted = 0
     for sq in state["search_queries"]:
         platform = (sq.get("platform") or "").strip().lower()
         query = (sq.get("query") or "").strip()
         key = (platform, query.lower())
         if not platform or not query or key in seen:
             continue
+        key_str = f"{platform}::{query.lower()}"
+        if key_str in attempted:
+            skipped_attempted += 1
+            continue
         seen.add(key)
         deduped_queries.append({"platform": platform, "query": query})
+        attempted.add(key_str)
     if len(deduped_queries) != len(state["search_queries"]):
         state["logs"].append(
             f"♻️ REQUEST DEDUPE: Collapsed {len(state['search_queries']) - len(deduped_queries)} duplicate platform-query jobs."
         )
+    if skipped_attempted:
+        state["logs"].append(
+            f"💸 API SAVINGS: Skipped {skipped_attempted} previously attempted connector queries in this run."
+        )
     state["search_queries"] = deduped_queries
+    state["attempted_query_keys"] = sorted(attempted)
 
     platforms = list(set(sq["platform"] for sq in state["search_queries"]))
     platform_names = ', '.join(platforms).upper()
@@ -1004,14 +1075,18 @@ async def analyzer_node(state: GraphState) -> GraphState:
     )
 
     if (not quality.get("passed", False)) and state.get("current_depth", 0) < state.get("max_depth", 1):
+        retry_targets = _build_retry_platform_targets(state, quality)
+        state["retry_platforms"] = retry_targets
         state["follow_up_directions"] = _build_quality_follow_up_directions(state, quality)
         state["logs"].append(
-            "🔁 QUALITY RETRY: Gate not met. Triggering autonomous refinement pass before finalization."
+            "🔁 QUALITY RETRY: Gate not met. Triggering focused refinement pass "
+            f"on [{', '.join(retry_targets)}] before finalization."
         )
         # Keep run in progress; graph edge will loop back to planner.
         state["status"] = QueryStatus.PROCESSING
         return state
     state["follow_up_directions"] = []
+    state["retry_platforms"] = []
     if not quality.get("passed", False):
         state["logs"].append(
             "⚠️ QUALITY EXCEPTION: Max research depth reached; finalizing below target quality threshold."
@@ -1117,6 +1192,8 @@ async def run_trend_analysis(
         "max_depth": 2 if "tinyfish" in (platforms or []) or "web" in (platforms or []) else 1,
         "follow_up_directions": [],
         "quality_assessment": None,
+        "retry_platforms": [],
+        "attempted_query_keys": [],
         "error": None,
     }
 
@@ -1180,6 +1257,8 @@ async def run_editorial_task(
         "max_depth": 1,
         "follow_up_directions": [],
         "quality_assessment": None,
+        "retry_platforms": [],
+        "attempted_query_keys": [],
         "error": None,
     }
     
