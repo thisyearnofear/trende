@@ -239,12 +239,14 @@ Prediction Market Data (Polymarket):
 {polymarket_data}
 """)
     
+    joined_context = "\n---\n".join(context_parts)
+
     prompt = f"""
 You are a financial intelligence analyst. Synthesize the following quantitative market data
 into a concise, actionable summary for the research topic: "{topic}"
 
 Financial Data:
-{"\n---\n".join(context_parts)}
+{joined_context}
 
 Provide a brief synthesis (3-5 sentences) that:
 1. Highlights key price forecast signals
