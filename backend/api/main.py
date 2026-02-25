@@ -796,6 +796,24 @@ class ActionSubmitRequest(BaseModel):
         return self
 
 
+class MissionTelemetryRequest(BaseModel):
+    name: str
+    payload: dict[str, Any] = Field(default_factory=dict)
+    session_id: str | None = None
+    source: str | None = None
+    stage: str | None = None
+
+    @model_validator(mode="after")
+    def validate_event(self) -> "MissionTelemetryRequest":
+        self.name = (self.name or "").strip().lower()[:120]
+        if not self.name:
+            raise ValueError("name is required.")
+        self.session_id = (self.session_id or "").strip()[:120] or None
+        self.source = (self.source or "").strip()[:80] or None
+        self.stage = (self.stage or "").strip()[:80] or None
+        return self
+
+
 def _configured_consensus_routes() -> dict[str, Any]:
     routes: list[dict[str, str]] = []
 
@@ -1543,6 +1561,42 @@ async def get_action_status(action_id: str) -> dict[str, Any] | Response:
     if not action:
         return Response(status_code=404, content=json.dumps({"error": "Action not found"}))
     return {"action": action}
+
+
+@app.post("/api/telemetry/mission-event")
+async def ingest_mission_event(
+    event: MissionTelemetryRequest,
+    request: Request,
+    x_wallet_address: str | None = Header(None, alias="X-Wallet-Address"),
+) -> dict[str, Any] | Response:
+    created = repo.create_mission_event(
+        event_id=str(uuid.uuid4()),
+        event_name=event.name,
+        payload=event.payload,
+        session_id=event.session_id,
+        source=event.source or "frontend",
+        stage=event.stage,
+        wallet_address=x_wallet_address,
+        client_ip=get_client_ip(request),
+        user_agent=(request.headers.get("User-Agent") or "")[:240],
+    )
+    if not created:
+        return Response(status_code=500, content=json.dumps({"error": "Failed to store telemetry event"}))
+    return {"ok": True, "event": created}
+
+
+@app.get("/api/telemetry/mission-events")
+async def list_mission_events(
+    limit: int = 200,
+    session_id: str | None = None,
+    name: str | None = None,
+) -> dict[str, Any]:
+    rows = repo.get_mission_events(
+        limit=max(1, min(limit, 1000)),
+        session_id=(session_id or "").strip() or None,
+        event_name=(name or "").strip().lower() or None,
+    )
+    return {"events": rows, "total": len(rows)}
 
 
 @app.get("/api/commons")

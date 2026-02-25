@@ -57,10 +57,34 @@ type MissionEvent = {
   payload: Record<string, unknown>;
 };
 
-function emitMissionEvent(event: MissionEvent) {
+const TELEMETRY_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+function emitMissionEvent(event: MissionEvent, sessionId?: string) {
   if (typeof window === 'undefined') return;
   const detail = { ...event, ts: new Date().toISOString() };
   window.dispatchEvent(new CustomEvent('trende:mission_event', { detail }));
+  const body = JSON.stringify({
+    name: event.name,
+    payload: event.payload,
+    session_id: sessionId,
+    source: 'query_input',
+    stage: typeof event.payload.stage === 'string' ? event.payload.stage : undefined,
+  });
+  const endpoint = `${TELEMETRY_API_BASE}/api/telemetry/mission-event`;
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(endpoint, new Blob([body], { type: 'application/json' }));
+    } else {
+      void fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+      });
+    }
+  } catch {
+    // non-fatal telemetry failure
+  }
   if (process.env.NODE_ENV !== 'production') {
     console.debug('[trende:mission_event]', detail);
   }
@@ -150,6 +174,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [highlightSelections, setHighlightSelections] = useState(false);
   const mountTimeRef = useRef<number>(0);
   const submittedRef = useRef(false);
+  const sessionIdRef = useRef<string>('anonymous');
 
   const activeProfile = useMemo(() => {
     return MISSION_PROFILES.find(p =>
@@ -321,11 +346,24 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
         models: models.length,
         threshold: relevanceThreshold,
       },
-    });
+    }, sessionIdRef.current);
   }, [composerStage, platforms.length, models.length, relevanceThreshold]);
 
   useEffect(() => {
     mountTimeRef.current = Date.now();
+    try {
+      const storageKey = 'trende:mission_session_id';
+      const existing = window.localStorage.getItem(storageKey);
+      const generated =
+        existing ||
+        (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? `mission-${crypto.randomUUID()}`
+          : `mission-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+      window.localStorage.setItem(storageKey, generated);
+      sessionIdRef.current = generated;
+    } catch {
+      sessionIdRef.current = 'anonymous';
+    }
   }, []);
 
   useEffect(() => {
@@ -340,7 +378,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
             configuredModels: models.length,
             secondsInComposer: Math.round((Date.now() - startedAt) / 1000),
           },
-        });
+        }, sessionIdRef.current);
       }
     };
   }, [composerStage, idea, platforms.length, models.length]);
@@ -361,7 +399,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
         projectedCostEth: totalCost,
         secondsInComposer: Math.round((Date.now() - mountTimeRef.current) / 1000),
       },
-    });
+    }, sessionIdRef.current);
     onSubmit({ idea: idea.trim(), platforms, models, relevanceThreshold, augmentation });
   }, [
     idea,

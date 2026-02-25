@@ -91,6 +91,20 @@ class ActionModel(Base):  # type: ignore
     )
 
 
+class MissionEventModel(Base):  # type: ignore
+    __tablename__ = "mission_events"
+    event_id = Column(String, primary_key=True)
+    event_name = Column(String, nullable=False)
+    session_id = Column(String, nullable=True)
+    source = Column(String, nullable=True)
+    stage = Column(String, nullable=True)
+    wallet_address = Column(String, nullable=True)
+    client_ip = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    payload = Column(JSON, nullable=False, default=dict)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+
+
 if HAS_SQL:
     engine = create_engine(settings.database_url)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -104,6 +118,7 @@ def init_db() -> None:
         Base.metadata.create_all(bind=engine)  # type: ignore
         _migrate_task_columns()
         _migrate_action_columns()
+        _migrate_mission_event_columns()
 
 
 def _migrate_task_columns() -> None:
@@ -145,6 +160,30 @@ def _migrate_action_columns() -> None:
             ("started_at", "ALTER TABLE actions ADD COLUMN started_at DATETIME"),
             ("completed_at", "ALTER TABLE actions ADD COLUMN completed_at DATETIME"),
             ("updated_at", "ALTER TABLE actions ADD COLUMN updated_at DATETIME"),
+        ]
+        for column_name, ddl in migrations:
+            if column_name not in cols:
+                conn.execute(text(ddl))
+
+
+def _migrate_mission_event_columns() -> None:
+    """Best-effort additive migration for mission_events table."""
+    if not HAS_SQL or engine is None:
+        return
+    with engine.begin() as conn:
+        tables = {t for t in inspect(conn).get_table_names()}
+        if "mission_events" not in tables:
+            return
+        cols = {col["name"] for col in inspect(conn).get_columns("mission_events")}
+        migrations = [
+            ("session_id", "ALTER TABLE mission_events ADD COLUMN session_id VARCHAR"),
+            ("source", "ALTER TABLE mission_events ADD COLUMN source VARCHAR"),
+            ("stage", "ALTER TABLE mission_events ADD COLUMN stage VARCHAR"),
+            ("wallet_address", "ALTER TABLE mission_events ADD COLUMN wallet_address VARCHAR"),
+            ("client_ip", "ALTER TABLE mission_events ADD COLUMN client_ip VARCHAR"),
+            ("user_agent", "ALTER TABLE mission_events ADD COLUMN user_agent VARCHAR"),
+            ("payload", "ALTER TABLE mission_events ADD COLUMN payload JSON"),
+            ("created_at", "ALTER TABLE mission_events ADD COLUMN created_at DATETIME"),
         ]
         for column_name, ddl in migrations:
             if column_name not in cols:
@@ -524,6 +563,77 @@ class Repository:
             if not action:
                 return None
             return self._serialize_action(action)
+
+    def create_mission_event(
+        self,
+        event_id: str,
+        event_name: str,
+        payload: dict[str, Any] | None = None,
+        *,
+        session_id: str | None = None,
+        source: str | None = None,
+        stage: str | None = None,
+        wallet_address: str | None = None,
+        client_ip: str | None = None,
+        user_agent: str | None = None,
+    ) -> dict[str, Any] | None:
+        if not HAS_SQL or not self.Session:
+            return None
+        with self.Session() as session:
+            event = MissionEventModel(
+                event_id=event_id,
+                event_name=event_name,
+                session_id=session_id,
+                source=source,
+                stage=stage,
+                wallet_address=wallet_address.lower() if wallet_address else None,
+                client_ip=client_ip,
+                user_agent=user_agent,
+                payload=payload or {},
+            )
+            session.add(event)
+            session.commit()
+            return {
+                "event_id": event.event_id,
+                "event_name": event.event_name,
+                "session_id": event.session_id,
+                "source": event.source,
+                "stage": event.stage,
+                "wallet_address": event.wallet_address,
+                "client_ip": event.client_ip,
+                "created_at": event.created_at.isoformat() if event.created_at else None,
+            }
+
+    def get_mission_events(
+        self,
+        *,
+        limit: int = 200,
+        session_id: str | None = None,
+        event_name: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if not HAS_SQL or not self.Session:
+            return []
+        with self.Session() as session:
+            query = session.query(MissionEventModel)
+            if session_id:
+                query = query.filter(MissionEventModel.session_id == session_id)
+            if event_name:
+                query = query.filter(MissionEventModel.event_name == event_name)
+            rows = query.order_by(MissionEventModel.created_at.desc()).limit(limit).all()
+            return [
+                {
+                    "event_id": row.event_id,
+                    "event_name": row.event_name,
+                    "session_id": row.session_id,
+                    "source": row.source,
+                    "stage": row.stage,
+                    "wallet_address": row.wallet_address,
+                    "client_ip": row.client_ip,
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                    "payload": row.payload or {},
+                }
+                for row in rows
+            ]
 
     def _coerce_datetime(
         self, value: str | datetime.datetime | None
