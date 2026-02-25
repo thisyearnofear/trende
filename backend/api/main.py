@@ -6,6 +6,7 @@ import datetime
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
+from urllib.parse import quote_plus
 
 from fastapi import BackgroundTasks, FastAPI, Header, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -719,6 +720,126 @@ def _derive_source_breakdown(raw_findings: list[Any]) -> list[dict[str, Any]]:
     rows = list(bucket.values())
     rows.sort(key=lambda r: int(r.get("items", 0)), reverse=True)
     return rows[:20]
+
+
+def _extract_related_prediction_markets(
+    topic: str,
+    financial_intelligence: dict[str, Any] | None,
+    top_trends: list[dict[str, Any]],
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    related: list[dict[str, Any]] = []
+    seen_urls: set[str] = set()
+
+    def append_market(
+        *,
+        provider: str,
+        title: str,
+        url: str,
+        probability: float | None = None,
+        volume: float | None = None,
+        end_date: str | None = None,
+        relevance_reason: str | None = None,
+    ) -> None:
+        normalized_url = (url or "").strip()
+        if not normalized_url or normalized_url in seen_urls:
+            return
+        seen_urls.add(normalized_url)
+        related.append(
+            {
+                "provider": provider,
+                "title": title.strip()[:220] or "Untitled market",
+                "url": normalized_url,
+                "probability": probability,
+                "volume": volume,
+                "endDate": end_date,
+                "relevanceReason": relevance_reason or "Aligned with report topic",
+            }
+        )
+
+    poly = (financial_intelligence or {}).get("polymarket_comparison")
+    if isinstance(poly, dict):
+        candidates: list[dict[str, Any]] = []
+        if isinstance(poly.get("markets"), list):
+            candidates.extend([row for row in poly.get("markets", []) if isinstance(row, dict)])
+        if isinstance(poly.get("events"), list):
+            candidates.extend([row for row in poly.get("events", []) if isinstance(row, dict)])
+        if isinstance(poly.get("data"), dict):
+            data = poly.get("data") or {}
+            if isinstance(data.get("markets"), list):
+                candidates.extend([row for row in data.get("markets", []) if isinstance(row, dict)])
+            if isinstance(data.get("events"), list):
+                candidates.extend([row for row in data.get("events", []) if isinstance(row, dict)])
+
+        for row in candidates:
+            url = str(
+                row.get("url")
+                or row.get("link")
+                or row.get("market_url")
+                or row.get("event_url")
+                or ""
+            ).strip()
+            if not url:
+                continue
+            provider = "polymarket" if "polymarket" in url.lower() else "prediction_market"
+            title = str(row.get("title") or row.get("question") or row.get("name") or "Prediction market")
+            prob = row.get("probability") or row.get("yes_prob") or row.get("odds")
+            try:
+                prob_value = float(prob) if prob is not None else None
+                if prob_value is not None and prob_value > 1:
+                    prob_value = prob_value / 100.0
+            except Exception:
+                prob_value = None
+            volume_raw = row.get("volume") or row.get("liquidity")
+            try:
+                volume_value = float(volume_raw) if volume_raw is not None else None
+            except Exception:
+                volume_value = None
+            append_market(
+                provider=provider,
+                title=title,
+                url=url,
+                probability=prob_value,
+                volume=volume_value,
+                end_date=str(row.get("end_date") or row.get("endDate") or row.get("close_time") or "") or None,
+                relevance_reason="Mapped from SynthData prediction-market comparison",
+            )
+
+    for trend in top_trends:
+        if not isinstance(trend, dict):
+            continue
+        trend_url = str(trend.get("url") or "").strip()
+        if "polymarket.com" in trend_url.lower():
+            append_market(
+                provider="polymarket",
+                title=str(trend.get("title") or "Polymarket market"),
+                url=trend_url,
+                relevance_reason="Detected directly in high-impact signals",
+            )
+        if "kalshi.com" in trend_url.lower():
+            append_market(
+                provider="kalshi",
+                title=str(trend.get("title") or "Kalshi market"),
+                url=trend_url,
+                relevance_reason="Detected directly in high-impact signals",
+            )
+
+    if not related:
+        topic_slug = quote_plus(topic[:120])
+        append_market(
+            provider="polymarket",
+            title=f"Search Polymarket for: {topic[:80]}",
+            url=f"https://polymarket.com/search?q={topic_slug}",
+            relevance_reason="No direct market matched; search suggested",
+        )
+        append_market(
+            provider="kalshi",
+            title=f"Search Kalshi for: {topic[:80]}",
+            url=f"https://kalshi.com/markets?search={topic_slug}",
+            relevance_reason="No direct market matched; search suggested",
+        )
+
+    return related[:limit]
 
 
 class QueryRequest(BaseModel):
@@ -1721,6 +1842,12 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
         financial_intelligence = res_node.get("financial_intelligence", task.get("financial_intelligence"))
 
     top_trends = _derive_top_trends_from_findings(raw_findings or [], limit=5)
+    related_markets = _extract_related_prediction_markets(
+        topic=task.get("topic", ""),
+        financial_intelligence=financial_intelligence if isinstance(financial_intelligence, dict) else None,
+        top_trends=top_trends,
+        limit=5,
+    )
     source_breakdown = _derive_source_breakdown(raw_findings or [])
     chainlink_proof = _extract_chainlink_proof(raw_findings or [], task)
     chainlink_configured = False
@@ -1769,6 +1896,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             "attestationData": attestation_data,
             "oracleMarketId": task.get("oracle_market_id"),
             "financialIntelligence": financial_intelligence,
+            "relatedMarkets": related_markets,
             "generatedAt": task.get("updated_at", task.get("created_at", "")),
         },
         "telemetry": {

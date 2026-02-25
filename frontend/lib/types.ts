@@ -153,6 +153,15 @@ export interface TrendSummary {
     generated_at?: string;
     polymarket_comparison?: Record<string, unknown> | null;
   };
+  relatedMarkets?: Array<{
+    provider: string;
+    title: string;
+    url: string;
+    probability?: number | null;
+    volume?: number | null;
+    endDate?: string | null;
+    relevanceReason?: string;
+  }>;
   oracleMarketId?: string;
   generatedAt: string;
 }

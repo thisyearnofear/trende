@@ -1,7 +1,7 @@
 'use client';
 
 import { TrendSummary as TrendSummaryType } from '@/lib/types';
-import { TrendingUp, TrendingDown, Minus, Clock, ShieldCheck, Flame, Sparkles, Radar } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Clock, ShieldCheck, Flame, Sparkles, Radar, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Card, Badge, Progress, Alert } from './DesignSystem';
@@ -53,6 +53,7 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
   const agreement = Math.round((consensus?.agreement_score || 0) * 100);
   const financial = summary.financialIntelligence;
   const assetRows = financial?.assets?.slice(0, 3) || [];
+  const relatedMarkets = summary.relatedMarkets?.slice(0, 4) || [];
 
   return (
     <Card accent="white" shadow="md" className={cn("p-0 overflow-hidden group", isSoft ? "soft-ui-out border-0" : "glass border-white/10")}>
@@ -302,6 +303,57 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
                 })}
               </div>
             )}
+          </section>
+        )}
+
+        {relatedMarkets.length > 0 && (
+          <section className={cn(
+            "rounded-xl p-5 space-y-4",
+            isSoft ? "soft-ui-in" : "glass border-violet-500/20"
+          )}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Radar className="w-4 h-4 text-[var(--accent-violet)]" />
+                <h4 className="text-xs font-black uppercase tracking-wider text-[var(--text-secondary)]">Related Prediction Markets</h4>
+              </div>
+              <Badge variant="violet" className={isSoft ? "soft-ui-out border-0" : "bg-violet-500/10 border-violet-500/30 text-violet-300"}>
+                Beta
+              </Badge>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {relatedMarkets.map((market, index) => (
+                <div key={`${market.url}-${index}`} className={cn("rounded-lg p-3 space-y-2", isSoft ? "soft-ui-out" : "bg-slate-900/60 border border-white/5")}>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-xs text-[var(--text-primary)] leading-relaxed">{market.title}</p>
+                    <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)]">{market.provider}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-[10px] font-mono">
+                    {typeof market.probability === "number" && (
+                      <span className={cn("px-2 py-0.5 rounded", isSoft ? "bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)]" : "bg-cyan-500/10 text-cyan-300")}>
+                        {(market.probability * 100).toFixed(1)}%
+                      </span>
+                    )}
+                    {typeof market.volume === "number" && (
+                      <span className={cn("px-2 py-0.5 rounded", isSoft ? "bg-[var(--accent-amber)]/10 text-[var(--accent-amber)]" : "bg-amber-500/10 text-amber-300")}>
+                        Vol ${market.volume.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                  {market.relevanceReason && (
+                    <p className="text-[10px] text-[var(--text-muted)] font-mono">{market.relevanceReason}</p>
+                  )}
+                  <a
+                    href={market.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-black text-[var(--accent-violet)] hover:opacity-80"
+                  >
+                    Open Market
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              ))}
+            </div>
           </section>
         )}
       </div>
