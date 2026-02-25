@@ -2455,25 +2455,28 @@ async def stream_status(task_id: str) -> StreamingResponse:
                 yield f"data: {json.dumps(payload)}\n\n"
                 break
 
-            # Estimate progress based on current status/logs
+            # Estimate progress based on status and elapsed runtime so long
+            # researcher windows still show incremental forward motion.
+            now_dt = datetime.datetime.now(datetime.timezone.utc)
+            created_dt = _parse_iso(state.get("created_at")) or now_dt
+            elapsed_seconds = max(0, int((now_dt - created_dt).total_seconds()))
+
             progress = 0
             if state["status"] == QueryStatus.PENDING:
-                progress = 10
+                progress = min(15, 8 + max(0, elapsed_seconds // 3))
             elif state["status"] == QueryStatus.PLANNING:
-                progress = 25
+                progress = min(30, 18 + max(0, elapsed_seconds // 4))
             elif state["status"] == QueryStatus.RESEARCHING:
-                progress = 45
+                # Research can be long-running; ramp gradually from 32 -> 65.
+                research_elapsed = min(max(elapsed_seconds - 15, 0), 480)
+                progress = 32 + int((research_elapsed / 480.0) * 33)
             elif state["status"] == QueryStatus.PROCESSING:
-                # This status is used by Validator and Architect nodes
-                last_log = state.get("logs", [])[-1] if state.get("logs") else ""
-                if "Validat" in last_log:
-                    progress = 65
-                elif "Architect" in last_log:
-                    progress = 95
-                else:
-                    progress = 75
+                # Processing covers validation + architecture passes.
+                process_elapsed = min(max(elapsed_seconds - 120, 0), 420)
+                progress = 66 + int((process_elapsed / 420.0) * 20)
             elif state["status"] == QueryStatus.ANALYZING:
-                progress = 85
+                analyze_elapsed = min(max(elapsed_seconds - 240, 0), 600)
+                progress = 86 + int((analyze_elapsed / 600.0) * 11)
             elif state["status"] == QueryStatus.COMPLETED:
                 progress = 100
 
@@ -2481,7 +2484,7 @@ async def stream_status(task_id: str) -> StreamingResponse:
             # do not appear as regressions in the UI.
             previous_progress = int(state.get("progress", 0) or 0)
             if state["status"] != QueryStatus.COMPLETED:
-                progress = max(previous_progress, progress)
+                progress = min(99, max(previous_progress, progress))
             state["progress"] = progress
             payload = {
                 "type": "status",

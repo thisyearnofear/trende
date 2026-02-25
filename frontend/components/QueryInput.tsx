@@ -25,6 +25,7 @@ interface PlatformOption {
 type AugmentMode = 'auto' | 'on' | 'off';
 type ComposerStage = 'directive' | 'setup' | 'launch';
 type ControlsSection = 'profile' | 'sources' | 'augmentation' | 'models' | 'threshold';
+const CONTROLS_ORDER: ControlsSection[] = ['profile', 'sources', 'augmentation', 'models', 'threshold'];
 
 const DEFAULT_PLATFORM_SELECTION = ['newsapi', 'web', 'hackernews', 'stackexchange'] as const;
 const DEFAULT_MODEL_SELECTION = ['venice_default', 'venice_mistral', 'openrouter_llama_70b', 'openrouter_hermes', 'aisa'] as const;
@@ -382,6 +383,17 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
       goToStage('setup');
     }, 240);
   }, [goToStage]);
+  const currentControlIndex = CONTROLS_ORDER.indexOf(controlsSection);
+  const canGoPrevControl = currentControlIndex > 0;
+  const canGoNextControl = currentControlIndex >= 0 && currentControlIndex < CONTROLS_ORDER.length - 1;
+  const goPrevControl = useCallback(() => {
+    if (!canGoPrevControl) return;
+    setControlsSection(CONTROLS_ORDER[currentControlIndex - 1]);
+  }, [canGoPrevControl, currentControlIndex]);
+  const goNextControl = useCallback(() => {
+    if (!canGoNextControl) return;
+    setControlsSection(CONTROLS_ORDER[currentControlIndex + 1]);
+  }, [canGoNextControl, currentControlIndex]);
 
   useEffect(() => {
     emitMissionEvent({
@@ -521,8 +533,10 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                   type="button"
                   onClick={() => goToStage('directive')}
                   className={cn(
-                    "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all",
-                    composerStage === 'directive' ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-300" : "border-white/10 text-[var(--text-muted)]"
+                    "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                    composerStage === 'directive'
+                      ? "border-cyan-400/80 bg-cyan-500/15 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
+                      : "border-white/20 text-[var(--text-muted)] hover:border-cyan-400/50 hover:text-cyan-200"
                   )}
                 >
                   1 Directive
@@ -531,8 +545,10 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                   type="button"
                   onClick={() => goToStage('setup')}
                   className={cn(
-                    "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all",
-                    composerStage === 'setup' ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-300" : "border-white/10 text-[var(--text-muted)]",
+                    "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                    composerStage === 'setup'
+                      ? "border-cyan-400/80 bg-cyan-500/15 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
+                      : "border-white/20 text-[var(--text-muted)] hover:border-cyan-400/50 hover:text-cyan-200",
                     !advancedSeen && "animate-pulse"
                   )}
                 >
@@ -542,8 +558,10 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                   type="button"
                   onClick={() => goToStage('launch')}
                   className={cn(
-                    "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all",
-                    composerStage === 'launch' ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-300" : "border-white/10 text-[var(--text-muted)]"
+                    "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                    composerStage === 'launch'
+                      ? "border-emerald-400/80 bg-emerald-500/15 text-emerald-200 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]"
+                      : "border-white/20 text-[var(--text-muted)] hover:border-emerald-400/50 hover:text-emerald-200"
                   )}
                 >
                   3 Launch
@@ -660,10 +678,13 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                     type="button"
                     onClick={() => setControlsSection(id)}
                     className={cn(
-                      "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all",
-                      controlsSection === id ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-300" : "border-white/10 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                      "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5",
+                      controlsSection === id
+                        ? "border-cyan-400/80 bg-cyan-500/15 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
+                        : "border-white/20 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-cyan-400/50"
                     )}
                   >
+                    <span className={cn("w-1.5 h-1.5 rounded-full", controlsSection === id ? "bg-cyan-300" : "bg-white/35")} />
                     {label}
                   </button>
                 ))}
@@ -913,7 +934,27 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
               )}
 
               {composerStage === 'setup' && (
-                <div className="flex justify-end pt-2">
+                <div className="flex flex-wrap justify-between gap-3 pt-2">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="rounded-xl px-4"
+                      disabled={disabled || !canGoPrevControl}
+                      onClick={goPrevControl}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="rounded-xl px-4"
+                      disabled={disabled || !canGoNextControl}
+                      onClick={goNextControl}
+                    >
+                      Next
+                    </Button>
+                  </div>
                   <Button
                     type="button"
                     variant="secondary"
