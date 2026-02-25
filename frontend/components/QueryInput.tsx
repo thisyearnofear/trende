@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 
 interface QueryInputProps {
   onSubmit: (request: QueryRequest) => void;
+  onLaunchIntent?: () => void;
   isLoading?: boolean;
   disabled?: boolean;
 }
@@ -157,7 +158,7 @@ const SUGGESTIONS = [
   'What Base + Arbitrum L2 narratives are converging and where is momentum diverging by audience?',
 ];
 
-export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
+export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: QueryInputProps) {
   const [idea, setIdea] = useState('');
   const [platforms, setPlatforms] = useState<string[]>([...DEFAULT_PLATFORM_SELECTION]);
   const [models, setModels] = useState<string[]>([...DEFAULT_MODEL_SELECTION]);
@@ -271,7 +272,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
       }
     }
   }, [markAdvancedSeen]);
-  const effectiveShowAdvanced = composerStage !== 'directive' || showAdvanced;
+  const effectiveShowAdvanced = (composerStage !== 'directive' || showAdvanced) && !isLoading;
   const runtimeBreakdown = useMemo(() => {
     const sourceDurations = platforms.map((platform) => SOURCE_RUNTIME_SECONDS[platform] || 60);
     const modelDurations = models.map((model) => MODEL_RUNTIME_SECONDS[model] || 35);
@@ -431,6 +432,10 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!idea.trim() || isLoading || disabled || !hasPlatforms || !hasModels) return;
+    setShowAdvanced(false);
+    setComposerStage('directive');
+    setControlsSection('profile');
+    onLaunchIntent?.();
     submittedRef.current = true;
     emitMissionEvent({
       name: 'composer_submit',
@@ -460,6 +465,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
     runtimeEstimate.maxSeconds,
     totalCost,
     onSubmit,
+    onLaunchIntent,
     augmentation,
   ]);
 

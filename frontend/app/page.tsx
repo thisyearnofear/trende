@@ -167,10 +167,15 @@ export default function Home() {
   const [showCommons, setShowCommons] = useState(true);
   const [commonsSearch, setCommonsSearch] = useState("");
   const [commonsVisibleCount, setCommonsVisibleCount] = useState(2);
+  const [pendingProcessingFocus, setPendingProcessingFocus] = useState(false);
   const { showToast } = useToast();
   const { isConnected } = useWallet();
   const missionFocusRef = useRef<HTMLDivElement | null>(null);
   const commonsFocusRef = useRef<HTMLDivElement | null>(null);
+
+  const focusProcessingSection = useCallback(() => {
+    missionFocusRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   const handleStaleQuery = useCallback(
     (staleId: string) => {
@@ -247,20 +252,30 @@ export default function Home() {
         setLastQuery(requestWithVisibility);
         setRunStartedAtMs(Date.now());
         setElapsedSeconds(0);
+        setPendingProcessingFocus(true);
         const response = await startAnalysis(requestWithVisibility);
         setQueryId(response.id);
         if (typeof window !== "undefined") {
           window.localStorage.setItem(LAST_QUERY_STORAGE_KEY, response.id);
         }
         window.setTimeout(() => {
-          missionFocusRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 150);
+          focusProcessingSection();
+        }, 160);
       } catch (error) {
         console.error("Failed to start analysis:", error);
+        setPendingProcessingFocus(false);
       }
     },
-    [saveVisibility, startAnalysis],
+    [focusProcessingSection, saveVisibility, startAnalysis],
   );
+
+  useEffect(() => {
+    if (!pendingProcessingFocus || !isRunActive) return;
+    window.setTimeout(() => {
+      focusProcessingSection();
+      setPendingProcessingFocus(false);
+    }, 180);
+  }, [focusProcessingSection, isRunActive, pendingProcessingFocus]);
 
   const handleSelectHistory = (id: string) => {
     setQueryId(id);
@@ -1246,6 +1261,12 @@ export default function Home() {
           {/* Query Input */}
           <QueryInput
             onSubmit={handleSubmit}
+            onLaunchIntent={() => {
+              setPendingProcessingFocus(true);
+              window.setTimeout(() => {
+                focusProcessingSection();
+              }, 60);
+            }}
             isLoading={isRunActive}
             disabled={isRunActive}
           />

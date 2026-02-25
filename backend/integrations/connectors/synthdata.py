@@ -594,8 +594,18 @@ class SynthDataConnector(AbstractPlatformConnector):
                     for endpoint in endpoint_candidates:
                         response = await client.get(endpoint, headers=headers)
                         if response.status_code == 200:
-                            payload = response.json()
-                            break
+                            try:
+                                parsed = response.json()
+                            except ValueError:
+                                body_preview = (response.text or "")[:120].replace("\n", " ")
+                                print(
+                                    f"SynthData non-JSON response at {endpoint}: "
+                                    f"{response.headers.get('content-type', 'unknown')} {body_preview}"
+                                )
+                                continue
+                            if isinstance(parsed, dict):
+                                payload = parsed
+                                break
                 if not payload:
                     return []
 

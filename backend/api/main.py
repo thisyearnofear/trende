@@ -2121,16 +2121,30 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
         financial_intelligence = res_node.get("financial_intelligence", task.get("financial_intelligence"))
 
     top_trends = _derive_top_trends_from_findings(raw_findings or [], limit=5)
-    related_market_output = await _extract_related_prediction_markets(
-        topic=task.get("topic", ""),
-        financial_intelligence=financial_intelligence if isinstance(financial_intelligence, dict) else None,
-        top_trends=top_trends,
-        confidence_score=float(confidence_score or 0.0),
-        agreement_score=float((consensus_data or {}).get("agreement_score", 0.0) or 0.0),
-        findings_count=int(run_telemetry.get("findings_count", len(raw_findings or [])) or 0),
-        data_sufficiency=str(run_telemetry.get("data_sufficiency", "unknown")).strip().lower(),
-        limit=5,
-    )
+    related_market_output: dict[str, Any] = {
+        "markets": [],
+        "gating": {
+            "actionable": False,
+            "dataSufficiency": str(run_telemetry.get("data_sufficiency", "unknown")).strip().lower() or "unknown",
+            "findingsCount": int(run_telemetry.get("findings_count", len(raw_findings or [])) or 0),
+            "agreementScore": float((consensus_data or {}).get("agreement_score", 0.0) or 0.0),
+            "minFitScore": 45,
+        },
+        "suppressionReasons": [],
+    }
+    # Avoid expensive related-market network fan-out during active polling.
+    # Market enrichment is only required once the run reaches terminal state.
+    if task.get("status") == QueryStatus.COMPLETED:
+        related_market_output = await _extract_related_prediction_markets(
+            topic=task.get("topic", ""),
+            financial_intelligence=financial_intelligence if isinstance(financial_intelligence, dict) else None,
+            top_trends=top_trends,
+            confidence_score=float(confidence_score or 0.0),
+            agreement_score=float((consensus_data or {}).get("agreement_score", 0.0) or 0.0),
+            findings_count=int(run_telemetry.get("findings_count", len(raw_findings or [])) or 0),
+            data_sufficiency=str(run_telemetry.get("data_sufficiency", "unknown")).strip().lower(),
+            limit=5,
+        )
     related_markets = related_market_output.get("markets", [])
     source_breakdown = _derive_source_breakdown(raw_findings or [])
     chainlink_proof = _extract_chainlink_proof(raw_findings or [], task)
