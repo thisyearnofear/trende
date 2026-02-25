@@ -49,7 +49,7 @@ export function WalletButton({ showTier = false, compact = false }: WalletButton
                 return (
                   <button
                     onClick={openConnectModal}
-                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all ${compact ? 'px-2.5 py-1.5 text-xs' : ''}`}
+                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all min-h-[44px] ${compact ? 'px-2.5 text-xs' : ''}`}
                     style={{
                       borderColor: isSoft ? 'var(--accent-cyan)' : 'rgba(6, 182, 212, 0.35)',
                       background: isSoft
@@ -70,7 +70,7 @@ export function WalletButton({ showTier = false, compact = false }: WalletButton
                 return (
                   <button
                     onClick={openChainModal}
-                    className="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all"
+                    className="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all min-h-[44px]"
                     style={{
                       borderColor: isSoft ? 'var(--accent-rose)' : 'rgba(239, 68, 68, 0.35)',
                       backgroundColor: isSoft ? 'rgba(255, 76, 76, 0.14)' : 'rgba(239, 68, 68, 0.12)',
@@ -89,7 +89,7 @@ export function WalletButton({ showTier = false, compact = false }: WalletButton
                   
                   <button
                     onClick={openAccountModal}
-                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all ${compact ? 'px-2.5 py-1.5 text-xs' : ''}`}
+                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all min-h-[44px] ${compact ? 'px-2.5 text-xs' : ''}`}
                     style={{
                       borderColor: isSoft ? 'var(--accent-emerald)' : 'rgba(16, 185, 129, 0.35)',
                       backgroundColor: isSoft ? 'rgba(0, 170, 68, 0.16)' : 'rgba(16, 185, 129, 0.10)',

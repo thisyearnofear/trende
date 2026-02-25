@@ -794,7 +794,7 @@ export default function Home() {
               </div>
             </Link>
 
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-1.5">
               <Tooltip content="Connect wallet for saved mission history, ownership, and publishing permissions.">
                 <div>
                   <WalletButton compact />
@@ -808,7 +808,7 @@ export default function Home() {
               <Tooltip content="Refresh current mission state from backend.">
                 <div>
                   <IconButton
-                    icon={<RefreshCw className="w-5 h-5" />}
+                    icon={<RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />}
                     onClick={() => refresh()}
                     disabled={!queryId}
                     ariaLabel="Refresh"
@@ -818,7 +818,7 @@ export default function Home() {
               <Tooltip content="Open Mission History (recent + saved runs).">
                 <button
                   onClick={() => setShowHistory(!showHistory)}
-                  className={`p-2.5 min-h-[44px] min-w-[44px] border-2 transition-all flex items-center justify-center ${showHistory
+                  className={`p-2 sm:p-2.5 min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] border-2 transition-all flex items-center justify-center ${showHistory
                     ? "bg-[var(--text-primary)] text-[var(--bg-primary)]"
                     : "bg-[var(--bg-primary)] text-[var(--text-primary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)]"
                     } ${isSoft ? 'soft-ui-button border-0 rounded-xl' : ''}`}
@@ -831,7 +831,7 @@ export default function Home() {
                   }}
                   aria-label="History"
                 >
-                  <History className="w-5 h-5" />
+                  <History className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </Tooltip>
             </div>
@@ -862,7 +862,8 @@ export default function Home() {
               </h3>
               <button
                 onClick={() => setShowHistory(false)}
-                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] font-mono"
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] font-mono min-h-[44px] min-w-[44px] flex items-center justify-center px-3"
+                aria-label="Close history panel"
               >
                 [CLOSE]
               </button>
@@ -886,9 +887,9 @@ export default function Home() {
                 </Button>
               </div>
             </div>
-            <div className="p-4 overflow-y-auto">
+            <div className="p-3 sm:p-4 overflow-y-auto max-h-[calc(100vh-180px)]">
               {historyMode === "saved" && !isConnected ? (
-                <p className="text-[var(--text-muted)] font-mono text-sm">
+                <p className="text-[var(--text-muted)] font-mono text-xs sm:text-sm">
                   CONNECT WALLET TO VIEW SAVED RESEARCH
                 </p>
               ) : historyMode === "saved" ? (
@@ -897,12 +898,12 @@ export default function Home() {
                     {[1, 2, 3].map((i) => (
                       <div
                         key={i}
-                        className="h-16 bg-[var(--bg-primary)] border-2 border-[var(--text-muted)]"
+                        className="h-14 sm:h-16 bg-[var(--bg-primary)] border-2 border-[var(--text-muted)]"
                       />
                     ))}
                   </div>
                 ) : savedResearch.length === 0 ? (
-                  <p className="text-[var(--text-muted)] font-mono">
+                  <p className="text-[var(--text-muted)] font-mono text-xs sm:text-sm">
                     NO SAVED RUNS YET. SAVE A COMPLETED RUN TO SEE IT HERE.
                   </p>
                 ) : (
@@ -911,21 +912,21 @@ export default function Home() {
                       <button
                         key={item.id}
                         onClick={() => handleSelectHistory(item.id)}
-                        className="w-full text-left p-3 bg-[var(--bg-primary)] border-2 border-[var(--text-muted)] hover:border-[var(--accent-cyan)] transition-colors"
+                        className="w-full text-left p-2 sm:p-2.5 md:p-3 bg-[var(--bg-primary)] border-2 border-[var(--text-muted)] hover:border-[var(--accent-cyan)] transition-colors"
                       >
-                        <p className="text-sm line-clamp-2 font-mono">
+                        <p className="text-xs sm:text-sm line-clamp-2 font-mono">
                           {item.saveLabel || item.idea}
                         </p>
-                        <div className="flex items-center gap-2 mt-2 flex-wrap">
-                          <span className="text-xs px-2 py-0.5 font-mono bg-[var(--accent-emerald)] text-[var(--bg-primary)]">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 flex-wrap">
+                          <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 font-mono bg-[var(--accent-emerald)] text-[var(--bg-primary)]">
                             {item.visibility.toUpperCase()}
                           </span>
                           {item.ipfsUri && (
-                            <span className="text-xs px-2 py-0.5 font-mono bg-[var(--bg-secondary)] border border-[var(--border-color)]">
+                            <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 font-mono bg-[var(--bg-secondary)] border border-[var(--border-color)]">
                               ARCHIVED
                             </span>
                           )}
-                          <span className="text-xs text-[var(--text-muted)] font-mono">
+                          <span className="text-[10px] sm:text-xs text-[var(--text-muted)] font-mono">
                             {new Date(item.savedAt).toLocaleDateString()}
                           </span>
                         </div>
@@ -938,12 +939,12 @@ export default function Home() {
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="h-16 bg-[var(--bg-primary)] border-2 border-[var(--text-muted)]"
+                      className="h-14 sm:h-16 bg-[var(--bg-primary)] border-2 border-[var(--text-muted)]"
                     />
                   ))}
                 </div>
               ) : history.length === 0 ? (
-                <p className="text-[var(--text-muted)] font-mono">
+                <p className="text-[var(--text-muted)] font-mono text-xs sm:text-sm">
                   NO MISSIONS ON RECORD. THIS LIST SHOWS SERVER-STORED RUNS.
                 </p>
               ) : (
@@ -952,14 +953,14 @@ export default function Home() {
                     <button
                       key={item.id}
                       onClick={() => handleSelectHistory(item.id)}
-                      className="w-full text-left p-3 bg-[var(--bg-primary)] border-2 border-[var(--text-muted)] hover:border-[var(--accent-cyan)] transition-colors"
+                      className="w-full text-left p-2 sm:p-2.5 md:p-3 bg-[var(--bg-primary)] border-2 border-[var(--text-muted)] hover:border-[var(--accent-cyan)] transition-colors"
                     >
-                      <p className="text-sm line-clamp-2 font-mono">
+                      <p className="text-xs sm:text-sm line-clamp-2 font-mono">
                         {item.idea}
                       </p>
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
                         <span
-                          className={`text-xs px-2 py-0.5 font-mono ${item.status === "completed"
+                          className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 font-mono ${item.status === "completed"
                             ? "bg-[var(--accent-emerald)] text-[var(--bg-primary)]"
                             : item.status === "processing"
                               ? "bg-[var(--accent-amber)] text-[var(--bg-primary)]"
@@ -968,7 +969,7 @@ export default function Home() {
                         >
                           {item.status.toUpperCase()}
                         </span>
-                        <span className="text-xs text-[var(--text-muted)] font-mono">
+                        <span className="text-[10px] sm:text-xs text-[var(--text-muted)] font-mono">
                           {new Date(item.createdAt).toLocaleDateString()}
                         </span>
                       </div>

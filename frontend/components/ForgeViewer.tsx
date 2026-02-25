@@ -360,10 +360,10 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                     )}
                 >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3 sm:gap-4">
                             <div
                                 className={cn(
-                                    "w-14 h-14 flex items-center justify-center transition-all",
+                                    "w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center transition-all",
                                     isSoft ? 'soft-ui-out rounded-2xl' : `rounded-2xl shadow-lg ${isMeme ? 'bg-cyan-500 shadow-cyan-900/40' : 'bg-emerald-500 shadow-emerald-900/40'}`
                                 )}
                                 style={{ backgroundColor: isSoft ? 'transparent' : undefined }}
@@ -375,7 +375,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                 )}
                             </div>
                             <div className="flex-1">
-                                <h1 className={cn("text-2xl font-bold flex items-center gap-2", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>
+                                <h1 className={cn("text-xl sm:text-2xl font-bold flex items-center gap-2", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>
                                     {data.token?.name || 'Research Forge'}
                                     {data.token?.ticker && (
                                         <span className={cn("text-sm font-mono px-2 py-0.5 rounded", isSoft ? "soft-ui-in text-[var(--text-secondary)]" : "bg-slate-800 text-slate-400")}>
@@ -408,8 +408,8 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <div className="flex -space-x-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex -space-x-2 flex-wrap">
                                 {(providers.length > 0 ? providers : ['consensus']).slice(0, 5).map((model) => (
                                     <div
                                         key={model}
@@ -451,25 +451,25 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
 
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                     <section className={cn(
-                        "sm:col-span-2 p-4 sm:p-5 rounded-2xl",
+                        "sm:col-span-2 p-3 sm:p-5 rounded-2xl",
                         isSoft ? 'soft-ui-out border-0' : 'border border-slate-700/50 bg-slate-900/70'
                     )}>
                         <div className={cn("flex items-center gap-2 mb-3", isSoft ? "text-[var(--text-muted)]" : "text-slate-400")}>
                             <TrendingUp className="w-4 h-4" />
                             <span className="text-xs font-bold uppercase tracking-widest">Key Pillars</span>
                         </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-2 sm:gap-3 grid-cols-1">
                             {(data.thesis || []).map((point, i) => (
                                 <div
                                     key={i}
                                     className={cn(
-                                        "p-4 transition-all rounded-xl",
+                                        "p-2.5 sm:p-3 md:p-4 transition-all rounded-lg sm:rounded-xl",
                                         isSoft ? 'soft-ui-in' : 'bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800/70'
                                     )}
                                 >
-                                    <div className="flex gap-3">
-                                        <span className={cn("font-mono font-bold", isSoft ? 'text-[var(--accent-cyan)]' : 'text-cyan-400')}>{i + 1}.</span>
-                                        <p className={cn("text-sm leading-relaxed", isSoft ? 'text-[var(--text-secondary)]' : 'text-slate-300')}>{point}</p>
+                                    <div className="flex gap-2 sm:gap-3">
+                                        <span className={cn("font-mono font-bold text-sm", isSoft ? 'text-[var(--accent-cyan)]' : 'text-cyan-400')}>{i + 1}.</span>
+                                        <p className={cn("text-xs sm:text-sm leading-relaxed", isSoft ? 'text-[var(--text-secondary)]' : 'text-slate-300')}>{point}</p>
                                     </div>
                                 </div>
                             ))}
@@ -479,7 +479,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                     {isMeme ? (
                         <>
                             <section className={cn(
-                                "p-4 rounded-2xl",
+                                "p-3 sm:p-4 rounded-2xl",
                                 isSoft ? 'soft-ui-out border-0' : 'border border-slate-700/50 bg-slate-900/70'
                             )}>
                                 <div className={cn("flex items-center gap-2 mb-3", isSoft ? "text-[var(--text-muted)]" : "text-slate-400")}>
@@ -487,7 +487,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                     <span className="text-xs font-bold uppercase tracking-widest">Brand Aesthetic</span>
                                 </div>
                                 <div className={cn(
-                                    "p-4 rounded-xl border flex items-center justify-between",
+                                    "p-3 sm:p-4 rounded-xl border flex items-center justify-between",
                                     isSoft ? "soft-ui-in border-0" : "bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700"
                                 )}>
                                     <div>
@@ -506,21 +506,21 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                             </section>
 
                             <section className={cn(
-                                "p-4 rounded-2xl",
+                                "p-3 sm:p-4 rounded-2xl",
                                 isSoft ? 'soft-ui-out border-0' : 'border border-slate-700/50 bg-slate-900/70'
                             )}>
                                 <div className={cn("flex items-center gap-2 mb-3", isSoft ? "text-[var(--text-muted)]" : "text-slate-400")}>
                                     <Info className="w-4 h-4" />
                                     <span className="text-xs font-bold uppercase tracking-widest">Consensus Metrics</span>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className={cn("p-4 rounded-xl", isSoft ? "soft-ui-in" : "bg-slate-800/40 border border-slate-700/50")}>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className={cn("p-3 sm:p-4 rounded-xl", isSoft ? "soft-ui-in" : "bg-slate-800/40 border border-slate-700/50")}>
                                         <p className={cn("text-[10px] uppercase font-bold tracking-tighter mb-1", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>
                                             Model agreement
                                         </p>
                                         <p className="text-xl font-bold text-[var(--accent-emerald)]">{agreement}%</p>
                                     </div>
-                                    <div className={cn("p-4 rounded-xl", isSoft ? "soft-ui-in" : "bg-slate-800/40 border border-slate-700/50")}>
+                                    <div className={cn("p-3 sm:p-4 rounded-xl", isSoft ? "soft-ui-in" : "bg-slate-800/40 border border-slate-700/50")}>
                                         <p className={cn("text-[10px] uppercase font-bold tracking-tighter mb-1", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>
                                             Divergence level
                                         </p>
@@ -534,7 +534,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                     ) : (
                         <>
                             <section className={cn(
-                                "sm:col-span-2 xl:col-span-2 p-5 rounded-2xl shadow-lg",
+                                "sm:col-span-2 xl:col-span-2 p-4 sm:p-5 rounded-2xl shadow-lg",
                                 isSoft ? 'soft-ui-out' : 'bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-2 border-emerald-500/30'
                             )}>
                                 <div className="flex items-start justify-between mb-4">
@@ -751,24 +751,24 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                     )}
 
                     <section className={cn(
-                        "sm:col-span-2 xl:col-span-2 p-4 rounded-2xl",
+                        "sm:col-span-2 xl:col-span-2 p-3 sm:p-4 rounded-2xl",
                         isSoft ? 'soft-ui-out border-0' : 'border border-slate-700/50 bg-slate-900/70'
                     )}>
                         <div className={cn("flex items-center gap-2 mb-3", isSoft ? "text-[var(--text-muted)]" : "text-slate-400")}>
                             <ExternalLink className="w-4 h-4" />
                             <span className="text-xs font-bold uppercase tracking-widest">Alpha Citations</span>
                         </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-2 sm:gap-3 grid-cols-1">
                             {(data.citations || []).map((cite, i) => (
                                 <div
                                     key={i}
                                     className={cn(
-                                        "p-4 rounded-xl border transition-all group",
+                                        "p-2.5 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border transition-all group",
                                         isSoft ? "soft-ui-in border-0" : "bg-slate-900 border-slate-800 hover:border-slate-700"
                                     )}
                                 >
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
                                             <p className={cn("text-[10px] font-bold uppercase tracking-tighter mb-1", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>
                                                 {cite.source || 'Source'}
                                             </p>
@@ -781,7 +781,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                                 href={cite.url}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className={cn("p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity", isSoft ? "soft-ui-button" : "bg-slate-800 text-slate-400")}
+                                                className={cn("p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0", isSoft ? "soft-ui-button" : "bg-slate-800 text-slate-400")}
                                             >
                                                 <ExternalLink className="w-3.5 h-3.5" />
                                             </a>
@@ -818,40 +818,40 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-                        <div className={cn("rounded-xl border p-3", isSoft ? "soft-ui-in border-0" : "border-slate-800 bg-slate-900/70")}>
+                        <div className={cn("rounded-xl border p-2.5 sm:p-3", isSoft ? "soft-ui-in border-0" : "border-slate-800 bg-slate-900/70")}>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent-emerald)] mb-1">Trader Flow</p>
                             <p className={cn("text-xs", isSoft ? "text-[var(--text-secondary)]" : "text-slate-400")}>Trader agent requests thesis, execution agent acts only when proof is verified.</p>
                         </div>
-                        <div className={cn("rounded-xl border p-3", isSoft ? "soft-ui-in border-0" : "border-slate-800 bg-slate-900/70")}>
+                        <div className={cn("rounded-xl border p-2.5 sm:p-3", isSoft ? "soft-ui-in border-0" : "border-slate-800 bg-slate-900/70")}>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent-cyan)] mb-1">DAO Risk Flow</p>
                             <p className={cn("text-xs", isSoft ? "text-[var(--text-secondary)]" : "text-slate-400")}>Risk agent submits attested findings for governance review and vote staging.</p>
                         </div>
-                        <div className={cn("rounded-xl border p-3", isSoft ? "soft-ui-in border-0" : "border-slate-800 bg-slate-900/70")}>
+                        <div className={cn("rounded-xl border p-2.5 sm:p-3", isSoft ? "soft-ui-in border-0" : "border-slate-800 bg-slate-900/70")}>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent-amber)] mb-1">Creator Flow</p>
                             <p className={cn("text-xs", isSoft ? "text-[var(--text-secondary)]" : "text-slate-400")}>Publishing agent drafts from citations while preserving provenance and proof links.</p>
                         </div>
                     </div>
 
                     {/* Agentic Action Matrix */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-6 border-t border-white/5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pt-6 border-t border-white/5">
                         <button
                             onClick={handleDeployToken}
                             disabled={isDeploying}
                             className={cn(
-                                "flex items-center justify-between p-4 rounded-2xl transition-all group lg:col-span-1",
+                                "flex items-center justify-between p-3 sm:p-4 rounded-2xl transition-all group lg:col-span-1",
                                 isSoft ? "soft-ui-button" : "bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-amber-500/5"
                             )}
                         >
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3 sm:gap-4">
                                 <div className={cn(
-                                    "w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
+                                    "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
                                     isSoft ? "soft-ui-out border-0" : "bg-amber-500/10 border-amber-500/20"
                                 )}>
-                                    <Rocket className="w-5 h-5 text-[var(--accent-amber)]" />
+                                    <Rocket className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--accent-amber)]" />
                                 </div>
                                 <div className="text-left">
-                                    <div className={cn("text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Deploy Token</div>
-                                    <div className={cn("text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Launch {data.token?.ticker || 'ALPHA'} on BNB Chain</div>
+                                    <div className={cn("text-[11px] sm:text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Deploy Token</div>
+                                    <div className={cn("text-[9px] sm:text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Launch {data.token?.ticker || 'ALPHA'} on BNB Chain</div>
                                 </div>
                             </div>
                             <Zap className={cn("w-4 h-4 transition-colors", isSoft ? "text-[var(--text-muted)] group-hover:text-[var(--accent-amber)]" : "text-slate-700 group-hover:text-amber-500")} />
@@ -861,20 +861,20 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                             onClick={handleDraftArticle}
                             disabled={isDrafting}
                             className={cn(
-                                "flex items-center justify-between p-4 rounded-2xl transition-all group lg:col-span-1",
+                                "flex items-center justify-between p-3 sm:p-4 rounded-2xl transition-all group lg:col-span-1",
                                 isSoft ? "soft-ui-button" : "bg-slate-950 border border-slate-800 hover:border-cyan-500/50 hover:bg-cyan-500/5"
                             )}
                         >
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3 sm:gap-4">
                                 <div className={cn(
-                                    "w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
+                                    "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
                                     isSoft ? "soft-ui-out border-0" : "bg-cyan-500/10 border-cyan-500/20"
                                 )}>
-                                    <PenLine className="w-5 h-5 text-[var(--accent-cyan)]" />
+                                    <PenLine className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--accent-cyan)]" />
                                 </div>
                                 <div className="text-left">
-                                    <div className={cn("text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Draft Article</div>
-                                    <div className={cn("text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Construct Paragraph post with citations</div>
+                                    <div className={cn("text-[11px] sm:text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Draft Article</div>
+                                    <div className={cn("text-[9px] sm:text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Construct Paragraph post with citations</div>
                                 </div>
                             </div>
                             <Zap className={cn("w-4 h-4 transition-colors", isSoft ? "text-[var(--text-muted)] group-hover:text-[var(--accent-cyan)]" : "text-slate-700 group-hover:text-cyan-500")} />
@@ -885,20 +885,20 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                 onClick={handleDraftPodcast}
                                 disabled={isPodcasting}
                                 className={cn(
-                                    "flex items-center justify-between p-4 rounded-2xl transition-all group lg:col-span-1",
+                                    "flex items-center justify-between p-3 sm:p-4 rounded-2xl transition-all group lg:col-span-1",
                                     isSoft ? "soft-ui-button" : "bg-slate-950 border border-slate-800 hover:border-fuchsia-500/50 hover:bg-fuchsia-500/5"
                                 )}
                             >
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3 sm:gap-4">
                                     <div className={cn(
-                                        "w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
+                                        "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
                                         isSoft ? "soft-ui-out border-0" : "bg-fuchsia-500/10 border-fuchsia-500/20"
                                     )}>
-                                        <Mic className="w-5 h-5 text-fuchsia-400" />
+                                        <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-fuchsia-400" />
                                     </div>
                                     <div className="text-left">
-                                        <div className={cn("text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Draft Podcast</div>
-                                        <div className={cn("text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Generate transcript + citations pack</div>
+                                        <div className={cn("text-[11px] sm:text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Draft Podcast</div>
+                                        <div className={cn("text-[9px] sm:text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Generate transcript + citations pack</div>
                                     </div>
                                 </div>
                                 <Zap className={cn("w-4 h-4 transition-colors", isSoft ? "text-[var(--text-muted)] group-hover:text-fuchsia-400" : "text-slate-700 group-hover:text-fuchsia-400")} />
@@ -927,20 +927,20 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                             }}
                             disabled={isMonitoring}
                             className={cn(
-                                "flex items-center justify-between p-4 rounded-2xl transition-all group lg:col-span-1",
+                                "flex items-center justify-between p-3 sm:p-4 rounded-2xl transition-all group lg:col-span-1",
                                 isSoft ? "soft-ui-button" : "bg-slate-950 border border-slate-800 hover:border-emerald-500/50 hover:bg-emerald-500/5"
                             )}
                         >
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3 sm:gap-4">
                                 <div className={cn(
-                                    "w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
+                                    "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
                                     isSoft ? "soft-ui-out border-0" : "bg-emerald-500/10 border-emerald-500/20"
                                 )}>
-                                    <TrendingUp className="w-5 h-5 text-[var(--accent-emerald)]" />
+                                    <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--accent-emerald)]" />
                                 </div>
                                 <div className="text-left">
-                                    <div className={cn("text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Activate Sentinel</div>
-                                    <div className={cn("text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Enable recursive monitoring & alerts</div>
+                                    <div className={cn("text-[11px] sm:text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Activate Sentinel</div>
+                                    <div className={cn("text-[9px] sm:text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Enable recursive monitoring & alerts</div>
                                 </div>
                             </div>
                             <Sparkles className={cn("w-4 h-4 transition-colors", isSoft ? "text-[var(--text-muted)] group-hover:text-[var(--accent-emerald)]" : "text-slate-700 group-hover:text-emerald-500")} />
@@ -964,20 +964,20 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                 }
                             }}
                             className={cn(
-                                "flex items-center justify-between p-4 rounded-2xl transition-all group lg:col-span-1",
+                                "flex items-center justify-between p-3 sm:p-4 rounded-2xl transition-all group lg:col-span-1",
                                 isSoft ? "soft-ui-button" : "bg-slate-950 border border-slate-800 hover:border-cyan-500/50 hover:bg-cyan-500/5"
                             )}
                         >
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3 sm:gap-4">
                                 <div className={cn(
-                                    "w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
+                                    "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
                                     isSoft ? "soft-ui-out border-0" : "bg-cyan-500/10 border-cyan-500/20"
                                 )}>
-                                    <ShieldCheck className="w-5 h-5 text-[var(--accent-cyan)]" />
+                                    <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--accent-cyan)]" />
                                 </div>
                                 <div className="text-left">
-                                    <div className={cn("text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Oracle Settlement</div>
-                                    <div className={cn("text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Stage on-chain prediction for Base/Arb</div>
+                                    <div className={cn("text-[11px] sm:text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Oracle Settlement</div>
+                                    <div className={cn("text-[9px] sm:text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Stage on-chain prediction for Base/Arb</div>
                                 </div>
                             </div>
                             <TrendingUp className={cn("w-4 h-4 transition-colors", isSoft ? "text-[var(--text-muted)] group-hover:text-[var(--accent-cyan)]" : "text-slate-700 group-hover:text-cyan-500")} />
@@ -1000,20 +1000,20 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                     }
                                 }}
                                 className={cn(
-                                    "flex items-center justify-between p-4 rounded-2xl transition-all group lg:col-span-1 animate-pulse",
+                                    "flex items-center justify-between p-3 sm:p-4 rounded-2xl transition-all group lg:col-span-1 animate-pulse",
                                     isSoft ? "soft-ui-button border-[var(--accent-emerald)]/30" : "bg-emerald-950/30 border border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/10"
                                 )}
                             >
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3 sm:gap-4">
                                     <div className={cn(
-                                        "w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
+                                        "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
                                         isSoft ? "soft-ui-out border-0" : "bg-emerald-500/10 border-emerald-500/20"
                                     )}>
-                                        <Zap className="w-5 h-5 text-[var(--accent-emerald)]" />
+                                        <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--accent-emerald)]" />
                                     </div>
                                     <div className="text-left">
-                                        <div className={cn("text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Finalize Oracle</div>
-                                        <div className={cn("text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Trigger final settlement consensus</div>
+                                        <div className={cn("text-[11px] sm:text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Finalize Oracle</div>
+                                        <div className={cn("text-[9px] sm:text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Trigger final settlement consensus</div>
                                     </div>
                                 </div>
                                 <ShieldCheck className="w-4 h-4 text-[var(--accent-emerald)] transition-colors" />

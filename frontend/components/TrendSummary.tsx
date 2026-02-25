@@ -165,7 +165,7 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
     <Card accent="white" shadow="md" className={cn("p-0 overflow-hidden group", isSoft ? "soft-ui-out border-0" : "glass border-white/10")}>
       {/* Premium Header */}
       <div className={cn(
-        "border-b p-5 flex items-center justify-between",
+        "border-b p-4 sm:p-5 flex items-center justify-between gap-3",
         isSoft ? "border-[var(--text-muted)]/10" : "bg-gradient-to-r from-transparent via-white/5 to-transparent border-white/10"
       )}>
         <div className="flex items-center gap-3">
@@ -179,11 +179,11 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
           </div>
         </div>
         <div className={cn(
-          "flex items-center gap-2 px-3 py-1.5 rounded-full",
+          "flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-full shrink-0",
           isSoft ? "soft-ui-in" : "glass border-white/5"
         )}>
           {getSentimentIcon()}
-          <span className="text-xs font-black uppercase tracking-wider text-[var(--text-primary)]">{summary.sentiment}</span>
+          <span className="text-xs font-black uppercase tracking-wider text-[var(--text-primary)] whitespace-nowrap">{summary.sentiment}</span>
         </div>
       </div>
 
@@ -220,7 +220,7 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
         {/* Neural Consensus Matrix */}
         {consensus && (
           <section className={cn(
-            "rounded-xl p-5 relative overflow-hidden",
+            "rounded-xl p-4 sm:p-5 relative overflow-hidden",
             isSoft ? "soft-ui-in" : "glass border-amber-500/20"
           )}>
             <div className="absolute top-0 right-0 p-2">
@@ -241,7 +241,7 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
               </Badge>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-4">
                 <div className="flex items-end justify-between">
                   <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Model Agreement</p>
@@ -252,14 +252,14 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
 
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Participating Oracles</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-1.5">
                   {consensus.providers?.map((p) => (
                     <div key={p} className={cn(
-                      "flex items-center gap-2 px-2 py-1 rounded-md",
+                      "flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[9px] sm:text-[10px]",
                       isSoft ? "soft-ui-out" : "glass border-white/5"
                     )}>
                       <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-cyan)] shadow-[0_0_8px_var(--accent-cyan)]" />
-                      <span className="text-[10px] uppercase font-bold text-[var(--text-secondary)] tracking-tight">{p}</span>
+                      <span className="uppercase font-bold text-[var(--text-secondary)] tracking-tight truncate">{p}</span>
                     </div>
                   ))}
                 </div>
@@ -286,7 +286,7 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
         )}
 
         {/* Signals & Trust */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
           {/* High Impact Signals */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -299,17 +299,17 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
                 : (summary.validationResults || []).slice(0, 3).map((log) => ({ title: log }))
               ).map((trend, index) => (
                 <div key={index} className={cn(
-                  "flex items-start gap-3 p-3 rounded-lg group/item transition-colors",
+                  "flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg group/item transition-colors",
                   isSoft ? "soft-ui-out" : "glass-cyan border-cyan-500/10 hover:bg-cyan-500/10"
                 )}>
                   <span className={cn(
-                    "text-[10px] font-black w-5 h-5 flex items-center justify-center rounded",
+                    "text-[10px] font-black w-5 h-5 flex items-center justify-center rounded shrink-0",
                     isSoft ? "bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)]" : "text-cyan-400 bg-cyan-500/10"
                   )}>
                     0{index + 1}
                   </span>
                   <p className={cn(
-                    "text-xs transition-colors",
+                    "text-[11px] sm:text-xs transition-colors leading-relaxed",
                     isSoft ? "text-[var(--text-secondary)] group-hover/item:text-[var(--text-primary)]" : "text-white/80 group-hover/item:text-white"
                   )}>
                     {typeof trend === 'object' && 'title' in trend ? (trend.title as string) : String(trend)}
@@ -320,18 +320,18 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
           </div>
 
           {/* Research Integrity */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-[var(--accent-emerald)]" />
               <h4 className="text-xs font-black uppercase tracking-wider text-[var(--text-secondary)]">Integrity Score</h4>
             </div>
             <div className={cn(
-              "rounded-xl p-4 space-y-4",
+              "rounded-xl p-3 sm:p-4 space-y-3 sm:space-y-4",
               isSoft ? "soft-ui-out" : "glass border-emerald-500/10"
             )}>
               <div className="flex items-baseline justify-between">
                 <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Confidence Index</p>
-                <p className="text-xl font-black text-[var(--accent-emerald)]">{confidence}%</p>
+                <p className="text-lg sm:text-xl font-black text-[var(--accent-emerald)]">{confidence}%</p>
               </div>
               <Progress value={confidence} accent="emerald" className="h-1.5" />
 
@@ -357,7 +357,7 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
 
         {financial && (
           <section className={cn(
-            "rounded-xl p-5 space-y-4",
+            "rounded-xl p-4 sm:p-5 space-y-4",
             isSoft ? "soft-ui-in" : "glass border-cyan-500/15"
           )}>
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -389,11 +389,11 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
             )}
 
             {assetRows.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {assetRows.map((asset) => {
                   const p50 = asset.forecast_7d?.p50 ?? asset.forecast_7d?.median;
                   return (
-                    <div key={asset.symbol} className={cn("rounded-lg p-3", isSoft ? "soft-ui-out" : "bg-slate-900/60 border border-white/5")}>
+                    <div key={asset.symbol} className={cn("rounded-lg p-2.5 sm:p-3", isSoft ? "soft-ui-out" : "bg-slate-900/60 border border-white/5")}>
                       <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">{asset.symbol}</p>
                       {typeof asset.current_price === "number" && (
                         <p className="text-xs text-[var(--text-primary)]">Now: ${asset.current_price.toLocaleString()}</p>
@@ -426,21 +426,21 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
                 Beta
               </Badge>
             </div>
-            <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-2", isSoft ? "text-[var(--text-secondary)]" : "text-white/70")}>
-              <label className="text-[10px] font-mono flex items-center gap-2">
-                <input type="checkbox" checked={highFitOnly} onChange={(e) => setHighFitOnly(e.target.checked)} />
-                Show only high-fit
+            <div className="grid grid-cols-1 gap-2">
+              <label className="text-[10px] font-mono flex items-center gap-1.5 sm:gap-2">
+                <input type="checkbox" checked={highFitOnly} onChange={(e) => setHighFitOnly(e.target.checked)} className="shrink-0" />
+                <span className="whitespace-nowrap">Show only high-fit</span>
               </label>
-              <label className="text-[10px] font-mono flex items-center gap-2">
-                <input type="checkbox" checked={hideLowLiquidity} onChange={(e) => setHideLowLiquidity(e.target.checked)} />
-                Hide low-liquidity
+              <label className="text-[10px] font-mono flex items-center gap-1.5 sm:gap-2">
+                <input type="checkbox" checked={hideLowLiquidity} onChange={(e) => setHideLowLiquidity(e.target.checked)} className="shrink-0" />
+                <span className="whitespace-nowrap">Hide low-liquidity</span>
               </label>
-              <label className="text-[10px] font-mono flex items-center gap-2">
-                Min expiry
+              <label className="text-[10px] font-mono flex items-center gap-1.5 sm:gap-2">
+                <span className="whitespace-nowrap">Min expiry</span>
                 <select
                   value={minExpiryDays}
                   onChange={(e) => setMinExpiryDays(Number(e.target.value))}
-                  className={cn("bg-transparent border rounded px-2 py-1 text-[10px]", isSoft ? "border-[var(--text-muted)]/20" : "border-white/20")}
+                  className={cn("bg-transparent border rounded px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px]", isSoft ? "border-[var(--text-muted)]/20" : "border-white/20")}
                 >
                   <option value={0}>Any</option>
                   <option value={1}>1d+</option>
@@ -471,37 +471,37 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
                 )}
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               {filteredMarkets.map((market, index) => (
-                <div key={`${market.url}-${index}`} className={cn("rounded-lg p-3 space-y-2", isSoft ? "soft-ui-out" : "bg-slate-900/60 border border-white/5")}>
+                <div key={`${market.url}-${index}`} className={cn("rounded-lg p-2.5 sm:p-3 space-y-2", isSoft ? "soft-ui-out" : "bg-slate-900/60 border border-white/5")}>
                   <div className="flex items-start justify-between gap-3">
                     <p className="text-xs text-[var(--text-primary)] leading-relaxed">{market.title}</p>
-                    <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)]">{market.provider}</span>
+                    <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] shrink-0">{market.provider}</span>
                   </div>
-                  <div className="flex flex-wrap gap-2 text-[10px] font-mono">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2 text-[10px] font-mono">
                     {typeof market.fitScore === "number" && (
-                      <span className={cn("px-2 py-0.5 rounded", market.fitLabel === 'high' ? "bg-emerald-500/15 text-emerald-300" : market.fitLabel === 'medium' ? "bg-amber-500/15 text-amber-300" : "bg-rose-500/15 text-rose-300")}>
+                      <span className={cn("px-1.5 sm:px-2 py-0.5 rounded", market.fitLabel === 'high' ? "bg-emerald-500/15 text-emerald-300" : market.fitLabel === 'medium' ? "bg-amber-500/15 text-amber-300" : "bg-rose-500/15 text-rose-300")}>
                         Fit {market.fitScore}%
                       </span>
                     )}
                     {typeof market.probability === "number" && (
-                      <span className={cn("px-2 py-0.5 rounded", isSoft ? "bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)]" : "bg-cyan-500/10 text-cyan-300")}>
+                      <span className={cn("px-1.5 sm:px-2 py-0.5 rounded", isSoft ? "bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)]" : "bg-cyan-500/10 text-cyan-300")}>
                         {(market.probability * 100).toFixed(1)}%
                       </span>
                     )}
                     {typeof market.volume === "number" && (
-                      <span className={cn("px-2 py-0.5 rounded", isSoft ? "bg-[var(--accent-amber)]/10 text-[var(--accent-amber)]" : "bg-amber-500/10 text-amber-300")}>
+                      <span className={cn("px-1.5 sm:px-2 py-0.5 rounded", isSoft ? "bg-[var(--accent-amber)]/10 text-[var(--accent-amber)]" : "bg-amber-500/10 text-amber-300")}>
                         Vol ${market.volume.toLocaleString()}
                       </span>
                     )}
                     {typeof market.daysToResolution === "number" && (
-                      <span className={cn("px-2 py-0.5 rounded", isSoft ? "bg-[var(--accent-violet)]/10 text-[var(--accent-violet)]" : "bg-violet-500/10 text-violet-300")}>
+                      <span className={cn("px-1.5 sm:px-2 py-0.5 rounded", isSoft ? "bg-[var(--accent-violet)]/10 text-[var(--accent-violet)]" : "bg-violet-500/10 text-violet-300")}>
                         {market.daysToResolution.toFixed(1)}d
                       </span>
                     )}
                   </div>
                   {market.relevanceReason && (
-                    <p className="text-[10px] text-[var(--text-muted)] font-mono">{market.relevanceReason}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] font-mono line-clamp-2">{market.relevanceReason}</p>
                   )}
                   <button
                     type="button"
@@ -523,20 +523,20 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
 
       {/* Footer Meta */}
       <div className={cn(
-        "px-6 py-4 flex items-center justify-between",
+        "px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0",
         isSoft ? "soft-ui-in rounded-none" : "bg-black/40 border-t border-white/5"
       )}>
         <div className={cn(
-          "flex items-center gap-2 text-[10px] uppercase tracking-[0.2em]",
+          "flex items-center gap-2 text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em]",
           isSoft ? "text-[var(--text-muted)]" : "text-white/30"
         )}>
-          <Clock className="w-3 h-3" />
-          <span>Fulfillment: {formatDistanceToNow(new Date(summary.generatedAt), { addSuffix: true })}</span>
+          <Clock className="w-3 h-3 shrink-0" />
+          <span className="truncate">Fulfillment: {formatDistanceToNow(new Date(summary.generatedAt), { addSuffix: true })}</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)] animate-pulse" />
           <span className={cn(
-            "text-[10px] font-black uppercase",
+            "text-[9px] sm:text-[10px] font-black uppercase whitespace-nowrap",
             isSoft ? "text-[var(--text-muted)]" : "text-white/40"
           )}>Attested on EigenCompute</span>
         </div>

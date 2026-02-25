@@ -522,18 +522,18 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
           </div>
 
           {/* Starter Missions */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-cyan-400 opacity-60" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Mission Stages</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
                 <button
                   type="button"
                   onClick={() => goToStage('directive')}
                   className={cn(
-                    "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                    "px-1.5 py-1 sm:px-2 rounded border text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
                     composerStage === 'directive'
                       ? "border-cyan-400/80 bg-cyan-500/15 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
                       : "border-white/20 text-[var(--text-muted)] hover:border-cyan-400/50 hover:text-cyan-200"
@@ -545,7 +545,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                   type="button"
                   onClick={() => goToStage('setup')}
                   className={cn(
-                    "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                    "px-1.5 py-1 sm:px-2 rounded border text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
                     composerStage === 'setup'
                       ? "border-cyan-400/80 bg-cyan-500/15 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
                       : "border-white/20 text-[var(--text-muted)] hover:border-cyan-400/50 hover:text-cyan-200",
@@ -558,7 +558,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                   type="button"
                   onClick={() => goToStage('launch')}
                   className={cn(
-                    "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                    "px-1.5 py-1 sm:px-2 rounded border text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
                     composerStage === 'launch'
                       ? "border-emerald-400/80 bg-emerald-500/15 text-emerald-200 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]"
                       : "border-white/20 text-[var(--text-muted)] hover:border-emerald-400/50 hover:text-emerald-200"
@@ -570,7 +570,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
             </div>
 
             {composerStage === 'directive' && (
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 {SUGGESTIONS.slice(0, 3).map((suggestion) => (
                   <button
                     key={suggestion}
@@ -578,19 +578,19 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                     onClick={() => setIdea(suggestion)}
                     disabled={disabled}
                     className={cn(
-                      "flex-1 text-xs font-mono px-4 py-3 rounded-2xl glass transition-all text-left flex flex-col justify-between min-h-[80px]",
+                      "flex-1 text-[11px] sm:text-xs font-mono p-2.5 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl glass transition-all text-left flex flex-col justify-between",
                       selectedSuggestion === suggestion
                         ? "border-cyan-400/70 bg-cyan-500/10 text-[var(--text-primary)] shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
                         : "border-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-cyan-400/50 hover:bg-white/10"
                     )}
                   >
                     <span className={cn(
-                      "font-black uppercase tracking-[0.2em] text-[10px] block mb-2",
+                      "font-black uppercase tracking-[0.2em] text-[9px] sm:text-[10px] block mb-1.5 sm:mb-2",
                       selectedSuggestion === suggestion ? "text-cyan-300 opacity-100" : "text-[var(--accent-cyan)] opacity-60"
                     )}>
                       {selectedSuggestion === suggestion ? "Selected" : "One-Click"}
                     </span>
-                    <span className="line-clamp-3 leading-relaxed">{suggestion}</span>
+                    <span className="line-clamp-2 sm:line-clamp-3 leading-relaxed">{suggestion}</span>
                   </button>
                 ))}
               </div>
@@ -606,8 +606,8 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                 onChange={(e) => setIdea(e.target.value)}
                 placeholder="Brief your agent... e.g., 'Investigate DePIN + AI compute convergence. Identify where builder momentum diverges from market narrative across HN, CoinGecko, and Web sources.'"
                 disabled={disabled}
-                rows={4}
-                className="w-full bg-black/40 glass border-white/10 rounded-2xl p-6 text-base font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-white/30 transition-all resize-none shadow-inner"
+                rows={3}
+                className="w-full bg-black/40 glass border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-sm sm:text-base font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-white/30 transition-all resize-none shadow-inner"
               />
             </div>
           </div>
@@ -700,7 +700,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                 <p className="text-[10px] font-mono text-[var(--text-muted)]">
                   Profiles are presets. You can still add or remove any sources, models, and thresholds in the sections below.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {MISSION_PROFILES.map((profile) => {
                     const active = activeProfile?.id === profile.id;
                     return (
@@ -710,20 +710,20 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                         onClick={() => applyProfile(profile.id)}
                         disabled={disabled}
                         className={cn(
-                          "flex flex-col text-left p-4 transition-all duration-500 glass relative overflow-hidden group/card rounded-2xl",
+                          "flex flex-col text-left p-2.5 sm:p-3 md:p-4 transition-all duration-500 glass relative overflow-hidden group/card rounded-xl sm:rounded-2xl",
                           active ? "border-white/30" : "border-white/5 opacity-60 hover:opacity-100 hover:border-white/10"
                         )}
                       >
                         {active && <div className="absolute inset-0 bg-white/[0.03] animate-pulse" />}
-                        <div className="flex items-center gap-3 mb-2 relative z-10">
+                        <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2 relative z-10">
                           <div className={cn(
-                            "w-6 h-6 rounded-lg flex items-center justify-center border transition-all duration-500",
+                            "w-5 h-5 sm:w-6 sm:h-6 rounded-lg flex items-center justify-center border transition-all duration-500",
                             active ? "bg-white/10 border-white/20" : "bg-white/5 border-white/10"
                           )}>
                             <profile.icon className="w-3 h-3" style={{ color: active ? profile.accent : 'rgba(255,255,255,0.3)' }} />
                           </div>
                           <span className={cn(
-                            "text-[10px] font-black uppercase tracking-widest transition-colors duration-500",
+                            "text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-colors duration-500",
                             active ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"
                           )}>{profile.label}</span>
                         </div>
@@ -747,7 +747,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Source Matrix Selection</span>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                   {PLATFORM_OPTIONS.map((platform) => {
                     const active = platforms.includes(platform.id);
                     const unavailable = !platform.enabled;
@@ -759,14 +759,14 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                         onClick={() => togglePlatform(platform.id, platform.enabled)}
                         disabled={disabled || unavailable}
                         className={cn(
-                          "text-left p-4 rounded-xl glass border transition-all duration-300 relative group/plat",
+                          "text-left p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl glass border transition-all duration-300 relative group/plat",
                           active ? "border-cyan-500/50 bg-cyan-500/5" : "border-white/5 hover:border-white/20 opacity-40 hover:opacity-100",
                           active && highlightSelections && "ring-1 ring-cyan-300/80 animate-pulse"
                         )}
                         title={unavailable ? platform.reason : platform.hint}
                       >
                         <p className={cn(
-                          "text-[10px] font-black uppercase tracking-widest mb-1",
+                          "text-[9px] sm:text-[10px] font-black uppercase tracking-widest mb-1",
                           active ? "text-cyan-400" : "text-[var(--text-primary)]"
                         )}>
                           {platform.label}
@@ -774,7 +774,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                         {active && <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_var(--accent-cyan)]" />}
                         {unavailable && <span className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-tighter">Planned</span>}
                         {platform.isPremium && (
-                          <div className="absolute top-2 right-2">
+                          <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2">
                             <Sparkles className="w-3 h-3 text-amber-400 opacity-50" />
                           </div>
                         )}
@@ -807,8 +807,8 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                   </div>
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Augmentation Sources</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="p-4 rounded-xl glass border border-white/10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 sm:p-4 rounded-xl glass border border-white/10">
                     <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)]">Firecrawl</p>
                     <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">Broad web/news crawling fallback for sparse routes.</p>
                     <div className="mt-3 flex gap-2">
@@ -828,7 +828,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                       ))}
                     </div>
                   </div>
-                  <div className="p-4 rounded-xl glass border border-white/10">
+                  <div className="p-3 sm:p-4 rounded-xl glass border border-white/10">
                     <div className="flex items-center gap-2">
                       <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)]">SynthData</p>
                       <span className="text-[8px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 uppercase font-black tracking-widest">Market</span>
@@ -866,7 +866,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Neural Consensus Routes</span>
                   </div>
 
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                     <div className="flex flex-col items-start sm:items-end">
                       <span className="text-[8px] font-black uppercase text-[var(--text-muted)] tracking-widest">Est. Cost</span>
                       <span className="text-xs font-black text-amber-400 tabular-nums">{totalCost.toFixed(4)} ETH</span>
@@ -878,7 +878,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                   {MODEL_OPTIONS.map((model) => {
                     const active = models.includes(model.id);
                     const unavailable = model.enabled === false;
@@ -889,13 +889,13 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                         onClick={() => toggleModel(model.id, model.enabled !== false)}
                         disabled={disabled || unavailable}
                         className={cn(
-                          "text-left p-3 rounded-xl glass border transition-all duration-300",
+                          "text-left p-2 sm:p-2.5 md:p-3 rounded-lg sm:rounded-xl glass border transition-all duration-300",
                           active ? "border-amber-500/50 bg-amber-500/5 shadow-inner" : "border-white/5 hover:border-white/20 opacity-40 hover:opacity-100",
                           active && highlightSelections && "ring-1 ring-amber-300/80 animate-pulse"
                         )}
                       >
                         <p className={cn(
-                          "text-[10px] font-black uppercase tracking-widest",
+                          "text-[9px] sm:text-[10px] font-black uppercase tracking-widest",
                           active ? "text-amber-400" : "text-[var(--text-primary)]"
                         )}>
                           {model.label}
@@ -971,7 +971,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                 <div className="space-y-4 pt-6 border-t border-white/5">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Mission Receipt</p>
                   <div className="glass border border-white/10 rounded-xl p-4 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="glass border border-white/10 rounded-xl p-3">
                         <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Directive</p>
                         <p className="text-xs font-mono text-[var(--text-primary)] mt-2 line-clamp-4">{idea.trim() || "No directive set"}</p>
