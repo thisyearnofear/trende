@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp, Check, Copy, Zap, PenLine, Rocket, Download } from 'lucide-react';
+import { ExternalLink, Info, Link2, Quote, ShieldCheck, Sparkles, TrendingUp, Check, Copy, Zap, PenLine, Rocket, Download, Mic } from 'lucide-react';
 import { AgentAction, TrendSummary as TrendSummaryType } from '@/lib/types';
 import { useToast } from '@/components/Toast';
 import { AttestationBadge } from '@/components/AttestationBadge';
@@ -88,6 +88,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const [copiedSignature, setCopiedSignature] = useState(false);
     const [isDeploying, setIsDeploying] = useState(false);
     const [isDrafting, setIsDrafting] = useState(false);
+    const [isPodcasting, setIsPodcasting] = useState(false);
     const [isMonitoring, setIsMonitoring] = useState(false);
     const [actions, setActions] = useState<AgentAction[]>([]);
     const [selectedActionPayload, setSelectedActionPayload] = useState<AgentAction | null>(null);
@@ -102,11 +103,6 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
         actions.find(a => a.action_type === 'resolve_oracle_market' && a.status === 'succeeded'),
         [actions]
     );
-    const oracleStaged = useMemo(() =>
-        actions.some(a => a.action_type === 'stage_oracle_market' && a.status === 'succeeded'),
-        [actions]
-    );
-
     const isMeme = mode === 'meme';
     const providers = useMemo(() => consensus?.providers || [], [consensus?.providers]);
     const consensusWarnings = consensus?.warnings || [];
@@ -157,6 +153,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
             verified,
         ]
     );
+    const podcastActionEnabled = process.env.NEXT_PUBLIC_ENABLE_PODCAST_ACTION === 'true';
 
     useEffect(() => {
         if (activeActions.length === 0) return;
@@ -247,6 +244,28 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
             showToast('Failed to queue draft action.', 'error');
         } finally {
             setIsDrafting(false);
+        }
+    };
+
+    const handleDraftPodcast = async () => {
+        setIsPodcasting(true);
+        showToast('Submitting podcast draft action...', 'info');
+        try {
+            const response = await api.submitAction({
+                action_type: 'draft_podcast',
+                task_id: queryId,
+                input: {
+                    title: `Trende Podcast Draft: ${summary.overview?.slice(0, 54) || 'Research'}`,
+                    tone: 'analyst',
+                    duration_minutes: 8,
+                },
+            });
+            addOrUpdateAction(response.action);
+            showToast(`Action queued: ${response.action.action_type}`, 'success');
+        } catch {
+            showToast('Failed to queue podcast action.', 'error');
+        } finally {
+            setIsPodcasting(false);
         }
     };
 
@@ -861,6 +880,31 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                             <Zap className={cn("w-4 h-4 transition-colors", isSoft ? "text-[var(--text-muted)] group-hover:text-[var(--accent-cyan)]" : "text-slate-700 group-hover:text-cyan-500")} />
                         </button>
 
+                        {podcastActionEnabled && (
+                            <button
+                                onClick={handleDraftPodcast}
+                                disabled={isPodcasting}
+                                className={cn(
+                                    "flex items-center justify-between p-4 rounded-2xl transition-all group lg:col-span-1",
+                                    isSoft ? "soft-ui-button" : "bg-slate-950 border border-slate-800 hover:border-fuchsia-500/50 hover:bg-fuchsia-500/5"
+                                )}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className={cn(
+                                        "w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
+                                        isSoft ? "soft-ui-out border-0" : "bg-fuchsia-500/10 border-fuchsia-500/20"
+                                    )}>
+                                        <Mic className="w-5 h-5 text-fuchsia-400" />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className={cn("text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Draft Podcast</div>
+                                        <div className={cn("text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Generate transcript + citations pack</div>
+                                    </div>
+                                </div>
+                                <Zap className={cn("w-4 h-4 transition-colors", isSoft ? "text-[var(--text-muted)] group-hover:text-fuchsia-400" : "text-slate-700 group-hover:text-fuchsia-400")} />
+                            </button>
+                        )}
+
                         <button
                             onClick={async () => {
                                 setIsMonitoring(true);
@@ -1381,6 +1425,51 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                                 </button>
                             </div>
                         </div>
+                        {selectedActionPayload.action_type === 'draft_podcast' && (
+                            <div className="mb-3 flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const payload = (selectedActionPayload.result_payload || {}) as Record<string, unknown>;
+                                        const assets = (payload.assets || {}) as Record<string, unknown>;
+                                        const transcript = typeof assets.transcript_markdown === 'string' ? assets.transcript_markdown : '';
+                                        if (!transcript) {
+                                            showToast('No transcript available in payload', 'info');
+                                            return;
+                                        }
+                                        navigator.clipboard.writeText(transcript);
+                                        showToast('Transcript copied', 'success');
+                                    }}
+                                    className="text-xs px-2 py-1 rounded bg-fuchsia-500/20 text-fuchsia-300 hover:bg-fuchsia-500/30"
+                                >
+                                    Copy Transcript
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const payload = (selectedActionPayload.result_payload || {}) as Record<string, unknown>;
+                                        const assets = (payload.assets || {}) as Record<string, unknown>;
+                                        const transcript = typeof assets.transcript_markdown === 'string' ? assets.transcript_markdown : '';
+                                        if (!transcript) {
+                                            showToast('No transcript available in payload', 'info');
+                                            return;
+                                        }
+                                        const blob = new Blob([transcript], { type: 'text/markdown;charset=utf-8' });
+                                        const url = URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.download = `trende-podcast-${queryId.slice(0, 8)}.md`;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                        URL.revokeObjectURL(url);
+                                    }}
+                                    className="text-xs px-2 py-1 rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30"
+                                >
+                                    Download Transcript
+                                </button>
+                            </div>
+                        )}
                         <pre className="text-xs text-slate-300 overflow-auto max-h-[60vh] rounded-xl border border-slate-700 bg-slate-950/70 p-3">
                             {JSON.stringify(selectedActionPayload.result_payload || {}, null, 2)}
                         </pre>

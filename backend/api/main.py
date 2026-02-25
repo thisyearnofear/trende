@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, model_validator
 from backend.agents.workflow import create_workflow, run_editorial_task
 from backend.api.routes import acp as acp_routes
 from backend.services.acp_service import acp_service
+from backend.integrations.connectors.synthdata import SynthDataConnector
 from backend.database.repository import Repository, init_db
 from backend.services.ai_service import OPENROUTER_VARIANTS, VENICE_VARIANTS, ai_service
 from backend.services.attestation_service import attestation_service
@@ -241,6 +242,115 @@ async def enforce_attestation_startup_gate() -> None:
         "Startup aborted: ATTESTATION_STRICT_MODE=true requires live Eigen attestation reachability. "
         f"endpoint={endpoint!r} status_code={status_code!r} reason={message}"
     )
+
+
+def _env_flag(name: str, default: str = "false") -> bool:
+    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _extract_task_findings(task: dict[str, Any]) -> list[dict[str, Any]]:
+    result_node = task.get("result")
+    if isinstance(result_node, dict) and isinstance(result_node.get("raw_findings"), list):
+        findings = result_node.get("raw_findings") or []
+    elif isinstance(task.get("raw_findings"), list):
+        findings = task.get("raw_findings") or []
+    else:
+        findings = []
+
+    normalized: list[dict[str, Any]] = []
+    for item in findings:
+        if hasattr(item, "model_dump"):
+            normalized.append(item.model_dump())
+        elif isinstance(item, dict):
+            normalized.append(item)
+    return normalized
+
+
+def _build_podcast_payload(
+    task_id: str,
+    task: dict[str, Any],
+    input_payload: dict[str, Any],
+) -> dict[str, Any]:
+    result_node = task.get("result") if isinstance(task.get("result"), dict) else task
+    topic = str(task.get("topic") or "Trende Intelligence Brief")
+    summary = str(result_node.get("summary") or task.get("summary") or "").strip()
+    final_report = str(result_node.get("final_report_md") or task.get("final_report_md") or "").strip()
+    tone = str(input_payload.get("tone") or "analyst").strip()[:32]
+    duration_minutes = int(input_payload.get("duration_minutes") or 8)
+    duration_minutes = max(3, min(duration_minutes, 20))
+
+    findings = _extract_task_findings(task)
+    citations: list[dict[str, str]] = []
+    seen_urls: set[str] = set()
+    for idx, item in enumerate(findings, start=1):
+        url = str(item.get("url") or "").strip()
+        if not url or url in seen_urls:
+            continue
+        seen_urls.add(url)
+        citations.append(
+            {
+                "id": f"S{len(citations) + 1}",
+                "title": str(item.get("title") or "Source"),
+                "url": url,
+                "platform": str(item.get("platform") or "web"),
+                "author": str(item.get("author") or "unknown"),
+            }
+        )
+        if len(citations) >= 12:
+            break
+
+    intro = summary or (final_report[:900] if final_report else "No summary available.")
+    bullet_lines = [f"- [{c['id']}] {c['title']} ({c['platform']})" for c in citations[:6]]
+    bullet_block = "\n".join(bullet_lines) if bullet_lines else "- No source links captured in this run."
+    script = (
+        f"# Podcast Draft: {topic}\n\n"
+        f"## Episode Meta\n"
+        f"- Tone: {tone}\n"
+        f"- Target length: {duration_minutes} minutes\n"
+        f"- Source task: {task_id}\n\n"
+        f"## Intro (Host)\n"
+        f"{intro}\n\n"
+        f"## Segment 1: What happened\n"
+        f"Host: Summarize the strongest verified signal in plain language.\n"
+        f"Analyst: Tie claim to sources and model agreement.\n\n"
+        f"## Segment 2: Why it matters\n"
+        f"Host: Explain market/agent impact and what changed this cycle.\n"
+        f"Analyst: Call out reliability and disagreement risks.\n\n"
+        f"## Segment 3: What to monitor next\n"
+        f"Host: Provide clear watchlist items for next 24-72h.\n"
+        f"Analyst: Add trigger thresholds and invalidation cues.\n\n"
+        f"## Source Anchors\n"
+        f"{bullet_block}\n\n"
+        f"## Compliance Note\n"
+        f"This draft is generated from attested Trende run outputs and must preserve source citations."
+    )
+
+    outline = (
+        f"# Outline: {topic}\n\n"
+        f"1. Opening thesis (60-90s)\n"
+        f"2. Evidence and divergence (3-5 min)\n"
+        f"3. Risk and next triggers (2-3 min)\n\n"
+        f"## Citations\n"
+        f"{bullet_block}"
+    )
+
+    return {
+        "status": "ready",
+        "podcast": {
+            "title": str(input_payload.get("title") or f"Trende Podcast Draft: {topic}")[:160],
+            "tone": tone,
+            "duration_minutes": duration_minutes,
+            "source_task_id": task_id,
+            "source_count": len(citations),
+            "audio_generation": "not_started",
+            "notes": "Draft-only mode enabled. Hook TTS renderer for MP3 generation.",
+        },
+        "assets": {
+            "transcript_markdown": script,
+            "outline_markdown": outline,
+            "citations": citations,
+        },
+    }
 
 
 async def resume_interrupted_tasks() -> None:
@@ -1124,6 +1234,12 @@ async def run_agent_action(action_id: str) -> None:
                 },
                 "status": "ready",
             }
+        elif action_type == "draft_podcast":
+            if not _env_flag("ENABLE_PODCAST_ACTION", "false"):
+                raise ValueError("draft_podcast is disabled. Set ENABLE_PODCAST_ACTION=true to enable.")
+            if not task:
+                raise ValueError("draft_podcast requires task_id.")
+            result_payload = _build_podcast_payload(task_id, task, input_payload)
         elif action_type == "export_proof_bundle":
             if not task:
                 raise ValueError("export_proof_bundle requires task_id.")
