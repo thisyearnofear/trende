@@ -54,9 +54,9 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
             </div>
 
             <header className="border-b border-white/5 bg-slate-950/80 backdrop-blur-2xl sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center gap-3 sm:gap-4">
                             <Link href="/" className="p-2 rounded-full hover:bg-white/5 transition-colors group">
                                 <ArrowLeft className="w-5 h-5 text-slate-400 group-hover:text-slate-100" />
                             </Link>
@@ -71,13 +71,13 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                             <button
                                 onClick={handleDownloadReport}
                                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                             >
                                 <Fingerprint className="w-3.5 h-3.5" />
-                                Download Report
+                                <span className="hidden sm:inline">Download</span> Report
                             </button>
                             <AttestationBadge
                                 attestation={data?.summary?.attestationData}
@@ -92,14 +92,15 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors"
                             >
                                 <Link2 className="w-3.5 h-3.5" />
-                                Copy Proof URL
+                                <span className="hidden sm:inline">Copy Proof URL</span>
+                                <span className="sm:hidden">Copy URL</span>
                             </button>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <main className="max-w-4xl mx-auto px-6 py-12 relative z-10">
+            <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12 relative z-10">
                 {!data || isProcessing ? (
                     <div className="flex flex-col items-center justify-center py-32 space-y-8">
                         <div className="relative">
@@ -122,12 +123,12 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                 Resource ID: <span className="text-slate-100">{queryId}</span>
                             </div>
-                            <h2 className="text-4xl font-bold tracking-tight text-white leading-tight">
+                            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-white leading-tight">
                                 Proof of Technical & Social Research
                             </h2>
-                            <p className="text-lg text-slate-400 max-w-2xl leading-relaxed">
+                            <p className="text-base sm:text-lg text-slate-400 max-w-2xl leading-relaxed">
                                 This document serves as a permanent cryptographic record of the multi-model consensus reached for the topic
-                                <span className="text-emerald-400 font-medium whitespace-nowrap px-1">&quot;{data.query?.idea}&quot;</span>.
+                                <span className="text-emerald-400 font-medium px-1">&quot;{data.query?.idea}&quot;</span>.
                             </p>
                         </div>
 
@@ -139,7 +140,7 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                         </div>
 
                         {/* Immutable Footnote */}
-                        <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-8 space-y-6">
+                        <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-4 sm:p-8 space-y-6">
                             <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
                                     <Lock className="w-6 h-6 text-emerald-400" />
@@ -220,7 +221,7 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                 )}
             </main>
 
-            <footer className="max-w-4xl mx-auto px-6 py-20 border-t border-white/5 text-center space-y-6">
+            <footer className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-20 border-t border-white/5 text-center space-y-6">
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.4em]">Powered by Trende Sovereign Agent</p>
                 <div className="flex items-center justify-center gap-8 opacity-40">
                     {/* Add partner logos or icons here */}

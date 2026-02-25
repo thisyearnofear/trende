@@ -60,8 +60,8 @@ export function WalletButton({ showTier = false, compact = false }: WalletButton
                     }}
                   >
                     <Wallet className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
-                    <span>Connect</span>
-                    <ChainBadge compact={compact} isSoft={isSoft} />
+                    <span className="hidden sm:inline">Connect</span>
+                    <span className="hidden sm:inline-flex"><ChainBadge compact={compact} isSoft={isSoft} /></span>
                   </button>
                 );
               }
@@ -98,7 +98,7 @@ export function WalletButton({ showTier = false, compact = false }: WalletButton
                     }}
                   >
                     <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="font-mono">{formatAddress(account.address)}</span>
+                    <span className="font-mono hidden sm:inline">{formatAddress(account.address)}</span>
                     <ChevronDown className={compact ? 'w-3 h-3' : 'w-4 h-4'} />
                   </button>
                 </div>

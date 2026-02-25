@@ -523,7 +523,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
 
           {/* Starter Missions */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-cyan-400 opacity-60" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Mission Stages</span>
@@ -858,7 +858,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
               {/* Model Selectors */}
               {controlsSection === 'models' && (
               <div className="space-y-4 pt-6 border-t border-white/5">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded bg-amber-500/10 flex items-center justify-center">
                       <Sparkles className="w-3.5 h-3.5 text-amber-400" />
@@ -867,11 +867,11 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                   </div>
 
                   <div className="flex gap-4">
-                    <div className="flex flex-col items-end">
+                    <div className="flex flex-col items-start sm:items-end">
                       <span className="text-[8px] font-black uppercase text-[var(--text-muted)] tracking-widest">Est. Cost</span>
                       <span className="text-xs font-black text-amber-400 tabular-nums">{totalCost.toFixed(4)} ETH</span>
                     </div>
-                    <div className="flex flex-col items-end">
+                    <div className="flex flex-col items-start sm:items-end">
                       <span className="text-[8px] font-black uppercase text-[var(--text-muted)] tracking-widest">Confidence Power</span>
                       <span className="text-xs font-black text-cyan-400 tabular-nums">{Math.round(avgQuality)}%</span>
                     </div>

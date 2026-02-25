@@ -763,7 +763,7 @@ export default function Home() {
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] pb-10 transition-colors duration-200">
       <Onboarding />
       {/* Header */}
-      <header className="border-b-2 border-[var(--border-color)] bg-[var(--bg-primary)] sticky top-0 z-40">
+      <header className="border-b-2 border-[var(--border-color)] bg-[var(--bg-primary)] sticky top-0 z-40 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-3">
             <Link
@@ -783,7 +783,7 @@ export default function Home() {
                 <h1 className="text-sm sm:text-lg font-black uppercase tracking-wider truncate">
                   TRENDE
                 </h1>
-                <p className="text-[10px] font-mono text-[var(--accent-cyan)] truncate flex items-center gap-1">
+                <p className="text-[10px] font-mono text-[var(--accent-cyan)] truncate hidden sm:flex items-center gap-1">
                   VERIFIED BY CRYPTOGRAPHY
                   <InfoIcon
                     tooltip="Trusted Execution Environment ensures verifiable, tamper-proof analysis with cryptographic attestation."
@@ -794,7 +794,7 @@ export default function Home() {
               </div>
             </Link>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <Tooltip content="Connect wallet for saved mission history, ownership, and publishing permissions.">
                 <div>
                   <WalletButton compact />
@@ -981,7 +981,7 @@ export default function Home() {
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 py-4 sm:py-8 space-y-5 sm:space-y-8">
         {/* Hero - Enhanced with kinetic typography */}
         {!queryId && !isProcessing && (
           <Card accent="cyan" shadow="lg" className="p-6 overflow-hidden relative">
@@ -1041,13 +1041,13 @@ export default function Home() {
               </div>
 
               {/* Agent Capabilities - Subtle Enhancement */}
-              <div className="flex items-center gap-3 mt-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
-                <div className="flex items-center gap-2 px-3 py-2 glass border-white/10 rounded-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mt-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                <div className="flex items-center gap-2 px-3 py-2 glass border-white/10 rounded-lg w-fit">
                   <Bot className="w-4 h-4 text-[var(--accent-cyan)]" />
                   <span className="text-xs font-mono text-[var(--text-muted)]">AI Agent</span>
                   <div className="w-2 h-2 rounded-full bg-[var(--accent-cyan)] animate-pulse" />
                 </div>
-                <span className="text-xs font-mono text-[var(--text-muted)]">• Proactive insights • Decision transparency • On-chain staging</span>
+                <span className="text-xs font-mono text-[var(--text-muted)]">Proactive insights · Decision transparency · On-chain staging</span>
               </div>
             </div>
           </Card>
@@ -1893,42 +1893,41 @@ export default function Home() {
                         </p>
                       </div>
 
-                      <div className="flex flex-wrap gap-4 items-center">
+                      <div className="flex flex-wrap gap-3 sm:gap-4 items-center">
                         <div className="text-center">
                           <p className="text-[9px] uppercase font-black text-white/20 tracking-widest mb-1">Agreement</p>
                           <p className="text-sm font-black text-amber-400">{Math.round((data.summary.consensusData?.agreement_score || 0) * 100)}%</p>
                         </div>
-                        <div className="w-px h-8 bg-white/5" />
+                        <div className="w-px h-8 bg-white/5 hidden sm:block" />
                         <div className="text-center">
                           <p className="text-[9px] uppercase font-black text-white/20 tracking-widest mb-1">Attestation</p>
                           <p className="text-sm font-black text-emerald-400">
                             {forgeAttestationStatus === "signed" || forgeAttestationStatus === "ready" ? "READY" : "PENDING"}
                           </p>
                         </div>
-                        <div className="w-px h-8 bg-white/5" />
-                        
-                        {/* Agent Interaction Section */}
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2 px-3 py-2 glass border-cyan-500/20 rounded-lg">
-                            <Bot className="w-4 h-4 text-[var(--accent-cyan)]" />
-                            <span className="text-xs font-mono text-cyan-400">Agent</span>
-                            <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="bg-white/5 border-white/5 hover:bg-white/10"
-                              onClick={() => setShowForgeInline((prev) => !prev)}
-                            >
-                              {showForgeInline ? "Close Forge" : "Open In-line"}
+                      </div>
+
+                      {/* Agent Interaction Section */}
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <div className="flex items-center gap-2 px-3 py-2 glass border-cyan-500/20 rounded-lg">
+                          <Bot className="w-4 h-4 text-[var(--accent-cyan)]" />
+                          <span className="text-xs font-mono text-cyan-400">Agent</span>
+                          <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="bg-white/5 border-white/5 hover:bg-white/10"
+                            onClick={() => setShowForgeInline((prev) => !prev)}
+                          >
+                            {showForgeInline ? "Close Forge" : "Open In-line"}
+                          </Button>
+                          <Link href={`/proof/${activeQueryId}`}>
+                            <Button variant="primary" size="sm" className="shadow-lg shadow-emerald-500/20">
+                              Full Forge
                             </Button>
-                            <Link href={`/proof/${activeQueryId}`}>
-                              <Button variant="primary" size="sm" className="shadow-lg shadow-emerald-500/20">
-                                Full Forge
-                              </Button>
-                            </Link>
-                          </div>
+                          </Link>
                         </div>
                       </div>
                     </div>
@@ -1982,9 +1981,9 @@ export default function Home() {
 
         {/* Empty State - Enhanced Landing */}
         {!queryId && !isProcessing && (
-          <div className="space-y-12 py-8 animate-in fade-in duration-700">
+          <div className="space-y-8 sm:space-y-12 py-4 sm:py-8 animate-in fade-in duration-700">
             {/* How It Works - Visual Flow */}
-            <div className="relative p-8 glass rounded-[2rem] border-white/10 overflow-hidden group">
+            <div className="relative p-4 sm:p-8 glass rounded-[2rem] border-white/10 overflow-hidden group">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
               <div className="absolute -top-24 -left-24 w-64 h-64 bg-cyan-500/10 rounded-full blur-[100px] animate-pulse" />
 
