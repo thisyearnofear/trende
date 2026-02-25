@@ -21,6 +21,8 @@ interface PlatformOption {
   isPremium?: boolean;
 }
 
+type AugmentMode = 'auto' | 'on' | 'off';
+
 const MODEL_OPTIONS = [
   { id: 'venice_default', label: 'Venice AI', hint: 'Primary privacy-first consensus lane', quality: 95, cost: 0.002, enabled: true },
   { id: 'openrouter_llama_70b', label: 'OR Llama 70B', hint: 'Strong baseline reasoning and coverage', quality: 90, cost: 0.0006, enabled: true },
@@ -93,6 +95,10 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [models, setModels] = useState<string[]>(['venice_default', 'venice_mistral', 'openrouter_llama_70b', 'openrouter_hermes', 'aisa']);
   const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [augmentation, setAugmentation] = useState<{ firecrawl: AugmentMode; synthdata: AugmentMode }>({
+    firecrawl: 'auto',
+    synthdata: 'auto',
+  });
   const [advancedSeen, setAdvancedSeen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('trende:advanced_controls_seen') === '1';
@@ -123,8 +129,8 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!idea.trim() || isLoading || disabled || !hasPlatforms || !hasModels) return;
-    onSubmit({ idea: idea.trim(), platforms, models, relevanceThreshold });
-  }, [idea, platforms, models, relevanceThreshold, onSubmit, isLoading, disabled, hasPlatforms, hasModels]);
+    onSubmit({ idea: idea.trim(), platforms, models, relevanceThreshold, augmentation });
+  }, [idea, platforms, models, relevanceThreshold, augmentation, onSubmit, isLoading, disabled, hasPlatforms, hasModels]);
 
   const togglePlatform = (platform: string, isEnabled: boolean) => {
     if (!isEnabled) return;
@@ -148,6 +154,23 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
     () => SUGGESTIONS.find((suggestion) => suggestion === idea.trim()) || null,
     [idea]
   );
+  const routePreview = useMemo(() => {
+    const rows: string[] = [];
+    if (platforms.includes('web')) {
+      const webFallbacks = [
+        augmentation.firecrawl !== 'off' ? 'Firecrawl' : null,
+        platforms.includes('tinyfish') ? 'TinyFish' : null,
+      ].filter(Boolean);
+      rows.push(`Web -> Tabstack${webFallbacks.length ? ` (+ ${webFallbacks.join(' / ')})` : ''}`);
+    }
+    if (platforms.includes('newsapi')) {
+      rows.push(`News -> NewsAPI${augmentation.firecrawl !== 'off' ? ' (+ Firecrawl)' : ''}`);
+    }
+    if (platforms.includes('coingecko')) {
+      rows.push(`CoinGecko -> CoinGecko${augmentation.synthdata !== 'off' ? ' (+ SynthData)' : ''}`);
+    }
+    return rows;
+  }, [platforms, augmentation]);
 
   const markAdvancedSeen = useCallback(() => {
     setAdvancedSeen(true);
@@ -323,6 +346,9 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                 <p className="text-[10px] font-mono text-[var(--text-secondary)] mt-1">
                   Models: {models.join(", ")}
                 </p>
+                <p className="text-[10px] font-mono text-[var(--text-secondary)] mt-1">
+                  Augmentation: firecrawl={augmentation.firecrawl}, synthdata={augmentation.synthdata}
+                </p>
               </div>
             </div>
           </div>
@@ -415,6 +441,74 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                       </button>
                     );
                   })}
+                </div>
+                <div className="mt-2 space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--text-secondary)]">Execution Preview</p>
+                  <div className="glass border border-white/10 rounded-xl p-3">
+                    {routePreview.length === 0 ? (
+                      <p className="text-[10px] font-mono text-[var(--text-muted)]">Select at least one source route to preview primary/fallback lanes.</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {routePreview.map((row) => (
+                          <p key={row} className="text-[10px] font-mono text-[var(--text-secondary)]">{row}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded bg-emerald-500/10 flex items-center justify-center">
+                    <Rocket className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Augmentation Sources</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="p-4 rounded-xl glass border border-white/10">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)]">Firecrawl</p>
+                    <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">Broad web/news crawling fallback for sparse routes.</p>
+                    <div className="mt-3 flex gap-2">
+                      {(['auto', 'on', 'off'] as AugmentMode[]).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => setAugmentation((prev) => ({ ...prev, firecrawl: mode }))}
+                          className={cn(
+                            "px-2 py-1 text-[10px] font-black uppercase tracking-wider rounded border transition-all",
+                            augmentation.firecrawl === mode ? "border-cyan-500/60 text-cyan-300 bg-cyan-500/10" : "border-white/10 text-[var(--text-muted)]"
+                          )}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-xl glass border border-white/10">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)]">SynthData</p>
+                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 uppercase font-black tracking-widest">Market</span>
+                    </div>
+                    <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">Financial enrichment for market-oriented missions.</p>
+                    <div className="mt-3 flex gap-2">
+                      {(['auto', 'on', 'off'] as AugmentMode[]).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => setAugmentation((prev) => ({ ...prev, synthdata: mode }))}
+                          className={cn(
+                            "px-2 py-1 text-[10px] font-black uppercase tracking-wider rounded border transition-all",
+                            augmentation.synthdata === mode ? "border-emerald-500/60 text-emerald-300 bg-emerald-500/10" : "border-white/10 text-[var(--text-muted)]"
+                          )}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 

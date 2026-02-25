@@ -14,6 +14,37 @@ from backend.integrations.connectors.twitter import TwitterConnector
 from backend.services.ai_service import ai_service
 from shared.models import QueryStatus
 
+DEFAULT_AUGMENTATION = {
+    "firecrawl": "auto",
+    "synthdata": "auto",
+}
+
+
+def _resolve_augmentation(state: GraphState) -> dict[str, str]:
+    raw = state.get("augmentation") or {}
+    resolved = DEFAULT_AUGMENTATION.copy()
+    for key in ("firecrawl", "synthdata"):
+        value = str(raw.get(key, resolved[key])).strip().lower()
+        resolved[key] = value if value in {"auto", "on", "off"} else resolved[key]
+    return resolved
+
+
+def _resolve_augmentation_from_input(raw: dict[str, Any] | None) -> dict[str, str]:
+    resolved = DEFAULT_AUGMENTATION.copy()
+    raw = raw or {}
+    for key in ("firecrawl", "synthdata"):
+        value = str(raw.get(key, resolved[key])).strip().lower()
+        resolved[key] = value if value in {"auto", "on", "off"} else resolved[key]
+    return resolved
+
+
+def _augmentation_enabled(mode: str, has_key: bool) -> bool:
+    if mode == "off":
+        return False
+    if mode == "on":
+        return has_key
+    return has_key
+
 
 def _normalize_text(value: str) -> str:
     return " ".join((value or "").strip().lower().split())
@@ -598,6 +629,14 @@ async def researcher_node(state: GraphState) -> GraphState:
     chainlink = ChainlinkConnector()
     firecrawl = FirecrawlConnector()
     synthdata = SynthDataConnector()
+    augmentation = _resolve_augmentation(state)
+    firecrawl_enabled = _augmentation_enabled(augmentation.get("firecrawl", "auto"), bool(firecrawl.api_key))
+    synthdata_enabled = _augmentation_enabled(augmentation.get("synthdata", "auto"), bool(synthdata.api_key))
+    state["augmentation"] = augmentation
+    if augmentation.get("firecrawl") == "on" and not firecrawl.api_key:
+        state["logs"].append("⚠️ AUGMENTATION NOTICE: Firecrawl set to ON but API key is unavailable.")
+    if augmentation.get("synthdata") == "on" and not synthdata.api_key:
+        state["logs"].append("⚠️ AUGMENTATION NOTICE: SynthData set to ON but API key is unavailable.")
 
     tasks = []
     default_timeout = max(8, int(os.getenv("RESEARCH_PLATFORM_TIMEOUT_SECS", "45")))
@@ -638,14 +677,14 @@ async def researcher_node(state: GraphState) -> GraphState:
             chain = [
                 ("newsapi", lambda: news.search(query, limit=5), default_timeout),
             ]
-            if firecrawl.api_key:
+            if firecrawl_enabled:
                 chain.append(("firecrawl", lambda: firecrawl.search(f"{query} latest news", limit=5), web_timeout))
             return chain
         if platform == "web":
             chain = [
                 ("tabstack", lambda: tabstack.search(query, limit=5), web_timeout),
             ]
-            if firecrawl.api_key:
+            if firecrawl_enabled:
                 chain.append(("firecrawl", lambda: firecrawl.search(query, limit=5), web_timeout))
             if tinyfish.api_key:
                 chain.append(("tinyfish", lambda: tinyfish.search(query, limit=5), tinyfish_timeout))
@@ -664,7 +703,7 @@ async def researcher_node(state: GraphState) -> GraphState:
             return [("stackexchange", lambda: stackexchange.search(query, limit=5), default_timeout)]
         if platform == "coingecko":
             chain = [("coingecko", lambda: coingecko.search(query, limit=5), default_timeout)]
-            if synthdata.api_key:
+            if synthdata_enabled:
                 chain.append(("synthdata", lambda: synthdata.search(query, limit=5), default_timeout))
             return chain
         if platform == "tinyfish":
@@ -674,12 +713,22 @@ async def researcher_node(state: GraphState) -> GraphState:
         if platform == "firecrawl":
             return [("firecrawl", lambda: firecrawl.search(query, limit=5), default_timeout)]
         if platform == "synthdata":
-            return [("synthdata", lambda: synthdata.search(query, limit=5), default_timeout)]
+            if synthdata_enabled:
+                return [("synthdata", lambda: synthdata.search(query, limit=5), default_timeout)]
+            return []
         return [("tabstack", lambda: tabstack.search(query, limit=5), default_timeout)]
 
     async def search_with_fallback(platform: str, query: str) -> dict[str, Any]:
         state["logs"].append(f"🤖 AGENT >> Establishing quantum link to {platform.upper()} for: '{query}'")
         chain = build_chain(platform, query)
+        if not chain:
+            return {
+                "requested_platform": platform,
+                "source": None,
+                "items": [],
+                "fallback_used": False,
+                "error": f"{platform} route disabled by augmentation settings",
+            }
         last_error: Optional[str] = None
         for idx, (label, runner, timeout_secs) in enumerate(chain):
             if idx > 0:
@@ -713,6 +762,7 @@ async def researcher_node(state: GraphState) -> GraphState:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         all_items = []
+        route_records: list[dict[str, Any]] = state.get("source_routes") or []
         for result in results:
             if isinstance(result, Exception):
                 state["logs"].append(f"❌ ERROR: Search job failed: {str(result)}")
@@ -720,6 +770,16 @@ async def researcher_node(state: GraphState) -> GraphState:
             platform = str(result.get("requested_platform", "unknown")).upper()
             source = str(result.get("source", "")).upper() if result.get("source") else ""
             items = result.get("items") or []
+            route_records.append(
+                {
+                    "requested_platform": str(result.get("requested_platform", "unknown")),
+                    "resolved_source": str(result.get("source") or ""),
+                    "fallback_used": bool(result.get("fallback_used")),
+                    "item_count": len(items),
+                    "status": "ok" if items else "empty",
+                    "error": result.get("error"),
+                }
+            )
             if not items:
                 err = result.get("error")
                 if err:
@@ -796,6 +856,16 @@ async def researcher_node(state: GraphState) -> GraphState:
                 if not items:
                     if err:
                         state["logs"].append(f"⚠️ BACKFILL MISS: {label} failed: {err}")
+                    route_records.append(
+                        {
+                            "requested_platform": "backfill",
+                            "resolved_source": label,
+                            "fallback_used": False,
+                            "item_count": 0,
+                            "status": "error",
+                            "error": err,
+                        }
+                    )
                     continue
                 kept_items, backfill_filter_stats = _apply_finding_quality_filters(items, state["topic"])
                 added = 0
@@ -817,6 +887,16 @@ async def researcher_node(state: GraphState) -> GraphState:
                         f"(placeholder={backfill_filter_stats['placeholder']}, stale={backfill_filter_stats['stale']}, "
                         f"off_topic={backfill_filter_stats['off_topic']})."
                     )
+                route_records.append(
+                    {
+                        "requested_platform": "backfill",
+                        "resolved_source": label,
+                        "fallback_used": False,
+                        "item_count": len(kept_items),
+                        "status": "ok" if kept_items else "empty",
+                        "error": None,
+                    }
+                )
 
             if len(state["raw_findings"]) < min_findings_required:
                 state["logs"].append(
@@ -826,6 +906,7 @@ async def researcher_node(state: GraphState) -> GraphState:
                 state["logs"].append(
                     f"🎯 QUALITY FLOOR MET: Run reached {len(state['raw_findings'])} findings before validation."
                 )
+        state["source_routes"] = route_records[-80:]
     else:
         state["logs"].append("😴 No search tasks were generated. Nothing to harvest.")
 
@@ -1155,7 +1236,8 @@ async def run_trend_analysis(
     platforms: list[str], 
     task_id: str, 
     models: list[str] = None,
-    sponsor: str = None
+    sponsor: str = None,
+    augmentation: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """
     Run the full trend research workflow for a given idea and platforms.
@@ -1194,6 +1276,8 @@ async def run_trend_analysis(
         "quality_assessment": None,
         "retry_platforms": [],
         "attempted_query_keys": [],
+        "augmentation": _resolve_augmentation_from_input(augmentation),
+        "source_routes": [],
         "error": None,
     }
 
@@ -1259,6 +1343,8 @@ async def run_editorial_task(
         "quality_assessment": None,
         "retry_platforms": [],
         "attempted_query_keys": [],
+        "augmentation": {},
+        "source_routes": [],
         "error": None,
     }
     

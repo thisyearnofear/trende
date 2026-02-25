@@ -202,6 +202,8 @@ class Repository:
                 "run_telemetry": state.get("run_telemetry"),
                 "raw_findings": self._serialize_findings(state.get("raw_findings", [])),
                 "editorial_data": state.get("editorial_data"),
+                "augmentation": state.get("augmentation"),
+                "source_routes": state.get("source_routes", []),
             }
             task.result = result_data
             try:
@@ -282,6 +284,16 @@ class Repository:
                 "updated_at": task.updated_at.isoformat()
                 if task.updated_at
                 else task.created_at.isoformat(),
+                "augmentation": (
+                    task.result.get("augmentation")
+                    if isinstance(task.result, dict)
+                    else {}
+                ),
+                "source_routes": (
+                    task.result.get("source_routes", [])
+                    if isinstance(task.result, dict)
+                    else []
+                ),
             }
 
     def get_all_tasks(self, limit: int = 50) -> list[dict[str, Any]]:

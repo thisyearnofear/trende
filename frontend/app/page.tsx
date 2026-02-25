@@ -44,6 +44,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { ParagraphConnectModal } from "@/components/integrations/ParagraphConnectModal";
 import { WalletButton } from "@/components/WalletButton";
 import { RunFlowDivider } from "@/components/RunFlowDivider";
+import { cn } from "@/lib/utils";
 
 const LAST_QUERY_STORAGE_KEY = "trende:last_query_id";
 
@@ -464,6 +465,14 @@ export default function Home() {
   }, [data?.telemetry, sourceCount]);
   const chainlinkProof = useMemo(() => data?.telemetry?.chainlinkProof || null, [data?.telemetry]);
   const trustStack = useMemo(() => data?.telemetry?.trustStack, [data?.telemetry]);
+  const sourceRoutes = useMemo(
+    () => (data?.telemetry?.sourceRoutes || []).slice(0, 12),
+    [data?.telemetry?.sourceRoutes],
+  );
+  const sourceBreakdown = useMemo(
+    () => (data?.telemetry?.sourceBreakdown || []).slice(0, 12),
+    [data?.telemetry?.sourceBreakdown],
+  );
   const chainlinkStatusLabel = useMemo(() => {
     const status = trustStack?.chainlink?.status;
     if (status === "resolution_requested") return "Resolution Requested";
@@ -1387,6 +1396,54 @@ export default function Home() {
                   <p className="text-[11px] font-mono text-[var(--text-secondary)] mt-1">
                     {trustStack?.chainlink?.network || "oracle lane ready"}
                   </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card accent="violet" className="p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent-violet)]">
+                  Source Provenance
+                </p>
+                <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                  Primary + fallback execution
+                </span>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">Route Execution</p>
+                  <div className="space-y-1.5 max-h-48 overflow-auto pr-1">
+                    {sourceRoutes.length === 0 ? (
+                      <p className="text-[11px] font-mono text-[var(--text-muted)]">No route telemetry captured for this run.</p>
+                    ) : (
+                      sourceRoutes.map((route, idx) => (
+                        <div key={`${route.requested_platform}-${route.resolved_source}-${idx}`} className="text-[11px] font-mono flex items-center justify-between gap-2">
+                          <span className="text-[var(--text-secondary)] uppercase">{route.requested_platform} → {route.resolved_source || "n/a"}</span>
+                          <span className={cn(
+                            "uppercase",
+                            route.status === "ok" ? "text-emerald-400" : route.status === "empty" ? "text-amber-300" : "text-rose-300"
+                          )}>
+                            {route.fallback_used ? "fallback" : "primary"} · {route.item_count}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">Source Contribution</p>
+                  <div className="space-y-1.5 max-h-48 overflow-auto pr-1">
+                    {sourceBreakdown.length === 0 ? (
+                      <p className="text-[11px] font-mono text-[var(--text-muted)]">No source contribution stats available.</p>
+                    ) : (
+                      sourceBreakdown.map((row, idx) => (
+                        <div key={`${row.platform}-${row.source}-${idx}`} className="text-[11px] font-mono flex items-center justify-between gap-2">
+                          <span className="text-[var(--text-secondary)] uppercase">{row.platform} · {row.source}</span>
+                          <span className="text-cyan-300">{row.items} items</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </Card>

@@ -25,6 +25,10 @@ export interface Query {
   relevanceThreshold: number;
   isSaved?: boolean;
   visibility?: 'private' | 'unlisted' | 'public';
+  augmentation?: {
+    firecrawl?: 'auto' | 'on' | 'off';
+    synthdata?: 'auto' | 'on' | 'off';
+  };
   savedAt?: string;
   ipfsUri?: string;
   saveLabel?: string;
@@ -132,6 +136,10 @@ export interface QueryRequest {
   models?: string[];
   relevanceThreshold?: number;
   visibility?: 'private' | 'unlisted' | 'public';
+  augmentation?: {
+    firecrawl?: 'auto' | 'on' | 'off';
+    synthdata?: 'auto' | 'on' | 'off';
+  };
 }
 
 export interface QueryResponse {
@@ -185,6 +193,20 @@ export interface ResultsResponse {
     warnings: string[];
     logs: string[];
     updatedAt: string;
+    qualityGate?: Record<string, unknown>;
+    sourceRoutes?: Array<{
+      requested_platform: string;
+      resolved_source: string;
+      fallback_used: boolean;
+      item_count: number;
+      status: 'ok' | 'empty' | 'error';
+      error?: string | null;
+    }>;
+    sourceBreakdown?: Array<{
+      platform: string;
+      source: string;
+      items: number;
+    }>;
     chainlinkProof?: {
       status?: string;
       network?: string;

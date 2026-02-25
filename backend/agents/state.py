@@ -43,5 +43,7 @@ class GraphState(TypedDict):
     quality_assessment: Optional[Dict[str, Any]]
     retry_platforms: List[str]
     attempted_query_keys: List[str]
+    augmentation: Dict[str, str]
+    source_routes: List[Dict[str, Any]]
     
     error: Optional[str]

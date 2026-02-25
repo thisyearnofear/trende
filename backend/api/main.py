@@ -270,6 +270,7 @@ async def resume_interrupted_tasks() -> None:
                 full_task["topic"],
                 full_task.get("platforms", []),
                 full_task.get("models", []),
+                full_task.get("augmentation", {}),
             )
         )
 
@@ -326,10 +327,20 @@ def _normalize_key_parts(values: list[str]) -> tuple[str, ...]:
     return tuple(sorted({(value or "").strip().lower() for value in values if (value or "").strip()}))
 
 
-def _find_matching_active_task(topic: str, platforms: list[str], models: list[str]) -> str | None:
+def _find_matching_active_task(
+    topic: str,
+    platforms: list[str],
+    models: list[str],
+    augmentation: dict[str, str] | None = None,
+) -> str | None:
     topic_key = (topic or "").strip().lower()
     platforms_key = _normalize_key_parts(platforms)
     models_key = _normalize_key_parts(models)
+    augmentation = augmentation or {}
+    augment_key = tuple(
+        f"{k}:{str(v).strip().lower()}"
+        for k, v in sorted((augmentation or {}).items())
+    )
     active_statuses = {
         QueryStatus.PENDING,
         QueryStatus.PLANNING,
@@ -349,6 +360,13 @@ def _find_matching_active_task(topic: str, platforms: list[str], models: list[st
         if _normalize_key_parts(task.get("platforms", []) or []) != platforms_key:
             continue
         if _normalize_key_parts(task.get("models", []) or []) != models_key:
+            continue
+        task_augmentation = task.get("augmentation") or {}
+        task_augment_key = tuple(
+            f"{k}:{str(v).strip().lower()}"
+            for k, v in sorted(task_augmentation.items())
+        )
+        if task_augment_key != augment_key:
             continue
         created_at = _parse_iso(task.get("created_at")) or now
         if now - created_at > max_age:
@@ -562,6 +580,37 @@ def _derive_top_trends_from_findings(
     return [item for _, item in ranked[:limit]]
 
 
+def _derive_source_breakdown(raw_findings: list[Any]) -> list[dict[str, Any]]:
+    bucket: dict[str, dict[str, Any]] = {}
+    for entry in raw_findings or []:
+        item = entry.model_dump() if hasattr(entry, "model_dump") else entry
+        if not isinstance(item, dict):
+            continue
+        platform = str(item.get("platform") or "unknown").lower()
+        raw_data = item.get("raw_data") if isinstance(item.get("raw_data"), dict) else {}
+        source_name = str(
+            raw_data.get("source")
+            or raw_data.get("provider")
+            or raw_data.get("connector")
+            or item.get("author_handle")
+            or platform
+        ).strip().lower()
+        key = f"{platform}:{source_name}"
+        row = bucket.setdefault(
+            key,
+            {
+                "platform": platform,
+                "source": source_name,
+                "items": 0,
+            },
+        )
+        row["items"] += 1
+
+    rows = list(bucket.values())
+    rows.sort(key=lambda r: int(r.get("items", 0)), reverse=True)
+    return rows[:20]
+
+
 class QueryRequest(BaseModel):
     topic: str | None = None
     idea: str | None = None
@@ -577,6 +626,7 @@ class QueryRequest(BaseModel):
     )
     relevance_threshold: float | None = None
     visibility: str = "public"
+    augmentation: dict[str, str] = Field(default_factory=dict)
     payment: X402Payment | None = None
 
     @model_validator(mode="after")
@@ -589,6 +639,11 @@ class QueryRequest(BaseModel):
         if visibility not in {"private", "unlisted", "public"}:
             visibility = "public"
         self.visibility = visibility
+        normalized_aug: dict[str, str] = {}
+        for key in ("firecrawl", "synthdata"):
+            value = str((self.augmentation or {}).get(key, "auto")).strip().lower()
+            normalized_aug[key] = value if value in {"auto", "on", "off"} else "auto"
+        self.augmentation = normalized_aug
         return self
 
 
@@ -820,6 +875,7 @@ async def start_analysis(
         request.topic or "",
         request.platforms,
         request.models,
+        request.augmentation,
     )
     if matching_task_id:
         existing = tasks.get(matching_task_id) or {}
@@ -845,6 +901,7 @@ async def start_analysis(
         "owner_address": x_wallet_address,
         "is_saved": False,
         "visibility": request.visibility,
+        "augmentation": request.augmentation,
         "saved_at": None,
         "ipfs_cid": None,
         "ipfs_uri": None,
@@ -873,6 +930,7 @@ async def start_analysis(
         request.topic or "",
         request.platforms,
         request.models,
+        request.augmentation,
     )
 
     created_at = tasks[task_id]["created_at"]
@@ -885,7 +943,11 @@ async def start_analysis(
 
 
 async def run_agent_workflow(
-    task_id: str, topic: str, platforms: list[str], models: list[str]
+    task_id: str,
+    topic: str,
+    platforms: list[str],
+    models: list[str],
+    augmentation: dict[str, str] | None = None,
 ) -> None:
     workflow = create_workflow()
     initial_state: dict[str, Any] = {
@@ -912,6 +974,10 @@ async def run_agent_workflow(
         "current_depth": 0,
         "max_depth": 2 if "tinyfish" in (platforms or []) or "web" in (platforms or []) else 1,
         "follow_up_directions": [],
+        "retry_platforms": [],
+        "attempted_query_keys": [],
+        "augmentation": augmentation or {},
+        "source_routes": [],
         "error": None,
     }
 
@@ -981,6 +1047,8 @@ async def run_agent_workflow(
                     "logs": tasks[task_id].get("logs", [])[-12:],
                     "updated_at": tasks[task_id]["updated_at"],
                     "quality_gate": quality_assessment,
+                    "source_routes": tasks[task_id].get("source_routes", []),
+                    "source_breakdown": _derive_source_breakdown(tasks[task_id].get("raw_findings") or []),
                 }
 
                 # Log the node completion
@@ -1478,6 +1546,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
         editorial_data = res_node.get("editorial_data", task.get("editorial_data"))
 
     top_trends = _derive_top_trends_from_findings(raw_findings or [], limit=5)
+    source_breakdown = _derive_source_breakdown(raw_findings or [])
     chainlink_proof = _extract_chainlink_proof(raw_findings or [], task)
     chainlink_configured = False
     try:
@@ -1506,6 +1575,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             "relevanceThreshold": 0.5,
             "isSaved": bool(task.get("is_saved")),
             "visibility": task.get("visibility", "private"),
+            "augmentation": task.get("augmentation", {}),
             "savedAt": task.get("saved_at"),
             "ipfsUri": task.get("ipfs_uri"),
             "saveLabel": task.get("save_label"),
@@ -1552,6 +1622,8 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
                 "updated_at", task.get("updated_at", task.get("created_at", ""))
             ),
             "qualityGate": run_telemetry.get("quality_gate", task.get("quality_assessment", {})),
+            "sourceRoutes": run_telemetry.get("source_routes", task.get("source_routes", [])),
+            "sourceBreakdown": run_telemetry.get("source_breakdown", source_breakdown),
             "chainlinkProof": chainlink_proof,
             "trustStack": {
                 "tee": {
