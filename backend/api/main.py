@@ -3,10 +3,13 @@ import json
 import os
 import uuid
 import datetime
+import math
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 from urllib.parse import quote_plus
+import httpx
 
 from fastapi import BackgroundTasks, FastAPI, Header, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -722,40 +725,236 @@ def _derive_source_breakdown(raw_findings: list[Any]) -> list[dict[str, Any]]:
     return rows[:20]
 
 
-def _extract_related_prediction_markets(
+def _tokenize_market_text(value: str) -> set[str]:
+    return {token for token in re.findall(r"[a-z0-9]{3,}", value.lower()) if token not in {"with", "from", "this", "that", "will", "have", "where", "what"}}
+
+
+def _normalize_probability(value: Any) -> float | None:
+    try:
+        if value is None:
+            return None
+        parsed = float(value)
+        if math.isnan(parsed):
+            return None
+        if parsed > 1:
+            parsed = parsed / 100.0
+        return max(0.0, min(1.0, parsed))
+    except Exception:
+        return None
+
+
+def _parse_market_dt(value: Any) -> datetime.datetime | None:
+    if not value:
+        return None
+    parsed = _parse_iso(value)
+    if parsed:
+        return parsed
+    for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ"):
+        try:
+            dt = datetime.datetime.strptime(str(value), fmt)
+            return dt.replace(tzinfo=datetime.timezone.utc)
+        except Exception:
+            continue
+    return None
+
+
+def _score_market_fit(
+    *,
+    market: dict[str, Any],
+    topic: str,
+    topic_tokens: set[str],
+    evidence_tokens: set[str],
+    now: datetime.datetime,
+    confidence_score: float,
+) -> dict[str, Any]:
+    text_blob = f"{market.get('title', '')} {market.get('description', '')}".lower()
+    market_tokens = _tokenize_market_text(text_blob)
+
+    semantic_overlap = len(topic_tokens & market_tokens) / max(len(topic_tokens), 1)
+    evidence_overlap = len(evidence_tokens & market_tokens) / max(len(evidence_tokens), 1)
+
+    volume = market.get("volume")
+    try:
+        volume_f = float(volume) if volume is not None else 0.0
+    except Exception:
+        volume_f = 0.0
+    liquidity_score = max(0.0, min(1.0, math.log10(max(volume_f, 1.0)) / 6.0))
+
+    end_dt = _parse_market_dt(market.get("endDate"))
+    horizon_score = 0.4
+    days_to_resolution = None
+    if end_dt:
+        days_to_resolution = max(0.0, (end_dt - now).total_seconds() / 86400.0)
+        if 1 <= days_to_resolution <= 30:
+            horizon_score = 1.0
+        elif days_to_resolution <= 90:
+            horizon_score = 0.75
+        else:
+            horizon_score = 0.45
+
+    freshness_score = 0.6
+    created_dt = _parse_market_dt(market.get("createdAt"))
+    if created_dt:
+        age_days = max(0.0, (now - created_dt).total_seconds() / 86400.0)
+        freshness_score = 1.0 if age_days <= 2 else (0.75 if age_days <= 14 else 0.5)
+
+    fit_score = (
+        semantic_overlap * 0.33
+        + evidence_overlap * 0.25
+        + liquidity_score * 0.20
+        + horizon_score * 0.12
+        + freshness_score * 0.10
+    )
+    fit_percent = round(max(0.0, min(1.0, fit_score)) * 100)
+    if fit_percent >= 72:
+        fit_label = "high"
+    elif fit_percent >= 50:
+        fit_label = "medium"
+    else:
+        fit_label = "weak"
+
+    probability = _normalize_probability(market.get("probability"))
+    conviction_prob = max(0.0, min(1.0, confidence_score))
+    edge_delta = None
+    if probability is not None:
+        edge_delta = round((conviction_prob - probability) * 100, 2)
+
+    disconfirmers: list[str] = []
+    if fit_label == "weak":
+        disconfirmers.append("Low semantic/evidence overlap to query.")
+    if liquidity_score < 0.25:
+        disconfirmers.append("Low liquidity can reduce tradability.")
+    if days_to_resolution is not None and days_to_resolution > 120:
+        disconfirmers.append("Long horizon may not match near-term thesis.")
+
+    return {
+        "fitScore": fit_percent,
+        "fitLabel": fit_label,
+        "liquidityScore": round(liquidity_score * 100),
+        "daysToResolution": round(days_to_resolution, 1) if days_to_resolution is not None else None,
+        "impliedProbability": probability,
+        "convictionProbability": round(conviction_prob, 3),
+        "edgeDelta": edge_delta,
+        "disconfirmers": disconfirmers[:3],
+    }
+
+
+async def _fetch_polymarket_markets(topic: str, limit: int = 8) -> list[dict[str, Any]]:
+    query = quote_plus(topic[:120])
+    endpoints = [
+        f"https://gamma-api.polymarket.com/markets?limit={max(limit, 8)}&closed=false&active=true&search={query}",
+        f"https://gamma-api.polymarket.com/events?limit={max(limit, 8)}&closed=false&search={query}",
+    ]
+    markets: list[dict[str, Any]] = []
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        for endpoint in endpoints:
+            try:
+                response = await client.get(endpoint)
+                if response.status_code != 200:
+                    continue
+                payload = response.json()
+                rows = payload if isinstance(payload, list) else payload.get("data", [])
+                if not isinstance(rows, list):
+                    continue
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    slug = row.get("slug") or row.get("market_slug")
+                    url = row.get("url") or (f"https://polymarket.com/event/{slug}" if slug else "")
+                    if not url:
+                        continue
+                    markets.append(
+                        {
+                            "provider": "polymarket",
+                            "title": str(row.get("question") or row.get("title") or row.get("name") or "Polymarket market"),
+                            "description": str(row.get("description") or ""),
+                            "url": str(url),
+                            "probability": row.get("probability") or row.get("yes_price"),
+                            "volume": row.get("volume") or row.get("liquidity"),
+                            "endDate": row.get("endDate") or row.get("end_date") or row.get("close_time"),
+                            "createdAt": row.get("createdAt") or row.get("created_at"),
+                            "relevanceReason": "Matched from Polymarket listings",
+                        }
+                    )
+            except Exception:
+                continue
+    return markets[:limit]
+
+
+async def _fetch_kalshi_markets(topic: str, limit: int = 8) -> list[dict[str, Any]]:
+    query = quote_plus(topic[:120])
+    candidates = [
+        f"https://trading-api.kalshi.com/trade-api/v2/markets?limit={max(limit, 8)}&status=open&search={query}",
+        f"https://api.elections.kalshi.com/trade-api/v2/markets?limit={max(limit, 8)}&status=open&search={query}",
+    ]
+    headers: dict[str, str] = {}
+    if os.getenv("KALSHI_API_KEY"):
+        headers["KALSHI-ACCESS-KEY"] = os.getenv("KALSHI_API_KEY", "")
+    markets: list[dict[str, Any]] = []
+    async with httpx.AsyncClient(timeout=8.0, headers=headers or None) as client:
+        for endpoint in candidates:
+            try:
+                response = await client.get(endpoint)
+                if response.status_code != 200:
+                    continue
+                payload = response.json()
+                rows = payload.get("markets") if isinstance(payload, dict) else payload
+                if not isinstance(rows, list):
+                    continue
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    ticker = row.get("ticker") or row.get("id")
+                    if not ticker:
+                        continue
+                    url = row.get("url") or f"https://kalshi.com/markets/{ticker}"
+                    markets.append(
+                        {
+                            "provider": "kalshi",
+                            "title": str(row.get("title") or row.get("question") or ticker),
+                            "description": str(row.get("subtitle") or row.get("description") or ""),
+                            "url": str(url),
+                            "probability": row.get("yes_price") or row.get("last_price"),
+                            "volume": row.get("volume") or row.get("open_interest"),
+                            "endDate": row.get("close_time") or row.get("expiration_time"),
+                            "createdAt": row.get("open_time") or row.get("created_time"),
+                            "relevanceReason": "Matched from Kalshi listings",
+                        }
+                    )
+            except Exception:
+                continue
+    return markets[:limit]
+
+
+async def _extract_related_prediction_markets(
+    *,
     topic: str,
     financial_intelligence: dict[str, Any] | None,
     top_trends: list[dict[str, Any]],
+    confidence_score: float,
+    agreement_score: float,
+    findings_count: int,
+    data_sufficiency: str,
     limit: int = 5,
-) -> list[dict[str, Any]]:
+) -> dict[str, Any]:
+    now = datetime.datetime.now(datetime.timezone.utc)
+    topic_tokens = _tokenize_market_text(topic)
+    evidence_tokens = set()
+    for trend in top_trends[:6]:
+        if not isinstance(trend, dict):
+            continue
+        evidence_tokens |= _tokenize_market_text(str(trend.get("title") or ""))
+
     related: list[dict[str, Any]] = []
     seen_urls: set[str] = set()
+    suppression_reasons: list[str] = []
 
-    def append_market(
-        *,
-        provider: str,
-        title: str,
-        url: str,
-        probability: float | None = None,
-        volume: float | None = None,
-        end_date: str | None = None,
-        relevance_reason: str | None = None,
-    ) -> None:
-        normalized_url = (url or "").strip()
+    def append_market(item: dict[str, Any]) -> None:
+        normalized_url = str(item.get("url") or "").strip()
         if not normalized_url or normalized_url in seen_urls:
             return
         seen_urls.add(normalized_url)
-        related.append(
-            {
-                "provider": provider,
-                "title": title.strip()[:220] or "Untitled market",
-                "url": normalized_url,
-                "probability": probability,
-                "volume": volume,
-                "endDate": end_date,
-                "relevanceReason": relevance_reason or "Aligned with report topic",
-            }
-        )
+        related.append(item)
 
     poly = (financial_intelligence or {}).get("polymarket_comparison")
     if isinstance(poly, dict):
@@ -770,40 +969,34 @@ def _extract_related_prediction_markets(
                 candidates.extend([row for row in data.get("markets", []) if isinstance(row, dict)])
             if isinstance(data.get("events"), list):
                 candidates.extend([row for row in data.get("events", []) if isinstance(row, dict)])
-
         for row in candidates:
-            url = str(
-                row.get("url")
-                or row.get("link")
-                or row.get("market_url")
-                or row.get("event_url")
-                or ""
-            ).strip()
+            url = str(row.get("url") or row.get("link") or row.get("market_url") or row.get("event_url") or "").strip()
             if not url:
                 continue
-            provider = "polymarket" if "polymarket" in url.lower() else "prediction_market"
-            title = str(row.get("title") or row.get("question") or row.get("name") or "Prediction market")
-            prob = row.get("probability") or row.get("yes_prob") or row.get("odds")
-            try:
-                prob_value = float(prob) if prob is not None else None
-                if prob_value is not None and prob_value > 1:
-                    prob_value = prob_value / 100.0
-            except Exception:
-                prob_value = None
-            volume_raw = row.get("volume") or row.get("liquidity")
-            try:
-                volume_value = float(volume_raw) if volume_raw is not None else None
-            except Exception:
-                volume_value = None
             append_market(
-                provider=provider,
-                title=title,
-                url=url,
-                probability=prob_value,
-                volume=volume_value,
-                end_date=str(row.get("end_date") or row.get("endDate") or row.get("close_time") or "") or None,
-                relevance_reason="Mapped from SynthData prediction-market comparison",
+                {
+                    "provider": "polymarket" if "polymarket" in url.lower() else "prediction_market",
+                    "title": str(row.get("title") or row.get("question") or row.get("name") or "Prediction market"),
+                    "description": str(row.get("description") or ""),
+                    "url": url,
+                    "probability": row.get("probability") or row.get("yes_prob") or row.get("odds"),
+                    "volume": row.get("volume") or row.get("liquidity"),
+                    "endDate": row.get("end_date") or row.get("endDate") or row.get("close_time"),
+                    "createdAt": row.get("created_at") or row.get("createdAt"),
+                    "relevanceReason": "Mapped from SynthData prediction-market comparison",
+                }
             )
+
+    external_results = await asyncio.gather(
+        _fetch_polymarket_markets(topic, limit=max(limit * 2, 8)),
+        _fetch_kalshi_markets(topic, limit=max(limit * 2, 8)),
+        return_exceptions=True,
+    )
+    for source in external_results:
+        if isinstance(source, Exception):
+            continue
+        for row in source:
+            append_market(row)
 
     for trend in top_trends:
         if not isinstance(trend, dict):
@@ -811,35 +1004,121 @@ def _extract_related_prediction_markets(
         trend_url = str(trend.get("url") or "").strip()
         if "polymarket.com" in trend_url.lower():
             append_market(
-                provider="polymarket",
-                title=str(trend.get("title") or "Polymarket market"),
-                url=trend_url,
-                relevance_reason="Detected directly in high-impact signals",
+                {
+                    "provider": "polymarket",
+                    "title": str(trend.get("title") or "Polymarket market"),
+                    "description": "",
+                    "url": trend_url,
+                    "probability": None,
+                    "volume": None,
+                    "endDate": trend.get("timestamp"),
+                    "createdAt": trend.get("timestamp"),
+                    "relevanceReason": "Detected directly in high-impact signals",
+                }
             )
         if "kalshi.com" in trend_url.lower():
             append_market(
-                provider="kalshi",
-                title=str(trend.get("title") or "Kalshi market"),
-                url=trend_url,
-                relevance_reason="Detected directly in high-impact signals",
+                {
+                    "provider": "kalshi",
+                    "title": str(trend.get("title") or "Kalshi market"),
+                    "description": "",
+                    "url": trend_url,
+                    "probability": None,
+                    "volume": None,
+                    "endDate": trend.get("timestamp"),
+                    "createdAt": trend.get("timestamp"),
+                    "relevanceReason": "Detected directly in high-impact signals",
+                }
             )
 
     if not related:
         topic_slug = quote_plus(topic[:120])
         append_market(
-            provider="polymarket",
-            title=f"Search Polymarket for: {topic[:80]}",
-            url=f"https://polymarket.com/search?q={topic_slug}",
-            relevance_reason="No direct market matched; search suggested",
+            {
+                "provider": "polymarket",
+                "title": f"Search Polymarket for: {topic[:80]}",
+                "description": "",
+                "url": f"https://polymarket.com/search?q={topic_slug}",
+                "probability": None,
+                "volume": None,
+                "endDate": None,
+                "createdAt": now.isoformat(),
+                "relevanceReason": "No direct market matched; search suggested",
+            }
         )
         append_market(
-            provider="kalshi",
-            title=f"Search Kalshi for: {topic[:80]}",
-            url=f"https://kalshi.com/markets?search={topic_slug}",
-            relevance_reason="No direct market matched; search suggested",
+            {
+                "provider": "kalshi",
+                "title": f"Search Kalshi for: {topic[:80]}",
+                "description": "",
+                "url": f"https://kalshi.com/markets?search={topic_slug}",
+                "probability": None,
+                "volume": None,
+                "endDate": None,
+                "createdAt": now.isoformat(),
+                "relevanceReason": "No direct market matched; search suggested",
+            }
         )
 
-    return related[:limit]
+    enriched: list[dict[str, Any]] = []
+    for market in related:
+        scoring = _score_market_fit(
+            market=market,
+            topic=topic,
+            topic_tokens=topic_tokens,
+            evidence_tokens=evidence_tokens,
+            now=now,
+            confidence_score=confidence_score,
+        )
+        enriched.append(
+            {
+                **market,
+                "probability": _normalize_probability(market.get("probability")),
+                "volume": float(market.get("volume")) if str(market.get("volume", "")).replace(".", "", 1).isdigit() else market.get("volume"),
+                **scoring,
+            }
+        )
+
+    enriched.sort(key=lambda item: (item.get("fitScore", 0), item.get("liquidityScore", 0)), reverse=True)
+    run_actionable = (
+        data_sufficiency in {"healthy", "partial"}
+        and findings_count >= int(os.getenv("MARKET_MIN_FINDINGS", "5"))
+        and agreement_score >= float(os.getenv("MARKET_MIN_AGREEMENT", "0.55"))
+    )
+    if not run_actionable:
+        suppression_reasons.append(
+            f"Run gated: sufficiency={data_sufficiency}, findings={findings_count}, agreement={agreement_score:.2f}"
+        )
+
+    min_fit = int(os.getenv("MARKET_MIN_FIT_SCORE", "45"))
+    for market in enriched:
+        market_actionable = run_actionable and int(market.get("fitScore", 0)) >= min_fit
+        market["actionable"] = market_actionable
+        market["fitLabel"] = market.get("fitLabel", "weak")
+        if not market_actionable:
+            reasons: list[str] = []
+            if not run_actionable:
+                reasons.append("Run quality gate not met")
+            if int(market.get("fitScore", 0)) < min_fit:
+                reasons.append(f"fit<{min_fit}")
+            if int(market.get("liquidityScore", 0)) < int(os.getenv("MARKET_MIN_LIQ_SCORE", "20")):
+                reasons.append("low_liquidity")
+            market["suppressionReasons"] = reasons
+            suppression_reasons.extend([f"{market.get('provider')}:{market.get('title')[:40]}:{reason}" for reason in reasons])
+        else:
+            market["suppressionReasons"] = []
+
+    return {
+        "markets": enriched[:limit],
+        "gating": {
+            "actionable": run_actionable,
+            "dataSufficiency": data_sufficiency,
+            "findingsCount": findings_count,
+            "agreementScore": round(agreement_score, 3),
+            "minFitScore": min_fit,
+        },
+        "suppressionReasons": suppression_reasons[:20],
+    }
 
 
 class QueryRequest(BaseModel):
@@ -1842,12 +2121,17 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
         financial_intelligence = res_node.get("financial_intelligence", task.get("financial_intelligence"))
 
     top_trends = _derive_top_trends_from_findings(raw_findings or [], limit=5)
-    related_markets = _extract_related_prediction_markets(
+    related_market_output = await _extract_related_prediction_markets(
         topic=task.get("topic", ""),
         financial_intelligence=financial_intelligence if isinstance(financial_intelligence, dict) else None,
         top_trends=top_trends,
+        confidence_score=float(confidence_score or 0.0),
+        agreement_score=float((consensus_data or {}).get("agreement_score", 0.0) or 0.0),
+        findings_count=int(run_telemetry.get("findings_count", len(raw_findings or [])) or 0),
+        data_sufficiency=str(run_telemetry.get("data_sufficiency", "unknown")).strip().lower(),
         limit=5,
     )
+    related_markets = related_market_output.get("markets", [])
     source_breakdown = _derive_source_breakdown(raw_findings or [])
     chainlink_proof = _extract_chainlink_proof(raw_findings or [], task)
     chainlink_configured = False
@@ -1897,6 +2181,10 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             "oracleMarketId": task.get("oracle_market_id"),
             "financialIntelligence": financial_intelligence,
             "relatedMarkets": related_markets,
+            "marketSignals": {
+                "gating": related_market_output.get("gating", {}),
+                "suppressionReasons": related_market_output.get("suppressionReasons", []),
+            },
             "generatedAt": task.get("updated_at", task.get("created_at", "")),
         },
         "telemetry": {
@@ -1945,6 +2233,8 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
                     "network": (chainlink_proof or {}).get("network"),
                 },
             },
+            "marketSignals": related_market_output.get("gating", {}),
+            "marketSuppressionReasons": related_market_output.get("suppressionReasons", []),
         },
         "editorial": editorial_data,
     }

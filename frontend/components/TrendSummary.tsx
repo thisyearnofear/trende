@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { TrendSummary as TrendSummaryType } from '@/lib/types';
 import { TrendingUp, TrendingDown, Minus, Clock, ShieldCheck, Flame, Sparkles, Radar, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -22,6 +23,126 @@ interface TrendSummaryProps {
 export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, dataHealth }: TrendSummaryProps) {
   const { isSoft } = useTheme();
   void sourceLabelByOrdinal;
+  const sentiment = summary?.sentiment || 'neutral';
+
+  const getSentimentIcon = () => {
+    switch (sentiment) {
+      case 'positive': return <TrendingUp className="w-5 h-5 text-emerald-400" />;
+      case 'negative': return <TrendingDown className="w-5 h-5 text-rose-400" />;
+      default: return <Minus className="w-5 h-5 text-amber-400" />;
+    }
+  };
+
+  const confidence = Math.round((summary?.confidenceScore || 0) * 100);
+  const consensus = summary?.consensusData;
+  const agreement = Math.round((consensus?.agreement_score || 0) * 100);
+  const financial = summary?.financialIntelligence;
+  const assetRows = financial?.assets?.slice(0, 3) || [];
+  const relatedMarkets = useMemo(() => summary?.relatedMarkets || [], [summary?.relatedMarkets]);
+  const [highFitOnly, setHighFitOnly] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const rawPrefs = window.localStorage.getItem('trende:market_prefs');
+      if (!rawPrefs) return false;
+      const prefs = JSON.parse(rawPrefs) as { highFitOnly?: boolean };
+      return Boolean(prefs.highFitOnly);
+    } catch {
+      return false;
+    }
+  });
+  const [hideLowLiquidity, setHideLowLiquidity] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      const rawPrefs = window.localStorage.getItem('trende:market_prefs');
+      if (!rawPrefs) return true;
+      const prefs = JSON.parse(rawPrefs) as { hideLowLiquidity?: boolean };
+      return prefs.hideLowLiquidity === undefined ? true : Boolean(prefs.hideLowLiquidity);
+    } catch {
+      return true;
+    }
+  });
+  const [minExpiryDays, setMinExpiryDays] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const rawPrefs = window.localStorage.getItem('trende:market_prefs');
+      if (!rawPrefs) return 0;
+      const prefs = JSON.parse(rawPrefs) as { minExpiryDays?: number };
+      return Number.isFinite(prefs.minExpiryDays) ? Number(prefs.minExpiryDays) : 0;
+    } catch {
+      return 0;
+    }
+  });
+  const [marketDisclaimerAccepted, setMarketDisclaimerAccepted] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('trende:market_disclaimer_ack') === '1';
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(
+      'trende:market_prefs',
+      JSON.stringify({ highFitOnly, hideLowLiquidity, minExpiryDays })
+    );
+  }, [highFitOnly, hideLowLiquidity, minExpiryDays]);
+
+  const filteredMarkets = useMemo(() => {
+    return relatedMarkets
+      .filter((market) => (highFitOnly ? (market.fitLabel === 'high' || market.actionable) : true))
+      .filter((market) => (hideLowLiquidity ? (market.liquidityScore ?? 100) >= 20 : true))
+      .filter((market) =>
+        minExpiryDays > 0 ? (market.daysToResolution == null ? false : market.daysToResolution >= minExpiryDays) : true
+      )
+      .slice(0, 5);
+  }, [relatedMarkets, highFitOnly, hideLowLiquidity, minExpiryDays]);
+
+  const readinessMarket = useMemo(() => {
+    if (filteredMarkets.length === 0) return null;
+    return [...filteredMarkets].sort(
+      (a, b) => Number(b.fitScore || 0) - Number(a.fitScore || 0)
+    )[0];
+  }, [filteredMarkets]);
+
+  const marketGating = summary?.marketSignals?.gating;
+
+  const handleOpenMarket = (url: string, marketTitle: string, provider: string, fitScore?: number) => {
+    if (typeof window === 'undefined') return;
+    if (!marketDisclaimerAccepted) {
+      const accepted = window.confirm(
+        "External market links are informational only. Verify jurisdiction rules and do your own diligence before participating."
+      );
+      if (!accepted) return;
+      window.localStorage.setItem('trende:market_disclaimer_ack', '1');
+      setMarketDisclaimerAccepted(true);
+    }
+    try {
+      const endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/telemetry/mission-event`;
+      const payload = JSON.stringify({
+        name: 'market_link_open',
+        source: 'trend_summary',
+        stage: 'results',
+        payload: {
+          url,
+          title: marketTitle,
+          provider,
+          fitScore: fitScore ?? null,
+        },
+      });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(endpoint, new Blob([payload], { type: 'application/json' }));
+      } else {
+        void fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          keepalive: true,
+        });
+      }
+    } catch {
+      // no-op
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   if (isLoading) {
     return (
       <Card accent="cyan" className={cn("p-6 animate-pulse glass", isSoft ? "soft-ui-out border-0" : "border-cyan-500/30")}>
@@ -39,21 +160,6 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
   if (!summary) {
     return null;
   }
-
-  const getSentimentIcon = () => {
-    switch (summary.sentiment) {
-      case 'positive': return <TrendingUp className="w-5 h-5 text-emerald-400" />;
-      case 'negative': return <TrendingDown className="w-5 h-5 text-rose-400" />;
-      default: return <Minus className="w-5 h-5 text-amber-400" />;
-    }
-  };
-
-  const confidence = Math.round((summary.confidenceScore || 0) * 100);
-  const consensus = summary.consensusData;
-  const agreement = Math.round((consensus?.agreement_score || 0) * 100);
-  const financial = summary.financialIntelligence;
-  const assetRows = financial?.assets?.slice(0, 3) || [];
-  const relatedMarkets = summary.relatedMarkets?.slice(0, 4) || [];
 
   return (
     <Card accent="white" shadow="md" className={cn("p-0 overflow-hidden group", isSoft ? "soft-ui-out border-0" : "glass border-white/10")}>
@@ -320,14 +426,64 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
                 Beta
               </Badge>
             </div>
+            <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-2", isSoft ? "text-[var(--text-secondary)]" : "text-white/70")}>
+              <label className="text-[10px] font-mono flex items-center gap-2">
+                <input type="checkbox" checked={highFitOnly} onChange={(e) => setHighFitOnly(e.target.checked)} />
+                Show only high-fit
+              </label>
+              <label className="text-[10px] font-mono flex items-center gap-2">
+                <input type="checkbox" checked={hideLowLiquidity} onChange={(e) => setHideLowLiquidity(e.target.checked)} />
+                Hide low-liquidity
+              </label>
+              <label className="text-[10px] font-mono flex items-center gap-2">
+                Min expiry
+                <select
+                  value={minExpiryDays}
+                  onChange={(e) => setMinExpiryDays(Number(e.target.value))}
+                  className={cn("bg-transparent border rounded px-2 py-1 text-[10px]", isSoft ? "border-[var(--text-muted)]/20" : "border-white/20")}
+                >
+                  <option value={0}>Any</option>
+                  <option value={1}>1d+</option>
+                  <option value={7}>7d+</option>
+                  <option value={30}>30d+</option>
+                </select>
+              </label>
+            </div>
+            {marketGating && (
+              <div className={cn("text-[10px] font-mono p-2 rounded", isSoft ? "soft-ui-out" : "bg-white/5 border border-white/10")}>
+                {marketGating.actionable ? "Actionable market suggestions enabled." : "Exploratory only: run quality gate is not fully met."}
+                <span className="ml-2 opacity-80">
+                  suff={marketGating.dataSufficiency} • findings={marketGating.findingsCount} • agreement={Math.round((marketGating.agreementScore || 0) * 100)}%
+                </span>
+              </div>
+            )}
+            {readinessMarket && (
+              <div className={cn("rounded-lg p-3 space-y-1", isSoft ? "soft-ui-out" : "bg-violet-500/10 border border-violet-500/20")}>
+                <p className="text-[10px] uppercase tracking-widest font-black text-[var(--accent-violet)]">Market Readiness</p>
+                <p className="text-xs text-[var(--text-primary)]">{readinessMarket.title}</p>
+                <p className="text-[10px] font-mono text-[var(--text-muted)]">
+                  fit {readinessMarket.fitScore ?? 0}% ({readinessMarket.fitLabel || 'weak'}) • liquidity {readinessMarket.liquidityScore ?? 0}% • edge {readinessMarket.edgeDelta ?? 0}pp
+                </p>
+                {(readinessMarket.disconfirmers || []).length > 0 && (
+                  <p className="text-[10px] font-mono text-[var(--text-muted)]">
+                    Risks: {(readinessMarket.disconfirmers || []).join(' | ')}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {relatedMarkets.map((market, index) => (
+              {filteredMarkets.map((market, index) => (
                 <div key={`${market.url}-${index}`} className={cn("rounded-lg p-3 space-y-2", isSoft ? "soft-ui-out" : "bg-slate-900/60 border border-white/5")}>
                   <div className="flex items-start justify-between gap-3">
                     <p className="text-xs text-[var(--text-primary)] leading-relaxed">{market.title}</p>
                     <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)]">{market.provider}</span>
                   </div>
                   <div className="flex flex-wrap gap-2 text-[10px] font-mono">
+                    {typeof market.fitScore === "number" && (
+                      <span className={cn("px-2 py-0.5 rounded", market.fitLabel === 'high' ? "bg-emerald-500/15 text-emerald-300" : market.fitLabel === 'medium' ? "bg-amber-500/15 text-amber-300" : "bg-rose-500/15 text-rose-300")}>
+                        Fit {market.fitScore}%
+                      </span>
+                    )}
                     {typeof market.probability === "number" && (
                       <span className={cn("px-2 py-0.5 rounded", isSoft ? "bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)]" : "bg-cyan-500/10 text-cyan-300")}>
                         {(market.probability * 100).toFixed(1)}%
@@ -338,22 +494,29 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
                         Vol ${market.volume.toLocaleString()}
                       </span>
                     )}
+                    {typeof market.daysToResolution === "number" && (
+                      <span className={cn("px-2 py-0.5 rounded", isSoft ? "bg-[var(--accent-violet)]/10 text-[var(--accent-violet)]" : "bg-violet-500/10 text-violet-300")}>
+                        {market.daysToResolution.toFixed(1)}d
+                      </span>
+                    )}
                   </div>
                   {market.relevanceReason && (
                     <p className="text-[10px] text-[var(--text-muted)] font-mono">{market.relevanceReason}</p>
                   )}
-                  <a
-                    href={market.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => handleOpenMarket(market.url, market.title, market.provider, market.fitScore)}
                     className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-black text-[var(--accent-violet)] hover:opacity-80"
                   >
                     Open Market
                     <ExternalLink className="w-3 h-3" />
-                  </a>
+                  </button>
                 </div>
               ))}
             </div>
+            {filteredMarkets.length === 0 && (
+              <p className="text-[10px] font-mono text-[var(--text-muted)]">No markets match current filters.</p>
+            )}
           </section>
         )}
       </div>

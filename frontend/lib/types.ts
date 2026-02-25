@@ -161,7 +161,27 @@ export interface TrendSummary {
     volume?: number | null;
     endDate?: string | null;
     relevanceReason?: string;
+    fitScore?: number;
+    fitLabel?: 'high' | 'medium' | 'weak';
+    liquidityScore?: number;
+    daysToResolution?: number | null;
+    impliedProbability?: number | null;
+    convictionProbability?: number;
+    edgeDelta?: number | null;
+    disconfirmers?: string[];
+    actionable?: boolean;
+    suppressionReasons?: string[];
   }>;
+  marketSignals?: {
+    gating?: {
+      actionable?: boolean;
+      dataSufficiency?: string;
+      findingsCount?: number;
+      agreementScore?: number;
+      minFitScore?: number;
+    };
+    suppressionReasons?: string[];
+  };
   oracleMarketId?: string;
   generatedAt: string;
 }
@@ -287,6 +307,14 @@ export interface ResultsResponse {
         network?: string;
       };
     };
+    marketSignals?: {
+      actionable?: boolean;
+      dataSufficiency?: string;
+      findingsCount?: number;
+      agreementScore?: number;
+      minFitScore?: number;
+    };
+    marketSuppressionReasons?: string[];
   };
 }
 
