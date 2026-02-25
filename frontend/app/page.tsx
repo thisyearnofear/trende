@@ -47,6 +47,14 @@ import { RunFlowDivider } from "@/components/RunFlowDivider";
 import { cn } from "@/lib/utils";
 
 const LAST_QUERY_STORAGE_KEY = "trende:last_query_id";
+const AGENT_THREAD_STORAGE_KEY = "trende:agent_threads";
+
+type AgentReply = {
+  q: string;
+  a: string;
+  citations: string[];
+  ts: number;
+};
 
 const INTELLIGENCE_ENGINE_STEPS = [
   {
@@ -155,7 +163,7 @@ export default function Home() {
   const forgeAutoInitForQueryRef = useRef<string | null>(null);
   const [briefOpen, setBriefOpen] = useState(true);
   const [agentPrompt, setAgentPrompt] = useState("");
-  const [agentReplies, setAgentReplies] = useState<Array<{ q: string; a: string; ts: number }>>([]);
+  const [agentReplies, setAgentReplies] = useState<AgentReply[]>([]);
   const [showCommons, setShowCommons] = useState(true);
   const [commonsSearch, setCommonsSearch] = useState("");
   const [commonsVisibleCount, setCommonsVisibleCount] = useState(6);
@@ -498,11 +506,17 @@ export default function Home() {
     if (!question) return;
     const q = question.toLowerCase();
 
+    const citations: string[] = [];
     let answer = "";
     if (q.includes("disagree") || q.includes("diverg")) {
       answer =
         data?.summary?.consensusData?.main_divergence ||
         "Divergence is low in this run; models are largely aligned on the core thesis.";
+      const agreement = Math.round((data?.telemetry?.agreementScore || 0) * 100);
+      citations.push(`[consensus.agreement:${agreement}%]`);
+      if (data?.summary?.consensusData?.providers?.length) {
+        citations.push(`[providers:${data.summary.consensusData.providers.length}]`);
+      }
     } else if (q.includes("source") || q.includes("firecrawl") || q.includes("synthdata") || q.includes("fallback")) {
       const top = (sourceBreakdown || []).slice(0, 5);
       const lanes = (sourceRoutes || []).filter((r) => r.fallback_used).length;
@@ -510,24 +524,57 @@ export default function Home() {
         ? top.map((r) => `${r.platform}/${r.source}: ${r.items}`).join(" | ")
         : "No source contribution rows were captured.";
       answer = `Top contribution: ${topText}. Fallback lanes used: ${lanes}.`;
+      citations.push(`[fallback_lanes:${lanes}]`);
+      top.slice(0, 3).forEach((row) => citations.push(`[src:${row.platform}/${row.source}:${row.items}]`));
     } else if (q.includes("confidence") || q.includes("score")) {
       answer = `Run confidence is ${weightedConfidence}%. Agreement is ${Math.round((data?.telemetry?.agreementScore || 0) * 100)}%, with ${stats.platforms} platform(s) and ${sourceCount} source items.`;
+      citations.push(`[confidence:${weightedConfidence}%]`);
+      citations.push(`[platforms:${stats.platforms}]`);
+      citations.push(`[sources:${sourceCount}]`);
     } else if (q.includes("next") || q.includes("improve") || q.includes("refine")) {
       answer = `Next best move: keep primary routes, set Firecrawl to AUTO, enable SynthData for market-heavy prompts, and tighten directive scope to 1-2 explicit outcomes with a timeframe.`;
+      citations.push(`[hint:firecrawl:auto]`);
+      citations.push(`[hint:synthdata:market]`);
     } else if (q.includes("tweet") || q.includes("plain language") || q.includes("summary")) {
       const summary = (data?.summary?.overview || "").replace(/\s+/g, " ").trim();
       answer = summary ? `${summary.slice(0, 420)}${summary.length > 420 ? "..." : ""}` : "Summary is not available yet for this run.";
+      citations.push(`[overview:${summary ? "available" : "missing"}]`);
     } else {
       const summary = (data?.summary?.overview || "").replace(/\s+/g, " ").trim();
       answer =
         summary
           ? `From this run: ${summary.slice(0, 360)}${summary.length > 360 ? "..." : ""}`
           : "I can answer from this run’s telemetry, sources, disagreement signal, and confidence drivers. Ask me about any of those.";
+      citations.push(`[telemetry:run_scoped]`);
     }
 
-    setAgentReplies((prev) => [...prev.slice(-5), { q: question, a: answer, ts: Date.now() }]);
+    setAgentReplies((prev) => [...prev.slice(-7), { q: question, a: answer, citations, ts: Date.now() }]);
     setAgentPrompt("");
-  }, [agentPrompt, data?.summary?.consensusData?.main_divergence, data?.summary?.overview, data?.telemetry?.agreementScore, sourceBreakdown, sourceCount, sourceRoutes, stats.platforms, weightedConfidence]);
+  }, [agentPrompt, data?.summary?.consensusData?.main_divergence, data?.summary?.consensusData?.providers, data?.summary?.overview, data?.telemetry?.agreementScore, sourceBreakdown, sourceCount, sourceRoutes, stats.platforms, weightedConfidence]);
+
+  useEffect(() => {
+    if (!activeQueryId || typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(AGENT_THREAD_STORAGE_KEY);
+      const all = raw ? JSON.parse(raw) : {};
+      const thread = Array.isArray(all?.[activeQueryId]) ? all[activeQueryId] : [];
+      setAgentReplies(thread.slice(-8));
+    } catch {
+      setAgentReplies([]);
+    }
+  }, [activeQueryId]);
+
+  useEffect(() => {
+    if (!activeQueryId || typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(AGENT_THREAD_STORAGE_KEY);
+      const all = raw ? JSON.parse(raw) : {};
+      all[activeQueryId] = agentReplies.slice(-20);
+      window.localStorage.setItem(AGENT_THREAD_STORAGE_KEY, JSON.stringify(all));
+    } catch {
+      // no-op for storage quota/errors
+    }
+  }, [activeQueryId, agentReplies]);
   const filteredCommons = useMemo(() => {
     const term = commonsSearch.trim().toLowerCase();
     if (!term) return commonsResearch;
@@ -1539,6 +1586,11 @@ export default function Home() {
                       <div key={row.ts} className="space-y-1">
                         <p className="text-[10px] font-black uppercase tracking-wider text-cyan-300">{row.q}</p>
                         <p className="text-[11px] font-mono text-[var(--text-secondary)]">{row.a}</p>
+                        {row.citations?.length > 0 && (
+                          <p className="text-[10px] font-mono text-[var(--text-muted)]">
+                            {row.citations.join(" ")}
+                          </p>
+                        )}
                       </div>
                     ))
                   )}
