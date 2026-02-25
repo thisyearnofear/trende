@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Terminal, Bot, Shield, Zap, Link, Layers, Rocket } from 'lucide-react';
+import { Terminal, Bot, Shield, Zap, Link } from 'lucide-react';
 import { Card, Button } from './DesignSystem';
 import { useTheme } from './ThemeProvider';
 
@@ -163,9 +163,6 @@ export function Onboarding() {
               <div className="space-y-2">
                 <Button onClick={handleClose} variant="primary" className="w-full h-12 text-sm font-black tracking-widest">
                   ENTER CONTROL ROOM
-                </Button>
-                <Button onClick={handleClose} variant="ghost" className="w-full h-10 text-xs font-black tracking-widest">
-                  SKIP FOR NOW
                 </Button>
               </div>
             </div>

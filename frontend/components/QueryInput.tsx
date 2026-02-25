@@ -242,7 +242,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-cyan-400 opacity-60" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Starter Missions</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Mission Stages</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -264,7 +264,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                     !advancedSeen && "animate-pulse"
                   )}
                 >
-                  2 Mission Setup
+                  2 Advanced Setup
                 </button>
                 <button
                   type="button"
@@ -319,30 +319,22 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                 rows={4}
                 className="w-full bg-black/40 glass border-white/10 rounded-2xl p-6 text-base font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-white/30 transition-all resize-none shadow-inner"
               />
-
-              <div className="absolute bottom-4 right-4 flex items-center gap-4">
-                {/* Character count or similar could go here */}
-                <Button
-                  type="submit"
-                  className="rounded-xl px-8 shadow-2xl transition-all active:scale-95"
-                  variant="primary"
-                  disabled={!idea.trim() || isLoading || disabled || !hasPlatforms || !hasModels}
-                >
-                  {isLoading ? (
-                    <div className="flex items-center gap-3">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="font-black uppercase tracking-widest text-xs">Agent Running</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <Rocket className="w-4 h-4" />
-                      <span className="font-black uppercase tracking-widest text-xs">Deploy Agent</span>
-                    </div>
-                  )}
-                </Button>
-              </div>
             </div>
           </div>
+
+          {composerStage === 'directive' && (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                className="rounded-xl px-6"
+                disabled={!idea.trim() || disabled}
+                onClick={() => goToStage('setup')}
+              >
+                Continue to Advanced Setup
+              </Button>
+            </div>
+          )}
 
           <div className="relative group/spec">
             <button
@@ -591,7 +583,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Intelligence Saliency Threshold</span>
                   <span className="text-xs font-black text-cyan-400">{Math.round(relevanceThreshold * 100)}%</span>
                 </div>
-                <div className="relative flex items-center px-4">
+                <div className="relative flex items-center">
                   <div className="absolute inset-x-0 h-1 bg-white/5 rounded-full overflow-hidden">
                     <div className="h-full bg-cyan-400" style={{ width: `${relevanceThreshold * 100}%` }} />
                   </div>
@@ -607,6 +599,69 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   />
                 </div>
               </div>
+
+              {composerStage === 'setup' && (
+                <div className="flex justify-end pt-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="rounded-xl px-6"
+                    disabled={disabled || !hasPlatforms || !hasModels}
+                    onClick={() => goToStage('launch')}
+                  >
+                    Review and Launch
+                  </Button>
+                </div>
+              )}
+
+              {composerStage === 'launch' && (
+                <div className="space-y-4 pt-6 border-t border-white/5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Launch Confirmation</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="glass border border-white/10 rounded-xl p-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Directive</p>
+                      <p className="text-xs font-mono text-[var(--text-primary)] mt-2 line-clamp-4">{idea.trim() || "No directive set"}</p>
+                    </div>
+                    <div className="glass border border-white/10 rounded-xl p-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Sources</p>
+                      <p className="text-xs font-mono text-[var(--text-primary)] mt-2">{platforms.join(", ")}</p>
+                    </div>
+                    <div className="glass border border-white/10 rounded-xl p-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Models</p>
+                      <p className="text-xs font-mono text-[var(--text-primary)] mt-2">{models.join(", ")}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="rounded-xl px-6"
+                      onClick={() => goToStage('setup')}
+                      disabled={disabled || isLoading}
+                    >
+                      Tweak Setup
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="rounded-xl px-8 shadow-2xl transition-all active:scale-95"
+                      variant="primary"
+                      disabled={!idea.trim() || isLoading || disabled || !hasPlatforms || !hasModels}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center gap-3">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="font-black uppercase tracking-widest text-xs">Agent Running</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <Rocket className="w-4 h-4" />
+                          <span className="font-black uppercase tracking-widest text-xs">Deploy Agent</span>
+                        </div>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

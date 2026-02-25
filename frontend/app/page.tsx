@@ -166,7 +166,7 @@ export default function Home() {
   const [agentReplies, setAgentReplies] = useState<AgentReply[]>([]);
   const [showCommons, setShowCommons] = useState(true);
   const [commonsSearch, setCommonsSearch] = useState("");
-  const [commonsVisibleCount, setCommonsVisibleCount] = useState(6);
+  const [commonsVisibleCount, setCommonsVisibleCount] = useState(2);
   const { showToast } = useToast();
   const { isConnected } = useWallet();
   const missionFocusRef = useRef<HTMLDivElement | null>(null);
@@ -1142,7 +1142,7 @@ export default function Home() {
                   value={commonsSearch}
                   onChange={(event) => {
                     setCommonsSearch(event.target.value);
-                    setCommonsVisibleCount(6);
+                    setCommonsVisibleCount(2);
                   }}
                   placeholder="Filter by topic or platform..."
                   className="w-full px-3 py-2 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] font-mono text-sm focus:outline-none focus:border-[var(--accent-emerald)]"
@@ -1228,7 +1228,7 @@ export default function Home() {
                         variant="secondary"
                         size="sm"
                         onClick={() =>
-                          setCommonsVisibleCount((prev) => Math.min(prev + 6, filteredCommons.length))
+                          setCommonsVisibleCount((prev) => Math.min(prev + 2, filteredCommons.length))
                         }
                       >
                         Load More
