@@ -29,6 +29,16 @@ from backend.services.archive_service import archive_service
 from backend.utils.rate_limit import UserRateLimitInfo, user_rate_limiter
 from shared.models import QueryStatus
 
+ACTIVE_TASK_STATUSES = {
+    QueryStatus.PENDING,
+    QueryStatus.PLANNING,
+    QueryStatus.RESEARCHING,
+    QueryStatus.PROCESSING,
+    QueryStatus.ANALYZING,
+}
+
+TERMINAL_TASK_STATUSES = {QueryStatus.COMPLETED, QueryStatus.FAILED}
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -41,6 +51,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         asyncio.create_task(acp_service.start_listening())
     # Start sentinel: autonomous oracle market resolution loop
     asyncio.create_task(_sentinel_loop())
+    # Reap stale non-terminal tasks that were orphaned by restarts/deploys.
+    asyncio.create_task(_stale_task_reaper_loop())
     yield
 
 
@@ -232,26 +244,76 @@ async def enforce_attestation_startup_gate() -> None:
 
 
 async def resume_interrupted_tasks() -> None:
-    # Only resume if they are in a processing state
-    unfinished = [
-        t
-        for t in repo.get_all_tasks(limit=100)
-        if t["status"] not in [QueryStatus.COMPLETED, QueryStatus.FAILED]
-    ]
+    # Only resume recent non-terminal tasks; expire stale ones.
+    max_resume_age = max(60, int(os.getenv("TASK_RESUME_MAX_AGE_SECS", "1200")))
+    now = datetime.datetime.now(datetime.timezone.utc)
+    unfinished = [t for t in repo.get_all_tasks(limit=200) if t["status"] in ACTIVE_TASK_STATUSES]
     for t in unfinished:
         # Load full state
         full_task = repo.get_task(t["task_id"])
-        if full_task:
-            tasks[t["task_id"]] = full_task
-            # Restart agent loop in background
-            asyncio.create_task(
-                run_agent_workflow(
-                    t["task_id"],
-                    full_task["topic"],
-                    full_task.get("platforms", []),
-                    full_task.get("models", []),
-                )
+        if not full_task:
+            continue
+        updated = _parse_iso(full_task.get("updated_at")) or _parse_iso(full_task.get("created_at"))
+        age_secs = int((now - updated).total_seconds()) if updated else max_resume_age + 1
+        if age_secs > max_resume_age:
+            _mark_task_failed(
+                full_task,
+                f"Task expired on startup cleanup after {age_secs}s without terminal completion.",
+                log_prefix="⚠️ AUTO-EXPIRE",
             )
+            continue
+        tasks[t["task_id"]] = full_task
+        # Restart agent loop in background
+        asyncio.create_task(
+            run_agent_workflow(
+                t["task_id"],
+                full_task["topic"],
+                full_task.get("platforms", []),
+                full_task.get("models", []),
+            )
+        )
+
+
+def _mark_task_failed(task: dict[str, Any], reason: str, log_prefix: str = "❌") -> None:
+    task_id = task.get("task_id")
+    task["status"] = QueryStatus.FAILED
+    task["error"] = reason
+    logs = task.get("logs", [])
+    logs.append(f"{log_prefix}: {reason}")
+    task["logs"] = logs[-200:]
+    task["updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    if task_id:
+        tasks[task_id] = task
+        repo.save_task(task_id, task)
+
+
+async def _stale_task_reaper_loop() -> None:
+    await asyncio.sleep(25)
+    stale_after = max(120, int(os.getenv("STALE_TASK_TIMEOUT_SECS", "1800")))
+    while True:
+        try:
+            now = datetime.datetime.now(datetime.timezone.utc)
+            for item in repo.get_all_tasks(limit=300):
+                if item.get("status") not in ACTIVE_TASK_STATUSES:
+                    continue
+                task_id = item.get("task_id")
+                if not task_id:
+                    continue
+                full_task = tasks.get(task_id) or repo.get_task(task_id)
+                if not full_task:
+                    continue
+                updated = _parse_iso(full_task.get("updated_at")) or _parse_iso(full_task.get("created_at"))
+                age_secs = int((now - updated).total_seconds()) if updated else stale_after + 1
+                if age_secs <= stale_after:
+                    continue
+                _mark_task_failed(
+                    full_task,
+                    f"Task auto-expired after {age_secs}s without terminal completion.",
+                    log_prefix="⚠️ STALE REAPER",
+                )
+        except Exception as exc:
+            print(f"[STALE-REAPER] non-fatal error: {exc}")
+        await asyncio.sleep(60)
 
 
 repo = Repository()
@@ -1408,7 +1470,11 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
         attestation_data = res_node.get("attestation_data", task.get("attestation_data"))
         summary_text = res_node.get("summary", task.get("summary", ""))
         final_report_md = res_node.get("final_report_md", task.get("final_report_md", ""))
-        run_telemetry = res_node.get("run_telemetry", task.get("run_telemetry", {}))
+        run_telemetry = (
+            res_node.get("run_telemetry")
+            or task.get("run_telemetry")
+            or {}
+        )
         editorial_data = res_node.get("editorial_data", task.get("editorial_data"))
 
     top_trends = _derive_top_trends_from_findings(raw_findings or [], limit=5)
