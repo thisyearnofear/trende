@@ -131,10 +131,19 @@ export function useTrendData(
       setEvents(prev => [...prev, event]);
       
       if (event.type === 'status' && event.message) {
-        // Parse progress from status message
-        const progressMatch = event.message.match(/(\d+)%/);
-        if (progressMatch) {
-          setProgress(parseInt(progressMatch[1], 10));
+        // Prefer structured progress, fallback to message parsing.
+        let nextProgress: number | null = null;
+        if (typeof event.data?.progress === 'number') {
+          nextProgress = event.data.progress;
+        } else {
+          const progressMatch = event.message.match(/(\d+)%/);
+          if (progressMatch) {
+            nextProgress = parseInt(progressMatch[1], 10);
+          }
+        }
+        if (nextProgress !== null && Number.isFinite(nextProgress)) {
+          const clamped = Math.max(0, Math.min(100, Math.round(nextProgress)));
+          setProgress((prev) => Math.max(prev, clamped));
         }
       }
       

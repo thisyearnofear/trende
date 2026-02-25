@@ -1659,6 +1659,11 @@ async def stream_status(task_id: str) -> StreamingResponse:
             elif state["status"] == QueryStatus.COMPLETED:
                 progress = 100
 
+            # Keep progress monotonic for a run so quality-refinement loops
+            # do not appear as regressions in the UI.
+            previous_progress = int(state.get("progress", 0) or 0)
+            if state["status"] != QueryStatus.COMPLETED:
+                progress = max(previous_progress, progress)
             state["progress"] = progress
             payload = {
                 "type": "status",
