@@ -154,6 +154,8 @@ export default function Home() {
   const [showForgeInline, setShowForgeInline] = useState(false);
   const forgeAutoInitForQueryRef = useRef<string | null>(null);
   const [briefOpen, setBriefOpen] = useState(true);
+  const [agentPrompt, setAgentPrompt] = useState("");
+  const [agentReplies, setAgentReplies] = useState<Array<{ q: string; a: string; ts: number }>>([]);
   const [showCommons, setShowCommons] = useState(true);
   const [commonsSearch, setCommonsSearch] = useState("");
   const [commonsVisibleCount, setCommonsVisibleCount] = useState(6);
@@ -482,6 +484,50 @@ export default function Home() {
     if (status === "not_configured") return "Not Configured";
     return "Standby";
   }, [trustStack?.chainlink?.status]);
+  const askSuggestions = useMemo(
+    () => [
+      "Where do models disagree most in this run?",
+      "Which sources contributed most and were any fallback lanes used?",
+      "How should I refine this mission for higher conviction?",
+      "Summarize this run in plain language for a tweet thread.",
+    ],
+    []
+  );
+  const handleAskTrende = useCallback((seed?: string) => {
+    const question = (seed ?? agentPrompt).trim();
+    if (!question) return;
+    const q = question.toLowerCase();
+
+    let answer = "";
+    if (q.includes("disagree") || q.includes("diverg")) {
+      answer =
+        data?.summary?.consensusData?.main_divergence ||
+        "Divergence is low in this run; models are largely aligned on the core thesis.";
+    } else if (q.includes("source") || q.includes("firecrawl") || q.includes("synthdata") || q.includes("fallback")) {
+      const top = (sourceBreakdown || []).slice(0, 5);
+      const lanes = (sourceRoutes || []).filter((r) => r.fallback_used).length;
+      const topText = top.length
+        ? top.map((r) => `${r.platform}/${r.source}: ${r.items}`).join(" | ")
+        : "No source contribution rows were captured.";
+      answer = `Top contribution: ${topText}. Fallback lanes used: ${lanes}.`;
+    } else if (q.includes("confidence") || q.includes("score")) {
+      answer = `Run confidence is ${weightedConfidence}%. Agreement is ${Math.round((data?.telemetry?.agreementScore || 0) * 100)}%, with ${stats.platforms} platform(s) and ${sourceCount} source items.`;
+    } else if (q.includes("next") || q.includes("improve") || q.includes("refine")) {
+      answer = `Next best move: keep primary routes, set Firecrawl to AUTO, enable SynthData for market-heavy prompts, and tighten directive scope to 1-2 explicit outcomes with a timeframe.`;
+    } else if (q.includes("tweet") || q.includes("plain language") || q.includes("summary")) {
+      const summary = (data?.summary?.overview || "").replace(/\s+/g, " ").trim();
+      answer = summary ? `${summary.slice(0, 420)}${summary.length > 420 ? "..." : ""}` : "Summary is not available yet for this run.";
+    } else {
+      const summary = (data?.summary?.overview || "").replace(/\s+/g, " ").trim();
+      answer =
+        summary
+          ? `From this run: ${summary.slice(0, 360)}${summary.length > 360 ? "..." : ""}`
+          : "I can answer from this run’s telemetry, sources, disagreement signal, and confidence drivers. Ask me about any of those.";
+    }
+
+    setAgentReplies((prev) => [...prev.slice(-5), { q: question, a: answer, ts: Date.now() }]);
+    setAgentPrompt("");
+  }, [agentPrompt, data?.summary?.consensusData?.main_divergence, data?.summary?.overview, data?.telemetry?.agreementScore, sourceBreakdown, sourceCount, sourceRoutes, stats.platforms, weightedConfidence]);
   const filteredCommons = useMemo(() => {
     const term = commonsSearch.trim().toLowerCase();
     if (!term) return commonsResearch;
@@ -1444,6 +1490,58 @@ export default function Home() {
                       ))
                     )}
                   </div>
+                </div>
+              </div>
+            </Card>
+
+            <Card accent="emerald" className="p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent-emerald)]">
+                  Ask Trende
+                </p>
+                <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                  Interactive run copilot
+                </span>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {askSuggestions.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => handleAskTrende(s)}
+                        className="px-2 py-1 text-[10px] font-black uppercase tracking-wider rounded border border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      value={agentPrompt}
+                      onChange={(e) => setAgentPrompt(e.target.value)}
+                      placeholder="Ask about disagreement, sources, confidence, or next steps..."
+                      className="flex-1 px-3 py-2 text-xs font-mono border border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-primary)]"
+                    />
+                    <Button variant="primary" size="sm" onClick={() => handleAskTrende()}>
+                      Ask
+                    </Button>
+                  </div>
+                </div>
+                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3 max-h-44 overflow-auto space-y-2">
+                  {agentReplies.length === 0 ? (
+                    <p className="text-[11px] font-mono text-[var(--text-muted)]">
+                      Ask Trende to parse this run and extract specific signals.
+                    </p>
+                  ) : (
+                    agentReplies.map((row) => (
+                      <div key={row.ts} className="space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-cyan-300">{row.q}</p>
+                        <p className="text-[11px] font-mono text-[var(--text-secondary)]">{row.a}</p>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </Card>

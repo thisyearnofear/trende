@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { Sparkles, Loader2, Compass, Layers, Zap, Shield, BarChart3, Settings2, Rocket, Activity } from 'lucide-react';
+import { Sparkles, Loader2, Compass, Layers, Zap, Shield, BarChart3, Rocket, Activity } from 'lucide-react';
 import { QueryRequest } from '@/lib/types';
 import { Card, Button } from './DesignSystem';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,7 @@ interface PlatformOption {
 }
 
 type AugmentMode = 'auto' | 'on' | 'off';
+type ComposerStage = 'directive' | 'setup' | 'launch';
 
 const MODEL_OPTIONS = [
   { id: 'venice_default', label: 'Venice AI', hint: 'Primary privacy-first consensus lane', quality: 95, cost: 0.002, enabled: true },
@@ -94,6 +95,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const [platforms, setPlatforms] = useState<string[]>(['newsapi', 'web', 'hackernews', 'stackexchange']);
   const [models, setModels] = useState<string[]>(['venice_default', 'venice_mistral', 'openrouter_llama_70b', 'openrouter_hermes', 'aisa']);
   const [relevanceThreshold, setRelevanceThreshold] = useState(0.6);
+  const [composerStage, setComposerStage] = useState<ComposerStage>('directive');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [augmentation, setAugmentation] = useState<{ firecrawl: AugmentMode; synthdata: AugmentMode }>({
     firecrawl: 'auto',
@@ -179,20 +181,21 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
     }
   }, []);
 
-  const toggleAdvancedControls = useCallback(() => {
-    setShowAdvanced((prev) => {
-      const next = !prev;
-      if (next) markAdvancedSeen();
-      return next;
-    });
-  }, [markAdvancedSeen]);
-
   const openAdvancedWithHighlight = useCallback(() => {
     markAdvancedSeen();
+    setComposerStage('setup');
     setShowAdvanced(true);
     setHighlightSelections(true);
     window.setTimeout(() => setHighlightSelections(false), 2600);
   }, [markAdvancedSeen]);
+  const goToStage = useCallback((stage: ComposerStage) => {
+    setComposerStage(stage);
+    if (stage !== 'directive') {
+      markAdvancedSeen();
+      setShowAdvanced(true);
+    }
+  }, [markAdvancedSeen]);
+  const effectiveShowAdvanced = composerStage !== 'directive' || showAdvanced;
 
   return (
     <div className="relative group">
@@ -241,23 +244,42 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                 <Sparkles className="w-3.5 h-3.5 text-cyan-400 opacity-60" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Starter Missions</span>
               </div>
-              <button
-                type="button"
-                onClick={toggleAdvancedControls}
-                className={cn(
-                  "text-[10px] font-black tracking-widest flex items-center gap-2 uppercase transition-all hover:text-cyan-400 text-[var(--text-muted)] group/btn relative",
-                  !advancedSeen && !showAdvanced && "text-cyan-300 animate-pulse"
-                )}
-              >
-                <Settings2 className={cn("w-3.5 h-3.5 transition-transform duration-500", showAdvanced ? "rotate-180" : "")} />
-                Advanced Controls
-                {!advancedSeen && !showAdvanced && (
-                  <span className="text-[8px] font-black uppercase tracking-widest text-amber-300">Recommended</span>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => goToStage('directive')}
+                  className={cn(
+                    "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all",
+                    composerStage === 'directive' ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-300" : "border-white/10 text-[var(--text-muted)]"
+                  )}
+                >
+                  1 Directive
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToStage('setup')}
+                  className={cn(
+                    "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all",
+                    composerStage === 'setup' ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-300" : "border-white/10 text-[var(--text-muted)]",
+                    !advancedSeen && "animate-pulse"
+                  )}
+                >
+                  2 Mission Setup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToStage('launch')}
+                  className={cn(
+                    "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all",
+                    composerStage === 'launch' ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-300" : "border-white/10 text-[var(--text-muted)]"
+                  )}
+                >
+                  3 Launch
+                </button>
+              </div>
             </div>
 
-            {!showAdvanced && (
+            {composerStage === 'directive' && (
               <div className="flex flex-col sm:flex-row gap-3">
                 {SUGGESTIONS.slice(0, 3).map((suggestion) => (
                   <button
@@ -353,7 +375,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
             </div>
           </div>
 
-          {showAdvanced && (
+          {effectiveShowAdvanced && (
             <div className="space-y-8 pt-6 border-t border-white/5 animate-in fade-in slide-in-from-top-4 duration-500">
 
               {/* Profile Selectors moved here */}
