@@ -12,6 +12,10 @@ from backend.agents.state import GraphState
 from backend.database.vector_store import vector_store
 from backend.integrations.connectors.twitter import TwitterConnector
 from backend.services.ai_service import ai_service
+from backend.agents.nodes.financial_intelligence import (
+    financial_intelligence_node,
+    enhance_consensus_with_financial_data,
+)
 from shared.models import QueryStatus
 
 DEFAULT_AUGMENTATION = {
@@ -613,6 +617,7 @@ async def researcher_node(state: GraphState) -> GraphState:
     from backend.integrations.connectors.chainlink import ChainlinkConnector
     from backend.integrations.connectors.firecrawl import FirecrawlConnector
     from backend.integrations.connectors.synthdata import SynthDataConnector
+    from backend.integrations.connectors.serpapi import SerpApiConnector
 
     twitter = TwitterConnector()
     linkedin = LinkedInConnector()
@@ -629,6 +634,7 @@ async def researcher_node(state: GraphState) -> GraphState:
     chainlink = ChainlinkConnector()
     firecrawl = FirecrawlConnector()
     synthdata = SynthDataConnector()
+    serpapi = SerpApiConnector()
     augmentation = _resolve_augmentation(state)
     firecrawl_enabled = _augmentation_enabled(augmentation.get("firecrawl", "auto"), bool(firecrawl.api_key))
     synthdata_enabled = _augmentation_enabled(augmentation.get("synthdata", "auto"), bool(synthdata.api_key))
@@ -637,6 +643,8 @@ async def researcher_node(state: GraphState) -> GraphState:
         state["logs"].append("⚠️ AUGMENTATION NOTICE: Firecrawl set to ON but API key is unavailable.")
     if augmentation.get("synthdata") == "on" and not synthdata.api_key:
         state["logs"].append("⚠️ AUGMENTATION NOTICE: SynthData set to ON but API key is unavailable.")
+    if os.getenv("SERPAPI_API_KEY") and not serpapi.api_key:
+        state["logs"].append("⚠️ AUGMENTATION NOTICE: SerpApi key expected but unavailable.")
 
     tasks = []
     default_timeout = max(8, int(os.getenv("RESEARCH_PLATFORM_TIMEOUT_SECS", "45")))
@@ -681,9 +689,10 @@ async def researcher_node(state: GraphState) -> GraphState:
                 chain.append(("firecrawl", lambda: firecrawl.search(f"{query} latest news", limit=5), web_timeout))
             return chain
         if platform == "web":
-            chain = [
-                ("tabstack", lambda: tabstack.search(query, limit=5), web_timeout),
-            ]
+            chain = []
+            if serpapi.api_key:
+                chain.append(("serpapi", lambda: serpapi.search(query, limit=6), default_timeout))
+            chain.append(("tabstack", lambda: tabstack.search(query, limit=5), web_timeout))
             if firecrawl_enabled:
                 chain.append(("firecrawl", lambda: firecrawl.search(query, limit=5), web_timeout))
             if tinyfish.api_key:
@@ -1119,6 +1128,11 @@ async def analyzer_node(state: GraphState) -> GraphState:
         system_prompt="You are a professional, neutral trend analyst.",
         providers=state.get("models"),
     )
+    
+    # Enhance consensus with financial intelligence if available
+    if state.get("financial_intelligence"):
+        state["logs"].append("📊 INTEGRATING: Adding probabilistic financial forecasts to consensus...")
+        consensus_bundle = await enhance_consensus_with_financial_data(state, consensus_bundle)
     report = str(consensus_bundle.get("consensus_report", ""))
     state["final_report_md"] = report
     # Keep full summary text to avoid clipped UI/report exports.
@@ -1194,6 +1208,7 @@ def create_workflow() -> Any:
     workflow.add_node("planner", planner_node)
     workflow.add_node("researcher", researcher_node)
     workflow.add_node("validator", validator_node)
+    workflow.add_node("financial_intelligence", financial_intelligence_node)
     workflow.add_node("analyzer", analyzer_node)
     workflow.add_node("architect", architect_node)
 
@@ -1210,8 +1225,9 @@ def create_workflow() -> Any:
     workflow.set_entry_point("planner")
     workflow.add_edge("planner", "researcher")
     workflow.add_edge("researcher", "validator")
+    workflow.add_edge("validator", "financial_intelligence")
     workflow.add_conditional_edges(
-        "validator",
+        "financial_intelligence",
         should_continue_research,
         {
             "planner": "planner",
@@ -1278,6 +1294,7 @@ async def run_trend_analysis(
         "attempted_query_keys": [],
         "augmentation": _resolve_augmentation_from_input(augmentation),
         "source_routes": [],
+        "financial_intelligence": None,
         "error": None,
     }
 
@@ -1345,6 +1362,7 @@ async def run_editorial_task(
         "attempted_query_keys": [],
         "augmentation": {},
         "source_routes": [],
+        "financial_intelligence": None,
         "error": None,
     }
     

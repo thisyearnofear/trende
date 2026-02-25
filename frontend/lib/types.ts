@@ -108,6 +108,51 @@ export interface TrendSummary {
     provider_count?: number;
     generated_at?: string;
   };
+  financialIntelligence?: {
+    assets: Array<{
+      symbol: string;
+      type: string;
+      current_price?: number;
+      forecast_7d?: {
+        p10?: number;
+        p25?: number;
+        p50?: number;
+        p75?: number;
+        p90?: number;
+        median?: number;
+        change_pct?: number;
+        range_low?: number;
+        range_high?: number;
+      };
+      forecast_30d?: {
+        p10?: number;
+        p25?: number;
+        p50?: number;
+        p75?: number;
+        p90?: number;
+        median?: number;
+        range_low?: number;
+        range_high?: number;
+      };
+      risk_level?: string;
+      volatility?: {
+        realized?: number;
+        implied?: number;
+      };
+      liquidation_probability?: number;
+    }>;
+    summary?: string;
+    aggregate_metrics?: {
+      overall_risk?: string;
+      forecast_direction?: string;
+      average_volatility?: number;
+      asset_count?: number;
+      high_risk_count?: number;
+    };
+    data_source?: string;
+    generated_at?: string;
+    polymarket_comparison?: Record<string, unknown> | null;
+  };
   oracleMarketId?: string;
   generatedAt: string;
 }

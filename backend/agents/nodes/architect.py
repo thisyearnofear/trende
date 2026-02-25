@@ -34,14 +34,65 @@ def _extract_json_object(raw: str) -> dict[str, Any]:
     return json.loads(snippet)
 
 
+def _build_financial_metrics(state: GraphState) -> dict[str, Any]:
+    """Build financial metrics section from SynthData intelligence."""
+    financial = state.get("financial_intelligence")
+    if not financial:
+        return {}
+    
+    metrics = financial.get("aggregate_metrics", {})
+    assets = financial.get("assets", [])
+    
+    # Build asset forecasts
+    asset_forecasts = []
+    for asset in assets:
+        forecast = {
+            "symbol": asset.get("symbol"),
+            "current_price": asset.get("current_price"),
+            "risk_level": asset.get("risk_level"),
+        }
+        
+        # Add 7-day forecast if available
+        forecast_7d = asset.get("forecast_7d", {})
+        if forecast_7d.get("p50"):
+            current = asset.get("current_price", 0)
+            median = forecast_7d.get("p50", 0)
+            if current and median:
+                forecast["forecast_7d"] = {
+                    "median": median,
+                    "change_pct": round((median - current) / current * 100, 2),
+                    "range_low": forecast_7d.get("p10"),
+                    "range_high": forecast_7d.get("p90"),
+                }
+        
+        # Add liquidation risk if available
+        if asset.get("liquidation_probability"):
+            forecast["liquidation_risk_10x"] = asset.get("liquidation_probability")
+        
+        asset_forecasts.append(forecast)
+    
+    return {
+        "overall_risk": metrics.get("overall_risk"),
+        "forecast_direction": metrics.get("forecast_direction"),
+        "average_volatility": metrics.get("average_volatility"),
+        "asset_count": metrics.get("asset_count", 0),
+        "high_risk_count": metrics.get("high_risk_assets", 0),
+        "asset_forecasts": asset_forecasts,
+        "data_source": "SynthData (Bittensor Subnet 50)",
+    }
+
+
 def _fallback_meme_data(state: GraphState, agreement: float) -> dict[str, Any]:
     consensus = state.get("consensus_data") or {}
     topic = str(state.get("topic") or "Trend Insight")
     summary = str(state.get("summary") or "No summary available.")
     suggested_mode = "NEWS" if agreement > 0.4 else "MEME"
     ticker = "".join(ch for ch in topic.upper() if ch.isalnum())[:6] or "ALPHA"
+    
+    # Include financial metrics if available
+    financial_metrics = _build_financial_metrics(state)
 
-    return {
+    result = {
         "type": suggested_mode,
         "token": {
             "name": topic[:60],
@@ -68,6 +119,12 @@ def _fallback_meme_data(state: GraphState, agreement: float) -> dict[str, Any]:
             "primary_color": "#06b6d4",
         },
     }
+    
+    # Add financial metrics if available
+    if financial_metrics:
+        result["financial_metrics"] = financial_metrics
+    
+    return result
 
 async def architect_node(state: GraphState) -> GraphState:
     """
@@ -90,6 +147,33 @@ async def architect_node(state: GraphState) -> GraphState:
     # Determine mode: Default to NEWS if technical/heavy agreement, MEME if social/viral
     suggested_mode = "NEWS" if agreement > 0.4 else "MEME"
 
+    # Build financial context for prompt
+    financial = state.get("financial_intelligence")
+    financial_context = ""
+    if financial and financial.get("assets"):
+        assets_summary = []
+        for asset in financial["assets"]:
+            symbol = asset.get("symbol")
+            current = asset.get("current_price")
+            forecast = asset.get("forecast_7d", {})
+            risk = asset.get("risk_level")
+            
+            summary = f"- {symbol}:"
+            if current:
+                summary += f" Current ${current:,.2f}"
+            if forecast.get("p50"):
+                summary += f", 7d forecast ${forecast['p50']:,.2f}"
+            if risk:
+                summary += f", Risk: {risk.upper()}"
+            assets_summary.append(summary)
+        
+        financial_context = f"""
+Financial Intelligence (SynthData):
+{chr(10).join(assets_summary)}
+Overall Risk: {financial.get("aggregate_metrics", {}).get("overall_risk", "unknown").upper()}
+Forecast Direction: {financial.get("aggregate_metrics", {}).get("forecast_direction", "neutral").upper()}
+"""
+
     prompt = f"""
     You are a Strategic Architect for the Monad economy.
     Based on the following research and enhanced consensus data, create a high-conviction structured payload.
@@ -104,11 +188,16 @@ async def architect_node(state: GraphState) -> GraphState:
     - Confidence Score: {confidence}
     - Consensus Depth: {consensus_depth}
     - Main Divergence: {consensus.get("main_divergence", "None detected")}
+    {financial_context}
 
     TASK:
     Generate a JSON payload for the Forge UI.
     If the topic is viral/community-centric, use MODE: "MEME".
     If the topic is technical/news-centric, use MODE: "NEWS".
+    
+    IMPORTANT: If financial intelligence is provided above, incorporate the risk levels and 
+    forecast direction into your conviction points and thesis. The financial metrics should
+    inform the "financial_metrics" field in the output.
 
     Output strictly as JSON:
     {{
@@ -138,6 +227,11 @@ async def architect_node(state: GraphState) -> GraphState:
         "brand": {{
             "aesthetic": "e.g., Cyberpunk, Institutional, Minimalist",
             "primary_color": "vibrant hex color"
+        }},
+        "financial_metrics": {{
+            "overall_risk": "low|medium|high|extreme",
+            "forecast_direction": "bullish|bearish|neutral",
+            "asset_forecasts": []
         }}
     }}
     """

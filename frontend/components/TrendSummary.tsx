@@ -51,6 +51,8 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
   const confidence = Math.round((summary.confidenceScore || 0) * 100);
   const consensus = summary.consensusData;
   const agreement = Math.round((consensus?.agreement_score || 0) * 100);
+  const financial = summary.financialIntelligence;
+  const assetRows = financial?.assets?.slice(0, 3) || [];
 
   return (
     <Card accent="white" shadow="md" className={cn("p-0 overflow-hidden group", isSoft ? "soft-ui-out border-0" : "glass border-white/10")}>
@@ -245,6 +247,63 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
             </div>
           </div>
         </div>
+
+        {financial && (
+          <section className={cn(
+            "rounded-xl p-5 space-y-4",
+            isSoft ? "soft-ui-in" : "glass border-cyan-500/15"
+          )}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Radar className="w-4 h-4 text-[var(--accent-cyan)]" />
+                <h4 className="text-xs font-black uppercase tracking-wider text-[var(--text-secondary)]">Financial Intelligence</h4>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {financial.aggregate_metrics?.overall_risk && (
+                  <Badge variant="amber" className={isSoft ? "soft-ui-out border-0" : "bg-amber-500/10 border-amber-500/30 text-amber-300"}>
+                    Risk: {financial.aggregate_metrics.overall_risk}
+                  </Badge>
+                )}
+                {financial.aggregate_metrics?.forecast_direction && (
+                  <Badge variant="cyan" className={isSoft ? "soft-ui-out border-0" : "bg-cyan-500/10 border-cyan-500/30 text-cyan-300"}>
+                    Bias: {financial.aggregate_metrics.forecast_direction}
+                  </Badge>
+                )}
+                {typeof financial.aggregate_metrics?.asset_count === "number" && (
+                  <Badge variant="emerald" className={isSoft ? "soft-ui-out border-0" : "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"}>
+                    Assets: {financial.aggregate_metrics.asset_count}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {financial.summary && (
+              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">{financial.summary}</p>
+            )}
+
+            {assetRows.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {assetRows.map((asset) => {
+                  const p50 = asset.forecast_7d?.p50 ?? asset.forecast_7d?.median;
+                  return (
+                    <div key={asset.symbol} className={cn("rounded-lg p-3", isSoft ? "soft-ui-out" : "bg-slate-900/60 border border-white/5")}>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">{asset.symbol}</p>
+                      {typeof asset.current_price === "number" && (
+                        <p className="text-xs text-[var(--text-primary)]">Now: ${asset.current_price.toLocaleString()}</p>
+                      )}
+                      {typeof p50 === "number" && (
+                        <p className="text-xs text-[var(--accent-cyan)]">7d p50: ${p50.toLocaleString()}</p>
+                      )}
+                      {asset.risk_level && (
+                        <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mt-1">risk {asset.risk_level}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
       </div>
 
       {/* Footer Meta */}

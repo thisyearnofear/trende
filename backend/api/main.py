@@ -1088,6 +1088,7 @@ async def run_agent_workflow(
         "attempted_query_keys": [],
         "augmentation": augmentation or {},
         "source_routes": [],
+        "financial_intelligence": None,
         "error": None,
     }
 
@@ -1109,6 +1110,8 @@ async def run_agent_workflow(
                 elif node_name == "researcher":
                     tasks[task_id]["status"] = QueryStatus.PROCESSING
                 elif node_name == "validator":
+                    tasks[task_id]["status"] = QueryStatus.ANALYZING
+                elif node_name == "financial_intelligence":
                     tasks[task_id]["status"] = QueryStatus.ANALYZING
                 elif node_name == "analyzer":
                     tasks[task_id]["status"] = QueryStatus.PROCESSING
@@ -1645,6 +1648,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
     final_report_md = ""
     run_telemetry = {}
     editorial_data = None
+    financial_intelligence = None
 
     if isinstance(res_node, dict):
         confidence_score = res_node.get("confidence_score", task.get("confidence_score", 0.0))
@@ -1660,6 +1664,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             or {}
         )
         editorial_data = res_node.get("editorial_data", task.get("editorial_data"))
+        financial_intelligence = res_node.get("financial_intelligence", task.get("financial_intelligence"))
 
     top_trends = _derive_top_trends_from_findings(raw_findings or [], limit=5)
     source_breakdown = _derive_source_breakdown(raw_findings or [])
@@ -1709,6 +1714,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             "consensusData": consensus_data,
             "attestationData": attestation_data,
             "oracleMarketId": task.get("oracle_market_id"),
+            "financialIntelligence": financial_intelligence,
             "generatedAt": task.get("updated_at", task.get("created_at", "")),
         },
         "telemetry": {
@@ -2069,6 +2075,139 @@ async def publish_trend(
         
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": "Publishing workflow failed."})
+
+# SynthData Endpoints
+
+class SynthDataForecastRequest(BaseModel):
+    asset: str
+    include_options: bool = False
+    include_liquidation: bool = False
+    leverage: float = 10.0
+
+
+@app.get("/api/synthdata/assets")
+async def list_synthdata_assets() -> dict[str, Any]:
+    """List all supported assets for SynthData forecasting."""
+    connector = SynthDataConnector()
+    return {
+        "crypto": list(connector.supported_crypto),
+        "equities": list(connector.supported_equities),
+        "aliases": connector.asset_aliases,
+    }
+
+
+@app.post("/api/synthdata/forecast")
+async def get_synthdata_forecast(request: SynthDataForecastRequest) -> dict[str, Any]:
+    """
+    Get probabilistic price forecast for an asset.
+    
+    Returns comprehensive financial intelligence including:
+    - Price forecasts (7d and 30d) with percentile ranges
+    - Volatility metrics
+    - Risk assessment
+    - Optional: Option pricing, liquidation analysis
+    """
+    connector = SynthDataConnector()
+    if not connector.api_key:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "SynthData API not configured"}
+        )
+    
+    # Normalize asset symbol/alias first (case-insensitive), then uppercase symbol.
+    asset_input = (request.asset or "").strip()
+    alias_key = asset_input.lower()
+    if alias_key in connector.asset_aliases:
+        asset = connector.asset_aliases[alias_key]
+    else:
+        asset = asset_input.upper()
+    
+    if asset not in connector.supported_crypto and asset not in connector.supported_equities:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": f"Asset '{request.asset}' not supported",
+                "supported_assets": list(connector.supported_crypto | connector.supported_equities)
+            }
+        )
+    
+    insight = await connector.get_comprehensive_asset_insight(
+        asset=asset,
+        include_options=request.include_options,
+        include_liquidation=request.include_liquidation,
+        leverage=request.leverage
+    )
+    
+    if not insight:
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"No forecast data available for {asset}"}
+        )
+    
+    return {
+        "asset": asset,
+        "asset_type": insight.asset_type,
+        "current_price": insight.current_price,
+        "forecast_7d": insight.price_forecast_7d,
+        "forecast_30d": insight.price_forecast_30d,
+        "risk_level": insight.risk_level,
+        "volatility": {
+            "realized": insight.realized_volatility,
+            "implied": insight.implied_volatility,
+        },
+        "liquidation_probability": insight.liquidation_probability,
+        "option_prices": insight.option_prices,
+        "timestamp": insight.timestamp.isoformat() if insight.timestamp else None,
+        "data_source": "SynthData (Bittensor Subnet 50)",
+    }
+
+
+@app.get("/api/synthdata/polymarket/events")
+async def get_polymarket_events() -> dict[str, Any]:
+    """Get available Polymarket events for comparison."""
+    connector = SynthDataConnector()
+    if not connector.api_key:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "SynthData API not configured"}
+        )
+    
+    events = await connector.get_polymarket_events()
+    return {"events": events or []}
+
+
+@app.get("/api/health/synthdata")
+async def synthdata_health() -> dict[str, Any]:
+    """Check SynthData API connectivity and configuration."""
+    connector = SynthDataConnector()
+    
+    if not connector.api_key:
+        return {
+            "ok": False,
+            "configured": False,
+            "message": "SynthData API key not configured",
+        }
+    
+    # Try a lightweight request
+    try:
+        # Try to get BTC forecast as health check
+        forecast = await connector.get_prediction_percentiles("BTC", "7d")
+        return {
+            "ok": forecast is not None,
+            "configured": True,
+            "message": "SynthData API healthy" if forecast else "SynthData API returned empty response",
+            "supported_assets": {
+                "crypto": list(connector.supported_crypto),
+                "equities": list(connector.supported_equities),
+            }
+        }
+    except Exception as e:
+        return {
+            "ok": False,
+            "configured": True,
+            "message": f"SynthData API error: {str(e)}",
+        }
+
 
 if __name__ == "__main__":
     import uvicorn

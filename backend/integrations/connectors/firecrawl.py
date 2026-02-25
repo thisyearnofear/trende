@@ -6,6 +6,7 @@ import httpx
 from backend.integrations.base import AbstractPlatformConnector
 from backend.utils.rate_limit import rate_limiter
 from backend.utils.request_cache import build_cache_key, request_cache
+from backend.utils.url_quality import is_low_signal_search_url
 from shared.config import get_settings
 from shared.models import PlatformType, TrendItem
 
@@ -62,6 +63,8 @@ class FirecrawlConnector(AbstractPlatformConnector):
                     url = str(row.get("url") or row.get("source") or "").strip()
                     if not url:
                         continue
+                    if is_low_signal_search_url(url):
+                        continue
                     title = str(row.get("title") or "Web Result").strip()
                     snippet = str(row.get("description") or row.get("snippet") or row.get("markdown") or "").strip()
                     items.append(
@@ -89,4 +92,3 @@ class FirecrawlConnector(AbstractPlatformConnector):
 
     async def get_item_details(self, item_id: str) -> Optional[TrendItem]:
         return None
-

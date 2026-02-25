@@ -1,17 +1,23 @@
 # Trende: The Verifiable AI Oracle for the Multichain Agent Economy
 
-Trende is a **Sovereign AI Agent** that bridges real-world social signal into verifiable intelligence. Powered by TEE-verifiable compute (Eigen), it serves as the "Truth Layer" for the emerging Agent Economy across Monad, Base, BNB, Solana, and beyond.
+Trende analyzes social media trends (Twitter/X, TikTok, LinkedIn, news) using multiple AI models and produces **cryptographically verified research reports**.
+
+**What it does:**
+1. **Research**: Multi-platform trend analysis via LangGraph agents
+2. **Verify**: TEE-attested output with cryptographic signatures (Eigen)
+3. **Settle**: On-chain prediction markets via Chainlink oracle
+4. **Monetize**: ACP integration for autonomous agent-to-agent commerce
+
+**Live deployments**: Arbitrum Sepolia + Base Sepolia ✅
 
 ## 📖 Documentation
 
-Detailed guides and specifications are available in the [./docs/](./docs/) directory:
+Consolidated documentation (max 4 docs, 300 lines each):
 
-- **[Vision & Strategy](./docs/VISION.md)**: Mission, core value proposition, and strategic opportunities.
-- **[Technical Architecture](./docs/ARCHITECTURE.md)**: System overview, LangGraph workflow, TEE attestation, and configuration.
-- **[ACP Integration](./docs/ACP_GUIDE.md)**: Guide for Virtuals Protocol's Agent Commerce Protocol.
-- **[Roadmap](./docs/ROADMAP.md)**: Development phases and future milestones.
-- **[A2A Integration](./docs/skills/alpha.md)**: Integrating Trende with other agents (Verifiable Alpha).
-- **[Agentic UX Shipped](./docs/AGENTIC_UX.md)**: Deploy Agent flow, Oracle status banner, Sentinel autonomy loop, decision feed, and A2A demo UX.
+- **[Architecture](./docs/ARCHITECTURE.md)**: System overview, LangGraph workflow, TEE attestation, Chainlink oracle
+- **[Integration](./docs/INTEGRATION.md)**: ACP, Paragraph, Chainlink integration guides
+- **[API Reference](./docs/API.md)**: Complete API documentation for developers
+- **[Developer Guide](./docs/GUIDE.md)**: Quick start, deployment, troubleshooting
 
 ## 🚀 Quick Start
 
@@ -55,25 +61,23 @@ Trende is built for the agent-to-agent economy:
 - **Chain Agnostic**: Built to serve intelligence to any ecosystem, including Monad, Base, BNB, and Solana.
 - **Privacy Centric**: Primary inference routed via Venice AI.
 
-## 🔗 Chainlink Integration (Hackathon 2026)
+## 🔗 Chainlink Integration
 
-Trende uses **Chainlink Functions** and the **Chainlink Runtime Environment (CRE)** to provide verifiable social intelligence.
+Trende uses **Chainlink Functions** and **Chainlink Runtime Environment (CRE)** for verifiable social intelligence.
 
-- **Contracts**: Located in `/contracts` (✅ **Live on Arbitrum Sepolia + Base Sepolia**)
+- **Contracts**: `/contracts` (✅ Live on Arbitrum Sepolia + Base Sepolia)
 - **Functions**: JS sources in `backend/chainlink/functions`
-- **Deployment**: See [docs/CHAINLINK_DEPLOY.md](docs/CHAINLINK_DEPLOY.md)
+- **CRE Workflow**: Decentralized consensus in `backend/chainlink/cre/workflow/`
 
 ### Verifiable Features
-1. **Data Sourcing**: GDELT & CoinGecko data fetched via Chainlink Functions.
-2. **Oracle**: `TrendeOracle` contract for on-chain trend resolution.
-3. **CRE Workflow**: Decentralized multi-model AI consensus via Chainlink Runtime Environment (`backend/chainlink/cre/workflow/`).
-4. **Autonomous Settlement**: Sentinel loop scans staged markets and triggers resolution requests without additional user clicks.
+1. **Data Sourcing**: GDELT & CoinGecko via Chainlink Functions
+2. **Oracle**: `TrendeOracle` contract for on-chain trend resolution
+3. **Autonomous Settlement**: Sentinel loop auto-triggers resolution when markets mature
 
-## ✅ Production Ops
+## ✅ Production
 
 - CI gates: `/.github/workflows/ci.yml`
-- Release runbook: `docs/PRODUCTION_CHECKLIST.md`
-- Smoke matrix script: `scripts/smoke_matrix.sh`
+- Smoke tests: `scripts/smoke_matrix.sh`
 
 ---
 

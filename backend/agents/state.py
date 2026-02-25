@@ -46,4 +46,7 @@ class GraphState(TypedDict):
     augmentation: Dict[str, str]
     source_routes: List[Dict[str, Any]]
     
+    # Financial Intelligence (SynthData)
+    financial_intelligence: Optional[Dict[str, Any]]
+    
     error: Optional[str]

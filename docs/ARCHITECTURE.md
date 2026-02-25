@@ -1,8 +1,8 @@
-# Technical Architecture
+# Trende Architecture
 
 ## System Overview
 
-Trende is built on a 4-stage agentic pipeline (LangGraph) with TEE-attested consensus.
+Trende is a verifiable AI oracle built on a 4-stage LangGraph pipeline with TEE-attested consensus and Chainlink integration.
 
 ```
 ┌──────────────────────┐     ┌──────────────────────┐
@@ -16,40 +16,30 @@ Trende is built on a 4-stage agentic pipeline (LangGraph) with TEE-attested cons
 │  FastAPI (Port 8000) │   HTTPS POST /attest
 │  - Trend Analysis    │
 │  - Consensus Engine  │
-│  - ACP Integration  │
+│  - ACP Integration   │
 └──────────┬───────────┘
            │
     ┌──────┴──────┐
     ▼             ▼
-┌─────────────────┐   ┌──────────┐
-│ Data Connectors │   │ AI Models│
-│ - Twitter       │   │ - Venice  │
-│ - TikTok        │   │ - AIsa    │
-│ - LinkedIn      │   │ - OpenRouter│
-│ - NewsAPI       │   │          │
-│ - TinyFish 🤖   │   │          │
-│   (AI Agent)    │   │          │
-└─────────────────┘   └──────────┘
+┌─────────────────┐   ┌──────────────────┐
+│ Data Connectors │   │ Chainlink Oracle │
+│ - Twitter/X     │   │ - Functions DON  │
+│ - TikTok        │   │ - CRE Workflow   │
+│ - LinkedIn      │   │ - Market Resolve │
+│ - NewsAPI       │   └──────────────────┘
+│ - TinyFish 🤖   │
+└─────────────────┘
 ```
-
-### Key Differentiator: TinyFish AI Agent
-
-**TinyFish** is Trende's autonomous deep-research agent - a key differentiator from competitors:
-
-- **Agentic, not just API**: TinyFish uses goal-based AI to autonomously browse the web
-- **Primary source reading**: Opens and reads actual docs, posts, research papers - not just API metadata
-- **Deep discovery**: Used for "deep" research profiles where depth matters more than speed
-- **Premium capability**: Included in Alpha Hunter and Due Diligence mission profiles
 
 ---
 
-## The Quadrant Workflow
+## The Quadrant Workflow (LangGraph)
 
 ### 1. Planner (Strategist)
 Analyzes user query and selects relevant integrations:
 - Platform selection (Twitter, TikTok, LinkedIn, News)
 - Depth determination (standard vs deep)
-- Resource allocation
+- RAG retrieval for historical context
 
 ### 2. Researcher (Data Harvester)
 Executes multi-threaded search across selected APIs:
@@ -57,17 +47,19 @@ Executes multi-threaded search across selected APIs:
 - TikTok/YouTube - Video trend metadata
 - LinkedIn - Professional discussions
 - NewsAPI/AIsa Web - News articles and research
+- **TinyFish** - Autonomous deep-research agent
 
 ### 3. Validator (Fact-Checker)
 Logic node for verification:
 - Source credibility scoring
 - Cross-reference counting
 - Confidence score generation (0.0 - 1.0)
+- Topic relevance filtering
 
 ### 4. Consensus Engine
 Parallel multi-model synthesis:
 - Simultaneous queries to Venice, AIsa, OpenRouter
-- Triangulated archetype analysis (Pillars vs Anomalies)
+- Triangulated archetype analysis
 - Lexical agreement hardening
 - Bias detection and mitigation
 
@@ -160,12 +152,7 @@ curl -X POST https://api.trende.famile.xyz/api/attest/verify \
 - ✅ Timestamped attestations
 - ✅ Public verifiability
 
-**Future Enhancements**:
-- [x] Production Eigen endpoint with trusted custom-domain TLS
-- [ ] Remote attestation quotes
-- [ ] Key rotation mechanism
-- [ ] On-chain attestation registry
-- [ ] IPFS storage
+**Production TEE Wallet**: `0xD518465105bc1a4Db877e5d7b0C64cc88260f15B`
 
 ---
 
@@ -188,31 +175,27 @@ curl -X POST https://api.trende.famile.xyz/api/attest/verify \
 
 ### Market Resolution Flow
 
-1. **Market Creation**: An agent stages a prediction market on-chain via the `ChainlinkService` by calling `createMarket`.
-2. **Sentinel Monitoring Loop**: A backend asyncio sentinel scans staged markets on a fixed cadence (currently every 90 seconds) and detects markets ready for settlement.
-3. **Autonomous Resolution Trigger**: When the trend's designated duration ends, the sentinel initiates settlement by calling `resolveMarket` automatically.
-3. **Decentralized Evaluation**: The Chainlink Decentralized Oracle Network (DON) executes the `oracle-resolution.js` script. This script independently queries Trende's API for the final aggregated AI consensus score.
-4. **On-Chain Settlement**: The DON returns a structured `score|summary` string. The `TrendeOracle` contract decodes this payload using `splitResponse` and irrevocably settles the on-chain market.
+1. **Market Creation**: Agent stages prediction market via `ChainlinkService.createMarket`
+2. **Sentinel Monitoring Loop**: Backend asyncio sentinel scans staged markets every 90s
+3. **Autonomous Resolution Trigger**: When trend duration ends, sentinel calls `resolveMarket`
+4. **Decentralized Evaluation**: Chainlink DON executes `oracle-resolution.js`, queries Trende API
+5. **On-Chain Settlement**: DON returns `score|summary`, contract decodes and settles market
 
 ### CRE Workflow (Decentralized Consensus)
 
-The `backend/chainlink/cre/workflow/` module ports the consensus engine to the **Chainlink Runtime Environment**. Instead of running on a single server, AI analysis runs across a decentralized DON:
+The `backend/chainlink/cre/workflow/` module ports consensus to **Chainlink Runtime Environment**:
 
-1. **EVM Log Trigger** watches for `MarketCreated` events on TrendeOracle.
-2. **Data fetch** from GDELT + CoinGecko via CRE HTTP capability (BFT consensus per call).
-3. **Multi-model AI consensus** across Venice, OpenRouter, and the Trende API.
-4. **Signed report** submitted on-chain via `runtime.report()` + `evmClient.writeReport()`.
+1. **EVM Log Trigger** watches for `MarketCreated` events
+2. **Data fetch** from GDELT + CoinGecko via CRE HTTP capability (BFT consensus)
+3. **Multi-model AI consensus** across Venice, OpenRouter, Trende API
+4. **Signed report** submitted on-chain via `runtime.report()` + `evmClient.writeReport()`
 
-This ensures the "Intelligence" is tamper-proof — no single node can fabricate a consensus result.
+### Active Deployments
 
-### Agentic UX Surface
-
-The frontend exposes this autonomous flow directly:
-
-1. **Deploy Agent command bar** in mission input.
-2. **Oracle Status Banner** in Forge (staged -> processing -> resolved with explorer link).
-3. **Agent Decision Feed** in processing telemetry.
-4. **A2A demo payload/curl** in Forge manifest modal for external agent interoperability.
+| Network | Chain ID | TrendeOracle | Consumer | Status |
+|---------|----------|--------------|----------|--------|
+| Base Sepolia | 84532 | `0xe968...eA8b` | `0x95fa...bE21` | ✅ Live |
+| Arbitrum Sepolia | 421614 | `0xe968...eA8b` | `0x95fa...bE21` | ✅ Live |
 
 ---
 
@@ -242,64 +225,27 @@ ACP_WALLET_PRIVATE_KEY=...
 ACP_ENTITY_ID=...
 ACP_SERVICE_PRICE=10.00
 ACP_SERVICE_SLA_SECONDS=180
+
+# Chainlink Configuration
+CHAINLINK_ACTIVE_CHAIN=base-sepolia
+CHAINLINK_RPC_URL=https://sepolia.base.org
+CHAINLINK_CONSUMER_ADDRESS=0x...
+CHAINLINK_ORACLE_ADDRESS=0x...
+CHAINLINK_SUBSCRIPTION_ID=...
 ```
 
-### Domain + TLS Notes
-
-Use a real domain you control for Eigen TLS issuance, for example:
+### Health Checks
 
 ```bash
-eigen-attest.famile.xyz -> 34.10.131.255
-```
-
-Do not use shared wildcard helper domains (for example `nip.io`) in production due to ACME rate limits.
-
-### Docker Network
-
-```bash
-docker network create trende-network
-
-docker run -d --name trende-backend \
-  --network trende-network \
-  -p 8000:8000 \
-  trende/backend:latest
-```
-
-Production attestation is served by EigenCloud via `https://eigen-attest.famile.xyz`, so no local attestor container is required on Hetzner.
-
----
-
-## Health Checks
-
-### Attestation Service
-```bash
+# Attestation Service
 curl https://eigen-attest.famile.xyz/health
-```
 
-### Backend Attestation Status
-```bash
-# Configuration check
-curl https://api.trende.famile.xyz/api/health/attestation
-
-# Live probe
+# Backend Attestation Status
 curl https://api.trende.famile.xyz/api/health/attestation?probe=true
-```
 
-### ACP Status
-```bash
+# ACP Status
 curl https://api.trende.famile.xyz/api/acp/status
 ```
-
----
-
-## TEE Service Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/attest` | POST | Attest to arbitrary payload |
-| `/verify` | POST | Verify an attestation |
-| `/random` | GET | Generate attested random number |
-| `/health` | GET | Service health check |
 
 ---
 
@@ -307,11 +253,7 @@ curl https://api.trende.famile.xyz/api/acp/status
 
 ### Attestation Service (Production)
 
-```bash
-curl https://eigen-attest.famile.xyz/health
-```
-
-EigenCloud hosts the attestor. Hetzner backend deploy does not rebuild attestation containers.
+EigenCloud hosts the attestor at `https://eigen-attest.famile.xyz`. No local container required.
 
 ### Backend API
 
@@ -326,43 +268,12 @@ Deployed to Vercel via git push.
 
 ---
 
-## API Integration
-
-### Frontend Display
-
-```typescript
-const response = await fetch(`/api/trends/${taskId}`);
-const data = await response.json();
-const attestation = data.summary.attestationData;
-
-console.log('Attestation ID:', attestation.attestation_id);
-console.log('Signature:', attestation.signature);
-console.log('Signer:', attestation.signer);
-```
-
-### Verification
-
-```typescript
-const verifyResponse = await fetch('/api/attest/verify', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    payload: attestation.payload,
-    attestation: attestation
-  })
-});
-const result = await verifyResponse.json();
-console.log('Verified:', result.verified);
-```
-
----
-
 ## Troubleshooting
 
 ### Backend Can't Reach TEE Service
 **Symptom**: `RuntimeError: ATTESTATION_STRICT_MODE=true requires live Eigen attestation`
 
-**Solution**: Ensure same Docker network, use container name:
+**Solution**: Verify endpoint configuration:
 ```bash
 EIGEN_ATTEST_URL=https://eigen-attest.famile.xyz/attest
 ```
@@ -372,18 +283,15 @@ EIGEN_ATTEST_URL=https://eigen-attest.famile.xyz/attest
 
 **Solution**: Use canonical JSON (sorted keys, no whitespace)
 
-### TEE Service Not Starting
-**Symptom**: Container exits immediately
+### Chainlink Oracle Not Resolving
+**Symptom**: Market stays in `staged` state
 
-**Solution**: Check MNEMONIC in `.env`:
-```bash
-docker logs eigen-attestor
-```
+**Solution**:
+1. Check sentinel logs: `docker logs trende-backend | grep SENTINEL`
+2. Verify subscription funded: [functions.chain.link](https://functions.chain.link)
+3. Confirm consumer added to subscription
 
----
+### Missing Research Results
+**Symptom**: Empty findings in response
 
-## Signer Address
-
-**Production TEE Wallet**: `0xD518465105bc1a4Db877e5d7b0C64cc88260f15B`
-
-All attestations are signed by this address. Verify against it to confirm authenticity.
+**Solution**: Check connector logs for rate limits or API key expiration

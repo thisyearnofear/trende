@@ -5,6 +5,7 @@ from typing import List, Optional, Dict, Any, Tuple
 from urllib.parse import quote_plus
 from backend.integrations.base import AbstractPlatformConnector
 from backend.utils.request_cache import build_cache_key, request_cache
+from backend.utils.url_quality import is_low_signal_search_url
 from shared.models import TrendItem, PlatformType
 from shared.config import get_settings
 from backend.utils.rate_limit import rate_limiter
@@ -223,8 +224,11 @@ class TabstackConnector(AbstractPlatformConnector):
             sources.append(normalized)
 
     def _normalize_source(self, source: Dict[str, Any]) -> Dict[str, Any]:
+        url = source.get("url") or source.get("href") or source.get("link") or ""
+        if isinstance(url, str) and is_low_signal_search_url(url):
+            url = ""
         return {
-            "url": source.get("url") or source.get("href") or source.get("link") or "",
+            "url": url,
             "title": source.get("title") or source.get("name") or "Web Source",
             "snippet": source.get("snippet") or source.get("summary") or source.get("description") or "",
             "publisher": source.get("publisher") or source.get("source") or "Web",
