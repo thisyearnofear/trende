@@ -23,6 +23,7 @@ interface PlatformOption {
 
 type AugmentMode = 'auto' | 'on' | 'off';
 type ComposerStage = 'directive' | 'setup' | 'launch';
+type ControlsSection = 'profile' | 'sources' | 'augmentation' | 'models' | 'threshold';
 
 const DEFAULT_PLATFORM_SELECTION = ['newsapi', 'web', 'hackernews', 'stackexchange'] as const;
 const DEFAULT_MODEL_SELECTION = ['venice_default', 'venice_mistral', 'openrouter_llama_70b', 'openrouter_hermes', 'aisa'] as const;
@@ -172,9 +173,12 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
     return window.localStorage.getItem('trende:advanced_controls_seen') === '1';
   });
   const [highlightSelections, setHighlightSelections] = useState(false);
+  const [controlsSection, setControlsSection] = useState<ControlsSection>('profile');
   const mountTimeRef = useRef<number>(0);
   const submittedRef = useRef(false);
   const sessionIdRef = useRef<string>('anonymous');
+  const setupFocusRef = useRef<HTMLDivElement | null>(null);
+  const formContainerRef = useRef<HTMLDivElement | null>(null);
 
   const activeProfile = useMemo(() => {
     return MISSION_PROFILES.find(p =>
@@ -247,46 +251,69 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   const openAdvancedWithHighlight = useCallback(() => {
     markAdvancedSeen();
     setComposerStage('setup');
+    setControlsSection('profile');
     setShowAdvanced(true);
     setHighlightSelections(true);
-    window.setTimeout(() => setHighlightSelections(false), 2600);
+    window.setTimeout(() => {
+      setHighlightSelections(false);
+      setupFocusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 260);
   }, [markAdvancedSeen]);
   const goToStage = useCallback((stage: ComposerStage) => {
     setComposerStage(stage);
     if (stage !== 'directive') {
       markAdvancedSeen();
       setShowAdvanced(true);
+      if (stage === 'setup') {
+        window.setTimeout(() => {
+          setupFocusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 220);
+      }
     }
   }, [markAdvancedSeen]);
   const effectiveShowAdvanced = composerStage !== 'directive' || showAdvanced;
-  const runtimeEstimate = useMemo(() => {
+  const runtimeBreakdown = useMemo(() => {
     const sourceDurations = platforms.map((platform) => SOURCE_RUNTIME_SECONDS[platform] || 60);
     const modelDurations = models.map((model) => MODEL_RUNTIME_SECONDS[model] || 35);
     const maxSource = sourceDurations.length ? Math.max(...sourceDurations) : 0;
     const maxModel = modelDurations.length ? Math.max(...modelDurations) : 0;
-    const base = 120;
-    let minSeconds = base + maxSource * 0.8 + maxModel * 0.8 + platforms.length * 12 + models.length * 6;
-    let maxSeconds = base + maxSource * 1.45 + maxModel * 1.5 + platforms.length * 26 + models.length * 12;
+    const basePipeline = 210;
+    const sourceContribution = Math.round(sourceDurations.reduce((sum, seconds) => sum + seconds, 0) * 0.58 + maxSource * 0.75);
+    const modelContribution = Math.round(modelDurations.reduce((sum, seconds) => sum + seconds, 0) * 0.48 + maxModel * 0.7);
+    const tinyfishContribution = platforms.includes('tinyfish') ? 150 : 0;
+    const firecrawlContribution = augmentation.firecrawl === 'on' ? 40 : augmentation.firecrawl === 'auto' ? 20 : 0;
+    const synthdataContribution =
+      platforms.includes('coingecko') && augmentation.synthdata !== 'off'
+        ? (augmentation.synthdata === 'on' ? 30 : 15)
+        : 0;
+    const qualityGateContribution = Math.round(Math.max(0, relevanceThreshold - 0.6) * 450);
+    const subtotal =
+      basePipeline +
+      sourceContribution +
+      modelContribution +
+      tinyfishContribution +
+      firecrawlContribution +
+      synthdataContribution +
+      qualityGateContribution;
 
-    if (platforms.includes('tinyfish')) {
-      minSeconds += 60;
-      maxSeconds += 160;
-    }
-    if (augmentation.firecrawl === 'on') {
-      maxSeconds += 35;
-    }
-    if (augmentation.synthdata === 'on' && platforms.includes('coingecko')) {
-      maxSeconds += 30;
-    }
-    if (Math.abs(relevanceThreshold - 0.8) < 0.001) {
-      maxSeconds += 70;
-    }
+    const minSeconds = Math.round(Math.max(240, subtotal * 0.62));
+    const maxSeconds = Math.round(Math.max(minSeconds + 240, subtotal * 1.42));
 
     return {
-      minSeconds: Math.round(Math.max(minSeconds, 150)),
-      maxSeconds: Math.round(Math.max(maxSeconds, minSeconds + 120)),
+      minSeconds,
+      maxSeconds,
+      contributions: {
+        basePipeline,
+        sourceContribution,
+        modelContribution,
+        tinyfishContribution,
+        firecrawlContribution,
+        synthdataContribution,
+        qualityGateContribution,
+      },
     };
   }, [platforms, models, augmentation.firecrawl, augmentation.synthdata, relevanceThreshold]);
+  const runtimeEstimate = runtimeBreakdown;
   const defaultCost = useMemo(
     () => DEFAULT_MODEL_SELECTION.reduce((sum, model) => sum + (MODEL_OPTIONS.find((opt) => opt.id === model)?.cost || 0), 0),
     []
@@ -296,9 +323,13 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
     const modelDurations = DEFAULT_MODEL_SELECTION.map((model) => MODEL_RUNTIME_SECONDS[model] || 35);
     const maxSource = sourceDurations.length ? Math.max(...sourceDurations) : 0;
     const maxModel = modelDurations.length ? Math.max(...modelDurations) : 0;
+    const basePipeline = 210;
+    const sourceContribution = Math.round(sourceDurations.reduce((sum, seconds) => sum + seconds, 0) * 0.58 + maxSource * 0.75);
+    const modelContribution = Math.round(modelDurations.reduce((sum, seconds) => sum + seconds, 0) * 0.48 + maxModel * 0.7);
+    const subtotal = basePipeline + sourceContribution + modelContribution + 20;
     return {
-      minSeconds: Math.round(120 + maxSource * 0.8 + maxModel * 0.8 + DEFAULT_PLATFORM_SELECTION.length * 12 + DEFAULT_MODEL_SELECTION.length * 6),
-      maxSeconds: Math.round(120 + maxSource * 1.45 + maxModel * 1.5 + DEFAULT_PLATFORM_SELECTION.length * 26 + DEFAULT_MODEL_SELECTION.length * 12),
+      minSeconds: Math.round(Math.max(240, subtotal * 0.62)),
+      maxSeconds: Math.round(Math.max(480, subtotal * 1.42)),
     };
   }, []);
   const runtimeDelta = runtimeEstimate.maxSeconds - defaultRuntimeEstimate.maxSeconds;
@@ -336,6 +367,20 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;
   }, []);
+  const runtimeDrivers = useMemo(() => {
+    const sourceDrivers = platforms.map((platform) => ({ label: platform, value: SOURCE_RUNTIME_SECONDS[platform] || 60 }));
+    const modelDrivers = models.map((model) => ({ label: model, value: MODEL_RUNTIME_SECONDS[model] || 35 }));
+    const topSource = sourceDrivers.sort((a, b) => b.value - a.value).slice(0, 3).map((driver) => `${driver.label} ~${driver.value}s`);
+    const topModels = modelDrivers.sort((a, b) => b.value - a.value).slice(0, 3).map((driver) => `${driver.label} ~${driver.value}s`);
+    return { topSource, topModels };
+  }, [platforms, models]);
+  const smoothReturnToSetup = useCallback(() => {
+    formContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => {
+      setControlsSection('profile');
+      goToStage('setup');
+    }, 240);
+  }, [goToStage]);
 
   useEffect(() => {
     emitMissionEvent({
@@ -419,11 +464,11 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
   ]);
 
   return (
-    <div className="relative group">
+    <div ref={formContainerRef} className="relative group">
       {/* Background glow effects */}
       <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/10 via-violet-500/10 to-emerald-500/10 rounded-[2rem] blur-xl opacity-50 group-hover:opacity-75 transition-opacity" />
 
-      <Card accent="white" shadow="none" className="p-5 sm:p-8 glass border-white/10 rounded-[2rem] overflow-hidden relative">
+      <Card accent="white" shadow="none" className="p-5 sm:p-8 glass border-white/10 rounded-[2rem] overflow-visible relative">
         <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
           {/* Header */}
           <div className="flex items-center justify-between gap-4">
@@ -485,7 +530,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                     !advancedSeen && "animate-pulse"
                   )}
                 >
-                  2 Advanced Setup
+                  2 Controls
                 </button>
                 <button
                   type="button"
@@ -552,7 +597,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                 disabled={!idea.trim() || disabled}
                 onClick={() => goToStage('setup')}
               >
-                Continue to Advanced Setup
+                Continue to Controls
               </Button>
             </div>
           )}
@@ -572,16 +617,16 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                 <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-300">{Math.round(relevanceThreshold * 100)}% threshold</span>
               </div>
             </button>
-            <div className="pointer-events-none absolute z-30 left-0 right-0 mt-2 opacity-0 translate-y-1 group-hover/spec:opacity-100 group-hover/spec:translate-y-0 transition-all duration-200">
-              <div className="glass border border-white/10 rounded-xl p-3">
+            <div className="pointer-events-none absolute z-[95] left-0 right-0 mt-2 opacity-0 translate-y-1 group-hover/spec:opacity-100 group-hover/spec:translate-y-0 transition-all duration-200">
+              <div className="rounded-xl p-3 border border-cyan-300/55 bg-slate-950/96 backdrop-blur-xl shadow-[0_20px_56px_rgba(0,0,0,0.62)]">
                 <p className="text-[10px] font-black uppercase tracking-widest text-cyan-300 mb-1">Mission Configuration</p>
-                <p className="text-[10px] font-mono text-[var(--text-secondary)]">
+                <p className="text-[10px] font-mono text-white/90">
                   Sources: {platforms.join(", ")}
                 </p>
-                <p className="text-[10px] font-mono text-[var(--text-secondary)] mt-1">
+                <p className="text-[10px] font-mono text-white/90 mt-1">
                   Models: {models.join(", ")}
                 </p>
-                <p className="text-[10px] font-mono text-[var(--text-secondary)] mt-1">
+                <p className="text-[10px] font-mono text-white/80 mt-1">
                   Augmentation: firecrawl={augmentation.firecrawl}, synthdata={augmentation.synthdata}
                 </p>
               </div>
@@ -589,14 +634,45 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
           </div>
 
           {effectiveShowAdvanced && (
-            <div className="space-y-8 pt-6 border-t border-white/5 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div ref={setupFocusRef} className="space-y-8 pt-6 border-t border-white/5 animate-in fade-in duration-300">
+              <div className="glass border border-white/10 rounded-xl p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Controls Guidance</p>
+                <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+                  Profiles are presets only. You can still customize every source, augmentation route, model, and threshold below.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ['profile', 'Profile'],
+                  ['sources', 'Sources'],
+                  ['augmentation', 'Augmentation'],
+                  ['models', 'Models'],
+                  ['threshold', 'Threshold'],
+                ] as Array<[ControlsSection, string]>).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setControlsSection(id)}
+                    className={cn(
+                      "px-2 py-1 rounded border text-[10px] font-black uppercase tracking-widest transition-all",
+                      controlsSection === id ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-300" : "border-white/10 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
 
               {/* Profile Selectors moved here */}
+              {controlsSection === 'profile' && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-3.5 h-3.5 text-amber-400 opacity-60" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Select Agent Profile</span>
                 </div>
+                <p className="text-[10px] font-mono text-[var(--text-muted)]">
+                  Profiles are presets. You can still add or remove any sources, models, and thresholds in the sections below.
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {MISSION_PROFILES.map((profile) => {
                     const active = activeProfile?.id === profile.id;
@@ -633,7 +709,9 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   })}
                 </div>
               </div>
+              )}
 
+              {controlsSection === 'sources' && (
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded bg-cyan-500/10 flex items-center justify-center">
@@ -692,7 +770,9 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   </div>
                 </div>
               </div>
+              )}
 
+              {controlsSection === 'augmentation' && (
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded bg-emerald-500/10 flex items-center justify-center">
@@ -746,8 +826,10 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Model Selectors */}
+              {controlsSection === 'models' && (
               <div className="space-y-4 pt-6 border-t border-white/5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -797,8 +879,10 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   })}
                 </div>
               </div>
+              )}
 
               {/* Relevance Threshold */}
+              {controlsSection === 'threshold' && (
               <div className="space-y-4 pt-6 border-t border-white/5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Intelligence Saliency Threshold</span>
@@ -820,6 +904,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                   />
                 </div>
               </div>
+              )}
 
               {composerStage === 'setup' && (
                 <div className="flex justify-end pt-2">
@@ -883,6 +968,28 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                         <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
                           {runtimeDelta >= 0 ? "+" : ""}{formatDuration(Math.abs(runtimeDelta))} vs default
                         </p>
+                        <p className="text-[10px] font-mono text-[var(--text-muted)] mt-2">
+                          Base: ~{formatDuration(runtimeBreakdown.contributions.basePipeline)}
+                        </p>
+                        <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+                          Sources: +~{formatDuration(runtimeBreakdown.contributions.sourceContribution)} • Models: +~{formatDuration(runtimeBreakdown.contributions.modelContribution)}
+                        </p>
+                        {(runtimeBreakdown.contributions.tinyfishContribution > 0 || runtimeBreakdown.contributions.firecrawlContribution > 0 || runtimeBreakdown.contributions.synthdataContribution > 0) && (
+                          <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+                            Augmentation: +~{formatDuration(runtimeBreakdown.contributions.tinyfishContribution + runtimeBreakdown.contributions.firecrawlContribution + runtimeBreakdown.contributions.synthdataContribution)}
+                          </p>
+                        )}
+                        {runtimeBreakdown.contributions.qualityGateContribution > 0 && (
+                          <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+                            Quality gate: +~{formatDuration(runtimeBreakdown.contributions.qualityGateContribution)}
+                          </p>
+                        )}
+                        <p className="text-[10px] font-mono text-[var(--text-muted)] mt-2">
+                          Source drivers: {runtimeDrivers.topSource.join(" • ")}
+                        </p>
+                        <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+                          Model drivers: {runtimeDrivers.topModels.join(" • ")}
+                        </p>
                       </div>
                     </div>
 
@@ -906,7 +1013,7 @@ export function QueryInput({ onSubmit, isLoading, disabled }: QueryInputProps) {
                       type="button"
                       variant="ghost"
                       className="rounded-xl px-6"
-                      onClick={() => goToStage('setup')}
+                      onClick={smoothReturnToSetup}
                       disabled={disabled || isLoading}
                     >
                       Tweak Setup
