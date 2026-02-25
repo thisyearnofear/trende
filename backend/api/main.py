@@ -1563,12 +1563,12 @@ async def get_action_status(action_id: str) -> dict[str, Any] | Response:
     return {"action": action}
 
 
-@app.post("/api/telemetry/mission-event")
+@app.post("/api/telemetry/mission-event", response_model=None)
 async def ingest_mission_event(
     event: MissionTelemetryRequest,
     request: Request,
     x_wallet_address: str | None = Header(None, alias="X-Wallet-Address"),
-) -> dict[str, Any] | Response:
+) -> Any:
     created = repo.create_mission_event(
         event_id=str(uuid.uuid4()),
         event_name=event.name,
