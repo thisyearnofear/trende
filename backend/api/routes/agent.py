@@ -16,11 +16,11 @@ from shared.models import QueryStatus
 router = APIRouter(prefix="/api/agent", tags=["agent"])
 
 
-@router.get("/alpha/{task_id}")
+@router.get("/alpha/{task_id}", response_model=None)
 async def get_agent_alpha(
     task_id: str,
     payment: X402Payment | None = None,
-) -> dict[str, Any] | Response:
+) -> Any:
     """
     Agent-to-Agent (A2A) Endpoint.
     Returns a compact, verifiable conviction manifest for external launch bots.
