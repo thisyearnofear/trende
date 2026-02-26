@@ -1,7 +1,8 @@
 "use client";
 
 import { Card } from "@/components/DesignSystem";
-import { Fingerprint, GlowText, ScrambleWords, ScrambleText, Bot } from "@/components/ScrambleText";
+import { GlowText, ScrambleWords, ScrambleText } from "@/components/ScrambleText";
+import { Fingerprint, Bot } from "lucide-react";
 
 export function HeroSection() {
   return (

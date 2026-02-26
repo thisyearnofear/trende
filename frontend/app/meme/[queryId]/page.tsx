@@ -2,7 +2,7 @@
 
 import { use, useEffect } from 'react';
 import { useTrendData } from '@/hooks/useTrendData';
-import { ReportViewer } from @/components/ReportViewerer';
+import { ReportViewer } from '@/components/ReportViewer';
 import { Zap, ArrowLeft, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';

@@ -2,7 +2,7 @@
 
 import { use, useEffect } from 'react';
 import { useTrendData } from '@/hooks/useTrendData';
-import { ReportViewer } from @/components/ReportViewerer';
+import { ReportViewer } from '@/components/ReportViewer';
 import { AttestationBadge } from '@/components/AttestationBadge';
 import { ShieldCheck, ArrowLeft, Loader2, Link2, Fingerprint, Lock } from 'lucide-react';
 import Link from 'next/link';
