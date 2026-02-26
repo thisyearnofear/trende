@@ -5,7 +5,7 @@ import { Card } from "@/components/DesignSystem";
 interface VerificationData {
   tee?: {
     status: string;
-    provider: string;
+    provider?: string;
   };
   consensus?: {
     status: string;
@@ -14,7 +14,7 @@ interface VerificationData {
   };
   chainlink?: {
     status: string;
-    network: string;
+    network?: string;
     configured?: boolean;
   };
 }

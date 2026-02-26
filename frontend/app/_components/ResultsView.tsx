@@ -6,7 +6,7 @@ import { TrendSummary } from "@/components/TrendSummary";
 import { ReportViewer } from "@/components/ReportViewer";
 import { PlatformTabs } from "@/components/PlatformTabs";
 import { RunFlowDivider } from "@/components/RunFlowDivider";
-import { TrendSummary as TrendSummaryType } from "@/lib/types";
+import { ResultsResponse } from "@/lib/types";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -80,32 +80,9 @@ interface QueryData {
   updatedAt?: string;
 }
 
-interface ResultsData {
-  query?: QueryData;
-  summary?: TrendSummaryType;
-  results?: Array<{
-    platform: string;
-    items: Array<{ id: string; timestamp: string }>;
-  }>;
-  telemetry?: {
-    sourceRoutes?: SourceRoute[];
-    sourceBreakdown?: SourceRow[];
-    chainlinkProof?: {
-      status?: string;
-      network?: string;
-      requestId?: string;
-      txHash?: string;
-      oracleSettlement?: string;
-      explorerUrl?: string;
-    };
-    verification?: VerificationData;
-    warnings?: string[];
-  };
-}
-
 interface ResultsViewProps {
-  activeQueryId: string;
-  data: ResultsData;
+  activeQueryId: string | null;
+  data: ResultsResponse;
   briefOpen: boolean;
   setBriefOpen: React.Dispatch<React.SetStateAction<boolean>>;
   showReportInline: boolean;
@@ -164,21 +141,25 @@ export function ResultsView({
   const sourceRoutes = data.telemetry?.sourceRoutes || [];
   const sourceBreakdown = data.telemetry?.sourceBreakdown || [];
   const chainlinkProof = data.telemetry?.chainlinkProof;
-  const verification = data.telemetry?.verification || {};
+  const verification: ResultsResponse["telemetry"] extends infer T ? (T extends { trustStack?: infer S } ? S : undefined) : undefined = data.telemetry?.trustStack;
   const sourceCount = data.results?.reduce((sum, r) => sum + (r.items?.length || 0), 0) || 0;
   
   const weightedConfidence = Math.round((data.summary?.confidenceScore || 0) * 100);
-  const reportAgreement = Math.round(((data.summary?.consensusData?.agreement_score || data.summary?.consensusData?.agreementScore || 0) * 100));
+  const reportAgreement = Math.round(((data.summary?.consensusData?.agreement_score ?? 0) * 100));
   const reportAttestationStatus = data.summary?.attestationData?.status || "pending";
   
   const chainlinkStatusLabel = chainlinkProof?.status || verification?.chainlink?.status || "available";
   
   const sourceIndexById: Record<string, number> = {};
+  const sourceLabelByOrdinal: Record<number, string> = {};
+
   let sourceOrdinal = 1;
   (data.results || []).forEach((platform) => {
     (platform.items || []).forEach((item) => {
-      if (!sourceIndexById[item.id]) {
-        sourceIndexById[item.id] = sourceOrdinal++;
+      if (sourceIndexById[item.id] == null) {
+        sourceIndexById[item.id] = sourceOrdinal;
+        sourceLabelByOrdinal[sourceOrdinal] = item.id;
+        sourceOrdinal += 1;
       }
     });
   });
@@ -229,7 +210,7 @@ export function ResultsView({
           <div className="flex flex-wrap items-center gap-4 text-[10px] font-mono text-white/40">
             <span className="flex items-center gap-1.5 px-2 py-0.5 glass border-white/5 rounded text-white/50">
               <Fingerprint className="w-3 h-3" />
-              ID: {activeQueryId.slice(0, 12)}
+              ID: {(activeQueryId ?? "").slice(0, 12)}
             </span>
             <span className="flex items-center gap-1.5">
               <Clock className="w-3 h-3" />
@@ -438,7 +419,7 @@ export function ResultsView({
             <div className="mt-4 animate-in fade-in slide-in-from-top-2">
               <TrendSummary
                 summary={data.summary}
-                sourceLabelByOrdinal={sourceIndexById}
+                sourceLabelByOrdinal={sourceLabelByOrdinal}
                 dataHealth={{ level: "healthy", message: "", warnings: [], findingsCount: sourceCount }}
               />
             </div>
@@ -616,7 +597,7 @@ export function ResultsView({
                   <div className="text-center">
                     <p className="text-[9px] uppercase font-black text-white/20 tracking-widest mb-1">Attestation</p>
                     <p className="text-sm font-black text-emerald-400">
-                      {forgeAttestationStatus === "signed" || forgeAttestationStatus === "ready" ? "READY" : "PENDING"}
+                      {reportAttestationStatus === "signed" || reportAttestationStatus === "ready" ? "READY" : "PENDING"}
                     </p>
                   </div>
                 </div>

@@ -30,6 +30,10 @@ interface ResearchData {
         main_divergence?: string;
     };
     citations?: Citation[];
+    brand?: {
+        aesthetic?: string;
+        primary_color?: string;
+    };
 }
 
 interface AgentManifest {
@@ -56,7 +60,7 @@ export function ReportViewer({ summary, mode, queryId }: ReportViewerProps) {
         },
         citations: [],
     };
-    const data = ((summary.researchPayload as ResearchData) || fallbackData) as ResearchData;
+    const data = ((((summary as unknown as { researchPayload?: unknown })?.researchPayload as ResearchData) || fallbackData) as ResearchData);
     const consensus = summary.consensusData;
     const attestation = summary.attestationData;
     const { showToast } = useToast();

@@ -105,6 +105,8 @@ export default function Home() {
   const [commonsSearch, setCommonsSearch] = useState("");
   const [commonsVisibleCount, setCommonsVisibleCount] = useState(2);
   const [pendingProcessingFocus, setPendingProcessingFocus] = useState(false);
+
+
   const { showToast } = useToast();
   const { isConnected } = useWallet();
   const missionFocusRef = useRef<HTMLDivElement | null>(null);
@@ -144,6 +146,23 @@ export default function Home() {
   const { queries: history, isLoading: historyLoading, refresh: refreshHistory } = useTrendHistory();
   const { saved: savedResearch, isLoading: savedLoading, refresh: refreshSaved } = useSavedResearch(isConnected);
   const { research: commonsResearch, isLoading: commonsLoading, refresh: refreshCommons } = useCommons();
+
+  const filteredCommons = useMemo(() => {
+    const search = commonsSearch.trim().toLowerCase();
+    if (!search) return commonsResearch;
+
+    return commonsResearch.filter((item) => {
+      const topicMatch = item.topic?.toLowerCase().includes(search);
+      const sponsorMatch = (item.sponsor ?? "").toLowerCase().includes(search);
+      const platformsMatch = (item.platforms ?? []).some((p) => p.toLowerCase().includes(search));
+      return topicMatch || sponsorMatch || platformsMatch;
+    });
+  }, [commonsResearch, commonsSearch]);
+
+  const visibleCommons = useMemo(
+    () => filteredCommons.slice(0, commonsVisibleCount),
+    [filteredCommons, commonsVisibleCount]
+  );
   const [saveVisibility, setSaveVisibility] = useState<"private" | "unlisted" | "public">("private");
   const [isSavingResearch, setIsSavingResearch] = useState(false);
   const isRunActive = isProcessing || ["pending", "planning", "researching", "analyzing", "processing"].includes(status || "");
@@ -224,11 +243,10 @@ export default function Home() {
       if (!activeQueryId) return;
       setIsSavingResearch(true);
       try {
-        await api.saveResearch({
-          task_id: activeQueryId,
-          label,
-          tags,
+        await api.saveResearch(activeQueryId, {
           visibility: saveVisibility,
+          saveLabel: label,
+          tags,
         });
         showToast("Research saved successfully!", "success");
         refreshSaved();
@@ -367,10 +385,23 @@ export default function Home() {
     }
   }, [status, activeQueryId]);
 
+  const [paragraphModalOpen, setParagraphModalOpen] = useState(false);
+
+  const handleParagraphConnect = useCallback((apiKey: string) => {
+    if (typeof window === "undefined") return;
+    // Store locally for now; backend can read it if needed via headers/env in the future.
+    window.localStorage.setItem("trende:paragraph_api_key", apiKey);
+    showToast("Paragraph connected.", "success");
+  }, [showToast]);
+
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <Onboarding />
-      <ParagraphConnectModal />
+      <ParagraphConnectModal
+        isOpen={paragraphModalOpen}
+        onClose={() => setParagraphModalOpen(false)}
+        onConnect={handleParagraphConnect}
+      />
 
       {/* Header */}
       <header className="sticky top-0 z-50 glass border-b border-white/5 backdrop-blur-xl">
@@ -384,11 +415,9 @@ export default function Home() {
 
           <div className="flex items-center gap-2">
             <IconButton
-              icon={History}
+              icon={<History className="w-4 h-4" />}
               onClick={() => setShowHistory(!showHistory)}
-              tooltip="Research History"
-              variant="ghost"
-              size="sm"
+              ariaLabel="Research History"
             />
             <ThemeToggle />
             <WalletButton />
@@ -397,41 +426,49 @@ export default function Home() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <IconButton icon={Github} tooltip="GitHub" variant="ghost" size="sm" />
+              <IconButton icon={<Github className="w-4 h-4" />} ariaLabel="GitHub" />
             </Link>
             <Link
               href="https://discord.gg/trende"
               target="_blank"
               rel="noopener noreferrer"
             >
-              <IconButton icon={MessageCircle} tooltip="Discord" variant="ghost" size="sm" />
+              <IconButton icon={<MessageCircle className="w-4 h-4" />} ariaLabel="Discord" />
             </Link>
           </div>
         </div>
       </header>
 
       {/* History Panel */}
-      {showHistory && (
-        <HistoryPanel
-          mode={historyMode}
-          onModeChange={setHistoryMode}
-          history={history}
-          savedResearch={savedResearch}
-          historyLoading={historyLoading}
-          savedLoading={savedLoading}
-          onSelect={handleHistorySelect}
-          onClose={() => setShowHistory(false)}
-          onRefreshHistory={refreshHistory}
-          onRefreshSaved={refreshSaved}
-        />
-      )}
+      <HistoryPanel
+        showHistory={showHistory}
+        onClose={() => setShowHistory(false)}
+        historyMode={historyMode}
+        setHistoryMode={setHistoryMode}
+        history={history}
+        historyLoading={historyLoading}
+        savedResearch={savedResearch}
+        savedLoading={savedLoading}
+        isConnected={isConnected}
+        onSelectHistory={handleHistorySelect}
+      />
 
       <main className="container mx-auto px-4 py-8 space-y-12">
         {/* Hero Section */}
         <HeroSection />
 
         {/* Intelligence Engine Steps */}
-        <IntelligenceEngineSection />
+        <IntelligenceEngineSection
+          onCopyOpenClawStarter={async () => {
+            try {
+              const snippet = `# OpenClaw ACP starter\n# Docs: https://github.com/Virtual-Protocol/openclaw-acp\n\nexport TRENDE_API_URL=${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}\n# TODO: configure your x402 / wallet signing\n`;
+              await navigator.clipboard.writeText(snippet);
+              showToast("Copied OpenClaw starter.", "success");
+            } catch {
+              showToast("Failed to copy starter.", "error");
+            }
+          }}
+        />
 
         {/* Research Control */}
         <section className="space-y-6">
@@ -445,8 +482,8 @@ export default function Home() {
                 variant="ghost"
                 size="sm"
                 onClick={refresh}
-                icon={RefreshCw}
               >
+                <RefreshCw className="w-4 h-4" />
                 Refresh
               </Button>
             )}
@@ -454,8 +491,7 @@ export default function Home() {
 
           <QueryInput
             onSubmit={handleSubmit}
-            isProcessing={isProcessing}
-            lastQuery={lastQuery}
+            isLoading={isProcessing}
           />
         </section>
 
@@ -466,6 +502,7 @@ export default function Home() {
               status={status}
               progress={progress}
               events={events}
+              isProcessing={isProcessing}
               elapsedSeconds={elapsedSeconds}
             />
           </div>
@@ -501,7 +538,8 @@ export default function Home() {
         {data && (
           <VerificationCard
             variant={status === "completed" ? "results" : "info"}
-            data={data}
+            verification={data.telemetry?.trustStack}
+            chainlinkStatusLabel={data.telemetry?.chainlinkProof?.status || data.telemetry?.trustStack?.chainlink?.status || "available"}
           />
         )}
 
@@ -514,9 +552,17 @@ export default function Home() {
             commonsLoading={commonsLoading}
             commonsSearch={commonsSearch}
             setCommonsSearch={setCommonsSearch}
-            commonsVisibleCount={commonsVisibleCount}
+            visibleCommons={visibleCommons}
+            filteredCommons={filteredCommons}
             setCommonsVisibleCount={setCommonsVisibleCount}
-            onRefresh={refreshCommons}
+            onLoadItem={(id) => {
+              setQueryId(id);
+              setShowCommons(false);
+              if (typeof window !== "undefined") {
+                window.localStorage.setItem(LAST_QUERY_STORAGE_KEY, id);
+              }
+              void refreshCommons();
+            }}
           />
         </div>
       </main>

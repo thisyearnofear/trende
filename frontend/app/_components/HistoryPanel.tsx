@@ -12,10 +12,10 @@ interface HistoryItem {
 
 interface SavedItem {
   id: string;
-  saveLabel: string | null;
+  saveLabel?: string | null;
   idea: string;
   visibility: string;
-  ipfsUri: string | null;
+  ipfsUri?: string | null;
   savedAt: string;
 }
 
