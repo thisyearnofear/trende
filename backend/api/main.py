@@ -381,7 +381,7 @@ async def resume_interrupted_tasks() -> None:
                 log_prefix="⚠️ AUTO-EXPIRE",
             )
             continue
-        tasks[t["task_id"]] = full_task
+        _save_task(t["task_id"], full_task)
         # Restart agent loop in background
         asyncio.create_task(
             run_agent_workflow(
@@ -403,8 +403,7 @@ def _mark_task_failed(task: dict[str, Any], reason: str, log_prefix: str = "❌"
     task["logs"] = logs[-200:]
     task["updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     if task_id:
-        tasks[task_id] = task
-        repo.save_task(task_id, task)
+        _save_task(task_id, task)
 
 
 async def _stale_task_reaper_loop() -> None:
@@ -419,7 +418,7 @@ async def _stale_task_reaper_loop() -> None:
                 task_id = item.get("task_id")
                 if not task_id:
                     continue
-                full_task = tasks.get(task_id) or repo.get_task(task_id)
+                full_task = _get_task(task_id) or item
                 if not full_task:
                     continue
                 updated = _parse_iso(full_task.get("updated_at")) or _parse_iso(full_task.get("created_at"))
@@ -438,8 +437,32 @@ async def _stale_task_reaper_loop() -> None:
 
 repo = Repository()
 
-# Simple in-memory task store (should move to Redis/DB later)
-tasks = {}
+# Read-through cache for active tasks (Repository is source of truth)
+_task_cache: dict[str, dict[str, Any]] = {}
+
+
+def _get_task(task_id: str) -> dict[str, Any] | None:
+    """Get task from cache or Repository (source of truth)."""
+    if task_id in _task_cache:
+        return _task_cache[task_id]
+    task = repo.get_task(task_id)
+    if task:
+        _task_cache[task_id] = task
+    return task
+
+
+def _save_task(task_id: str, task: dict[str, Any]) -> None:
+    """Save task to Repository (source of truth) and update cache."""
+    repo.save_task(task_id, task)
+    _task_cache[task_id] = task
+
+
+def _update_task(task_id: str, updates: dict[str, Any]) -> None:
+    """Update task fields in Repository and cache."""
+    task = _get_task(task_id)
+    if task:
+        task.update(updates)
+        _save_task(task_id, task)
 
 
 def _normalize_key_parts(values: list[str]) -> tuple[str, ...]:
@@ -470,8 +493,9 @@ def _find_matching_active_task(
     now = datetime.datetime.now(datetime.timezone.utc)
     max_age = datetime.timedelta(minutes=20)
 
-    for existing_id, task in tasks.items():
-        if task.get("status") not in active_statuses:
+    for task_id in list(_task_cache.keys()):
+        task = _get_task(task_id)
+        if not task or task.get("status") not in active_statuses:
             continue
         task_topic = str(task.get("topic", "")).strip().lower()
         if task_topic != topic_key:
@@ -1439,7 +1463,7 @@ async def run_health(limit: int = 50) -> dict[str, Any]:
         task_id = item.get("task_id")
         if not task_id:
             continue
-        full = tasks.get(task_id) or repo.get_task(task_id) or item
+        full = _get_task(task_id) or item
         alerts = _task_runtime_alerts(full)
         if alerts:
             issue_count += 1
@@ -1515,7 +1539,7 @@ async def start_analysis(
         request.augmentation,
     )
     if matching_task_id:
-        existing = tasks.get(matching_task_id) or {}
+        existing = _get_task(matching_task_id) or {}
         return {
             "task_id": matching_task_id,
             "id": matching_task_id,
@@ -1526,7 +1550,7 @@ async def start_analysis(
 
     task_id = str(uuid.uuid4())
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    tasks[task_id] = {
+    task = {
         "task_id": task_id,
         "status": QueryStatus.PENDING,
         "logs": [],
@@ -1558,8 +1582,8 @@ async def start_analysis(
         },
     }
 
-    # Save to DB
-    repo.save_task(task_id, tasks[task_id])
+    # Save to Repository (source of truth)
+    _save_task(task_id, task)
 
     background_tasks.add_task(
         run_agent_workflow,
@@ -1570,7 +1594,7 @@ async def start_analysis(
         request.augmentation,
     )
 
-    created_at = tasks[task_id]["created_at"]
+    created_at = task["created_at"]
     return {
         "task_id": task_id,
         "id": task_id,
@@ -1594,7 +1618,7 @@ async def run_agent_workflow(
         "query_id": task_id,
         "status": QueryStatus.PENDING,
         "logs": ["Task initialized."],
-        "created_at": tasks[task_id]["created_at"],
+        "created_at": task["created_at"],
         "raw_findings": [],
         "filtered_findings": [],
         "plan": None,
@@ -1621,51 +1645,55 @@ async def run_agent_workflow(
 
     # Run the graph
     try:
+        task = _get_task(task_id)
+        if not task:
+            raise ValueError(f"Task {task_id} not found")
+            
         async for output in workflow.astream(initial_state):  # type: ignore
             for node_name, state_update in output.items():
-                # Update the global task state with the latest changes from the agent
+                # Update the task state with the latest changes from the agent
                 for key, value in state_update.items():
-                    tasks[task_id][key] = value
+                    task[key] = value
 
                 # Honor explicit terminal statuses from node output first.
                 explicit_status = state_update.get("status")
                 if explicit_status in [QueryStatus.COMPLETED, QueryStatus.FAILED]:
-                    tasks[task_id]["status"] = explicit_status
+                    task["status"] = explicit_status
                 # Otherwise set an operational status based on the executing node.
                 elif node_name == "planner":
-                    tasks[task_id]["status"] = QueryStatus.RESEARCHING
+                    task["status"] = QueryStatus.RESEARCHING
                 elif node_name == "researcher":
-                    tasks[task_id]["status"] = QueryStatus.PROCESSING
+                    task["status"] = QueryStatus.PROCESSING
                 elif node_name == "validator":
-                    tasks[task_id]["status"] = QueryStatus.ANALYZING
+                    task["status"] = QueryStatus.ANALYZING
                 elif node_name == "financial_intelligence":
-                    tasks[task_id]["status"] = QueryStatus.ANALYZING
+                    task["status"] = QueryStatus.ANALYZING
                 elif node_name == "analyzer":
-                    tasks[task_id]["status"] = QueryStatus.PROCESSING
+                    task["status"] = QueryStatus.PROCESSING
                 elif node_name == "architect":
-                    tasks[task_id]["status"] = QueryStatus.COMPLETED
+                    task["status"] = QueryStatus.COMPLETED
 
                 if node_name == "architect":
-                    tasks[task_id]["logs"].append("🏆 MISSION ACCOMPLISHED: Final results ready.")
+                    task["logs"].append("🏆 MISSION ACCOMPLISHED: Final results ready.")
 
-                tasks[task_id]["updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                task["updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-                consensus_data = tasks[task_id].get("consensus_data") or {}
-                attestation_data = tasks[task_id].get("attestation_data") or {}
-                created_dt = _parse_iso(tasks[task_id].get("created_at"))
-                updated_dt = _parse_iso(tasks[task_id].get("updated_at"))
+                consensus_data = task.get("consensus_data") or {}
+                attestation_data = task.get("attestation_data") or {}
+                created_dt = _parse_iso(task.get("created_at"))
+                updated_dt = _parse_iso(task.get("updated_at"))
                 duration_seconds = (
                     int((updated_dt - created_dt).total_seconds())
                     if created_dt and updated_dt
                     else 0
                 )
                 provider_failure_rate = _provider_failure_rate(consensus_data)
-                guardrail_alerts = _task_runtime_alerts(tasks[task_id])
+                guardrail_alerts = _task_runtime_alerts(task)
                 merged_warnings = list(
                     dict.fromkeys((consensus_data.get("warnings", []) or []) + guardrail_alerts)
                 )
-                findings_count = len(tasks[task_id].get("raw_findings") or [])
-                quality_assessment = tasks[task_id].get("quality_assessment") or {}
+                findings_count = len(task.get("raw_findings") or [])
+                quality_assessment = task.get("quality_assessment") or {}
                 data_sufficiency = "healthy"
                 if findings_count == 0:
                     data_sufficiency = "sparse"
@@ -1673,7 +1701,7 @@ async def run_agent_workflow(
                     data_sufficiency = "partial"
                 if quality_assessment and not quality_assessment.get("passed", True):
                     data_sufficiency = "partial"
-                tasks[task_id]["run_telemetry"] = {
+                task["run_telemetry"] = {
                     "run_id": task_id,
                     "provider_count": len(consensus_data.get("providers", [])),
                     "agreement_score": consensus_data.get("agreement_score", 0.0),
@@ -1684,26 +1712,28 @@ async def run_agent_workflow(
                     "warnings": merged_warnings,
                     "provider_failure_rate": provider_failure_rate,
                     "duration_seconds": duration_seconds,
-                    "logs": tasks[task_id].get("logs", [])[-12:],
-                    "updated_at": tasks[task_id]["updated_at"],
+                    "logs": task.get("logs", [])[-12:],
+                    "updated_at": task["updated_at"],
                     "quality_gate": quality_assessment,
-                    "source_routes": tasks[task_id].get("source_routes", []),
-                    "source_breakdown": _derive_source_breakdown(tasks[task_id].get("raw_findings") or []),
+                    "source_routes": task.get("source_routes", []),
+                    "source_breakdown": _derive_source_breakdown(task.get("raw_findings") or []),
                 }
 
                 # Log the node completion
-                if "logs" not in tasks[task_id]:
-                    tasks[task_id]["logs"] = []
-                tasks[task_id]["logs"].append(f"Completed step: {node_name}")
+                if "logs" not in task:
+                    task["logs"] = []
+                task["logs"].append(f"Completed step: {node_name}")
 
-                # Persist update to DB
-                repo.save_task(task_id, tasks[task_id])
+                # Persist update to Repository (source of truth)
+                _save_task(task_id, task)
     except Exception as e:
         print(f"Workflow error for task {task_id}: {e}")
-        tasks[task_id]["status"] = QueryStatus.FAILED
-        tasks[task_id]["error"] = str(e)
-        tasks[task_id]["logs"].append(f"❌ CRITICAL ERROR: {str(e)}")
-        repo.save_task(task_id, tasks[task_id])
+        task = _get_task(task_id)
+        if task:
+            task["status"] = QueryStatus.FAILED
+            task["error"] = str(e)
+            task["logs"].append(f"❌ CRITICAL ERROR: {str(e)}")
+            _save_task(task_id, task)
 
 
 async def run_agent_action(action_id: str) -> None:
@@ -1723,7 +1753,7 @@ async def run_agent_action(action_id: str) -> None:
     input_payload = action.get("input_payload") or {}
 
     try:
-        task = tasks.get(task_id) or (repo.get_task(task_id) if task_id else None)
+        task = _get_task(task_id)
         if task_id and not task:
             raise ValueError("Referenced task not found.")
 
@@ -1888,9 +1918,7 @@ async def run_agent_action(action_id: str) -> None:
             market_id = "0x" + hashlib.sha256(topic.encode()).hexdigest()
             
             task["oracle_market_id"] = market_id
-            if task_id in tasks:
-                tasks[task_id] = task
-            repo.save_task(task_id, task)
+            _save_task(task_id, task)
 
     except Exception as exc:
         repo.update_action(
@@ -1970,7 +1998,7 @@ async def save_research(
             content=json.dumps({"error": "Connect wallet before saving research."}),
         )
 
-    task = tasks.get(task_id) or repo.get_task(task_id)
+    task = _get_task(task_id)
     if not task:
         return Response(status_code=404, content=json.dumps({"error": "Task not found"}))
 
@@ -2008,8 +2036,9 @@ async def save_research(
     if not saved:
         return Response(status_code=404, content=json.dumps({"error": "Task not found"}))
 
-    if task_id in tasks:
-        tasks[task_id].update(
+    if task_id:
+        _update_task(
+            task_id,
             {
                 "owner_address": saved.get("owner_address"),
                 "is_saved": saved.get("is_saved"),
@@ -2139,12 +2168,7 @@ async def get_public_commons(limit: int = 50, sponsor: str | None = None) -> dic
 
 @app.get("/api/trends/status/{task_id}", response_model=None)
 async def get_status(task_id: str) -> dict[str, Any] | Response:
-    task = tasks.get(task_id)
-    if not task:
-        task = repo.get_task(task_id)
-        if task:
-            tasks[task_id] = task
-            
+    task = _get_task(task_id)
     if not task:
         return Response(status_code=404, content=json.dumps({"error": "Task not found"}))
     return task
@@ -2153,12 +2177,7 @@ async def get_status(task_id: str) -> dict[str, Any] | Response:
 @app.get("/api/trends/{task_id}", response_model=None)
 async def get_task_results(task_id: str) -> dict[str, Any] | Response:
     """Returns the full task results in the format expected by the frontend."""
-    task = tasks.get(task_id)
-    if not task:
-        task = repo.get_task(task_id)
-        if task:
-            tasks[task_id] = task
-            
+    task = _get_task(task_id)
     if not task:
         return Response(status_code=404, content=json.dumps({"error": "Task not found"}))
 
@@ -2365,11 +2384,8 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
 
 @app.get("/api/trends/{task_id}/export", response_model=None)
 async def export_task_report(task_id: str, format: str = "pdf") -> Response:
-    task = tasks.get(task_id)
+    task = _get_task(task_id)
     if not task:
-        task = repo.get_task(task_id)
-        if task:
-            tasks[task_id] = task
     if not task:
         return Response(status_code=404, content=json.dumps({"error": "Task not found"}))
 
@@ -2429,7 +2445,7 @@ async def get_agent_alpha(
         return Response(status_code=402, content="Intelligence Purchase Required (X402)")
 
     # 2. Data Retrieval
-    task = tasks.get(task_id) or repo.get_task(task_id)
+    task = _get_task(task_id)
     if not task or task.get("status") != QueryStatus.COMPLETED:
         return Response(
             status_code=404, content=json.dumps({"error": "Alpha not ready or task not found"})
@@ -2472,16 +2488,8 @@ async def stream_status(task_id: str) -> StreamingResponse:
         # Initial delay to allow frontend to hook in
         await asyncio.sleep(1.0)
         while True:
-            # Try to get from in-memory tasks first
-            state = tasks.get(task_id)
-            
-            # If not in memory, try reloading from DB
-            if not state:
-                state = repo.get_task(task_id)
-                if state:
-                    # Cache it back to memory for streaming
-                    tasks[task_id] = state
-            
+            # Try to get from cache or Repository
+            state = _get_task(task_id)
             if not state:
                 payload = {
                     "type": "error",
@@ -2595,7 +2603,7 @@ async def publish_trend(
         return JSONResponse(status_code=400, content={"error": "Unsupported publish platform."})
 
     # 1. Retrieve the completed task
-    task = tasks.get(task_id) or repo.get_task(task_id)
+    task = _get_task(task_id)
     if not task:
         return JSONResponse(status_code=404, content={"error": "Task not found"})
 
@@ -2658,9 +2666,7 @@ async def publish_trend(
         }
         task["editorial_data"] = editorial_data
         task["owner_address"] = owner_address or requester
-        if task_id in tasks:
-            tasks[task_id] = task
-        repo.save_task(task_id, task)
+        _save_task(task_id, task)
 
         draft = editorial_result.get("editorial_draft") or ""
         
