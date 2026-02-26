@@ -2,7 +2,7 @@
 
 import { use, useEffect } from 'react';
 import { useTrendData } from '@/hooks/useTrendData';
-import { ForgeViewer } from '@/components/ForgeViewer';
+import { ReportViewer } from @/components/ReportViewerer';
 import { Zap, ArrowLeft, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -84,7 +84,7 @@ export default function MemePage({ params }: { params: Promise<{ queryId: string
           </div>
         ) : (
           <div className="space-y-10">
-            {data.summary && <ForgeViewer summary={data.summary} mode={viewMode} queryId={queryId} />}
+            {data.summary && <ReportViewer summary={data.summary} mode={viewMode} queryId={queryId} />}
           </div>
         )}
       </main>

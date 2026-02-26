@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "trende"
 version = "0.1.0"
-description = "Multi-Platform Trend Intelligence Platform"
+description = "Multi-source AI research with cryptographic proof"
 requires-python = ">=3.10"
 dependencies = [
     "pydantic>=2.0.0",

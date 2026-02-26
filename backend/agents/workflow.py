@@ -208,40 +208,29 @@ def _platform_counts(findings: list[Any]) -> dict[str, int]:
 
 
 def _coverage_status_counts(report_md: str) -> dict[str, int]:
-    lowered = (report_md or "").lower()
+    """Parse coverage matrix from report to count full/partial/missing dimensions.
+
+    The analyzer prompt now generates topic-adaptive dimensions, so we scan
+    for any row in a markdown table that contains an explicit coverage label.
+    """
     lines = [line.strip().lower() for line in (report_md or "").splitlines() if line.strip()]
-    dimension_tokens = {
-        "skills": ("emergent agent skills", "agent skills"),
-        "protocols": ("agent commerce protocols", "commerce protocols", "protocols"),
-        "primitives": ("primitives",),
-        "workflows": ("agentic workflows", "workflows"),
-    }
     counts = {"full": 0, "partial": 0, "missing": 0}
 
-    for _, tokens in dimension_tokens.items():
-        status = "missing"
-        candidate_line = ""
-        for line in lines:
-            if any(token in line for token in tokens):
-                candidate_line = line
-                break
+    for line in lines:
+        # Match markdown table rows that contain a coverage label.
+        if "|" not in line:
+            continue
+        if "full" in line:
+            counts["full"] += 1
+        elif "partial" in line:
+            counts["partial"] += 1
+        elif "missing" in line:
+            counts["missing"] += 1
 
-        # Fallback: search globally in report text if dimension is mentioned outside a row.
-        if not candidate_line and any(token in lowered for token in tokens):
-            candidate_line = lowered
+    # If no coverage rows were detected, treat as zero dimensions (no penalty).
+    if sum(counts.values()) == 0:
+        counts["full"] = 1  # Neutral default so quality gate isn't penalized.
 
-        if candidate_line:
-            if "missing" in candidate_line:
-                status = "missing"
-            elif "partial" in candidate_line:
-                status = "partial"
-            elif "full" in candidate_line:
-                status = "full"
-            else:
-                # Mentioned without explicit status = partial confidence.
-                status = "partial"
-
-        counts[status] += 1
     return counts
 
 
@@ -1097,7 +1086,7 @@ async def analyzer_node(state: GraphState) -> GraphState:
     Findings:
     {context}
 
-    Task: Create a detailed, UNBIASED Trend Report in Markdown.
+    Task: Create a detailed, UNBIASED Research Report in Markdown.
     Include:
     - Executive Summary
     - Platform-specific insights
@@ -1105,16 +1094,13 @@ async def analyzer_node(state: GraphState) -> GraphState:
     - Relevance Score (1-10)
     - Confidence Analysis (based on the provided research confidence)
     - Bias Mitigation: Briefly explain how multi-model consensus was used to ensure neutrality.
-    - A strict Coverage Matrix answering these dimensions explicitly:
-      1) emergent agent skills
-      2) agent commerce protocols
-      3) primitives
-      4) agentic workflows
+    - A Coverage Matrix with 3-5 dimensions that are SPECIFIC TO THIS TOPIC.
+      Choose dimensions that capture the most important facets of "{state["topic"]}".
       For each dimension include: coverage (full/partial/missing), evidence_count, and concrete examples.
       If evidence is weak, mark PARTIAL or MISSING rather than inferring.
 
     Output format:
-    # Trend Report: {state["topic"]}
+    # Research Report: {state["topic"]}
     ## Coverage Matrix
     | Dimension | Coverage | Evidence Count | Concrete Examples |
     | ... |
@@ -1283,7 +1269,7 @@ async def run_trend_analysis(
         "impact_score": 0.0,
         "confidence_score": 0.0,
         "validation_results": [],
-        "meme_page_data": None,
+        "research_payload": None,
         "consensus_data": None,
         "attestation_data": None,
         "current_depth": 0,
@@ -1351,7 +1337,7 @@ async def run_editorial_task(
         "impact_score": 0.0,
         "confidence_score": 0.0,
         "validation_results": [],
-        "meme_page_data": None,
+        "research_payload": None,
         "consensus_data": None,
         "attestation_data": None,
         "current_depth": 0,

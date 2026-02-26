@@ -140,7 +140,12 @@ app.include_router(acp_routes.router)
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure properly for production
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001", 
+        "https://trende.famile.xyz",
+        "https://api.trende.famile.xyz",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -638,6 +643,38 @@ def _task_runtime_alerts(task: dict[str, Any]) -> list[str]:
         alerts.append("report_too_short_for_export")
 
     return alerts
+
+
+def _estimate_live_progress(state: dict[str, Any]) -> int:
+    status = state.get("status")
+    now_dt = datetime.datetime.now(datetime.timezone.utc)
+    created_dt = _parse_iso(state.get("created_at")) or now_dt
+    elapsed_seconds = max(0, int((now_dt - created_dt).total_seconds()))
+
+    if status == QueryStatus.PENDING:
+        progress = min(15, 8 + max(0, elapsed_seconds // 3))
+    elif status == QueryStatus.PLANNING:
+        progress = min(30, 18 + max(0, elapsed_seconds // 4))
+    elif status == QueryStatus.RESEARCHING:
+        research_elapsed = min(max(elapsed_seconds - 15, 0), 480)
+        progress = 32 + int((research_elapsed / 480.0) * 33)
+    elif status == QueryStatus.PROCESSING:
+        process_elapsed = min(max(elapsed_seconds - 120, 0), 420)
+        progress = 66 + int((process_elapsed / 420.0) * 20)
+    elif status == QueryStatus.ANALYZING:
+        analyze_elapsed = min(max(elapsed_seconds - 240, 0), 600)
+        progress = 86 + int((analyze_elapsed / 600.0) * 11)
+    elif status == QueryStatus.COMPLETED:
+        progress = 100
+    elif status == QueryStatus.FAILED:
+        progress = int(state.get("progress", 0) or 0)
+    else:
+        progress = int(state.get("progress", 0) or 0)
+
+    previous_progress = int(state.get("progress", 0) or 0)
+    if status != QueryStatus.COMPLETED:
+        progress = min(99, max(previous_progress, progress))
+    return int(progress)
 
 
 def _derive_top_trends_from_findings(
@@ -1568,7 +1605,7 @@ async def run_agent_workflow(
         "impact_score": 0.0,
         "confidence_score": 0.0,
         "validation_results": [],
-        "meme_page_data": None,
+        "research_payload": None,
         "consensus_data": None,
         "attestation_data": None,
         "current_depth": 0,
@@ -1695,7 +1732,7 @@ async def run_agent_action(action_id: str) -> None:
         if action_type == "generate_alpha_manifest":
             if not task or task.get("status") != QueryStatus.COMPLETED:
                 raise ValueError("Task must be completed before manifest generation.")
-            data = task.get("meme_page_data", {}) or {}
+            data = task.get("research_payload", {}) or {}
             token = data.get("token", {})
             proof_url = f"{base_url}/meme/{task_id}"
             result_payload = {
@@ -2167,7 +2204,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
 
     confidence_score = 0.0
     validation_results = []
-    meme_page_data = None
+    research_payload = None
     consensus_data = None
     attestation_data = None
     summary_text = ""
@@ -2179,7 +2216,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
     if isinstance(res_node, dict):
         confidence_score = res_node.get("confidence_score", task.get("confidence_score", 0.0))
         validation_results = res_node.get("validation_results", task.get("validation_results", []))
-        meme_page_data = res_node.get("meme_page_data", task.get("meme_page_data"))
+        research_payload = res_node.get("research_payload", task.get("research_payload"))
         consensus_data = res_node.get("consensus_data", task.get("consensus_data"))
         attestation_data = res_node.get("attestation_data", task.get("attestation_data"))
         summary_text = res_node.get("summary", task.get("summary", ""))
@@ -2261,7 +2298,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             "confidenceScore": confidence_score,
             "validationResults": validation_results,
             "finalReportMd": final_report_md,
-            "memePageData": meme_page_data,
+            "researchPayload": research_payload,
             "consensusData": consensus_data,
             "attestationData": attestation_data,
             "oracleMarketId": task.get("oracle_market_id"),
@@ -2398,7 +2435,7 @@ async def get_agent_alpha(
             status_code=404, content=json.dumps({"error": "Alpha not ready or task not found"})
         )
 
-    data = task.get("meme_page_data", {})
+    data = task.get("research_payload", {})
     if not data:
         return Response(
             status_code=404, content=json.dumps({"error": "Architect failed to generate manifest"})

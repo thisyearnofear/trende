@@ -662,7 +662,7 @@ class AIService:
         Builds an enhanced synthesis prompt with deeper analysis instructions.
         """
         prompt_parts = [
-            "You are an Institutional Truth Oracle for the Monad economy.",
+            "You are a neutral research synthesis engine that produces unbiased, evidence-grounded analysis.",
             f"You have responses from {len(responses)} independent model paths.",
             f"LEXICAL AGREEMENT HINT: {round(agreement_hint, 2)} (0.0 = total divergence, 1.0 = identical wording). Use this as a guide for your final agreement_score.",
             "",
@@ -743,7 +743,7 @@ Return ONLY strict JSON (no markdown fence):
 
     def _build_synthesis_prompt(self, prompt: str, responses: Dict[str, str], agreement_hint: float) -> str:
         prompt_parts = [
-            "You are an Institutional Truth Oracle for the Monad economy.",
+            "You are a neutral research synthesis engine that produces unbiased, evidence-grounded analysis.",
             f"You have responses from {len(responses)} independent model paths.",
             f"LEXICAL AGREEMENT HINT: {round(agreement_hint, 2)} (0.0 = total divergence, 1.0 = identical wording). Use this as a guide for your final agreement_score.",
             "",

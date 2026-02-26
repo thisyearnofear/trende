@@ -27,7 +27,7 @@ class GraphState(TypedDict):
     impact_score: float
     confidence_score: float
     validation_results: List[str]
-    meme_page_data: Optional[Dict[str, Any]]
+    research_payload: Optional[Dict[str, Any]]
     consensus_data: Optional[Dict[str, Any]]
     attestation_data: Optional[Dict[str, Any]]
     

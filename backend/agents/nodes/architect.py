@@ -39,10 +39,10 @@ def _build_financial_metrics(state: GraphState) -> dict[str, Any]:
     financial = state.get("financial_intelligence")
     if not financial:
         return {}
-    
+
     metrics = financial.get("aggregate_metrics", {})
     assets = financial.get("assets", [])
-    
+
     # Build asset forecasts
     asset_forecasts = []
     for asset in assets:
@@ -51,7 +51,7 @@ def _build_financial_metrics(state: GraphState) -> dict[str, Any]:
             "current_price": asset.get("current_price"),
             "risk_level": asset.get("risk_level"),
         }
-        
+
         # Add 7-day forecast if available
         forecast_7d = asset.get("forecast_7d", {})
         if forecast_7d.get("p50"):
@@ -64,13 +64,13 @@ def _build_financial_metrics(state: GraphState) -> dict[str, Any]:
                     "range_low": forecast_7d.get("p10"),
                     "range_high": forecast_7d.get("p90"),
                 }
-        
+
         # Add liquidation risk if available
         if asset.get("liquidation_probability"):
             forecast["liquidation_risk_10x"] = asset.get("liquidation_probability")
-        
+
         asset_forecasts.append(forecast)
-    
+
     return {
         "overall_risk": metrics.get("overall_risk"),
         "forecast_direction": metrics.get("forecast_direction"),
@@ -82,23 +82,17 @@ def _build_financial_metrics(state: GraphState) -> dict[str, Any]:
     }
 
 
-def _fallback_meme_data(state: GraphState, agreement: float) -> dict[str, Any]:
+def _fallback_payload(state: GraphState, agreement: float) -> dict[str, Any]:
     consensus = state.get("consensus_data") or {}
-    topic = str(state.get("topic") or "Trend Insight")
+    topic = str(state.get("topic") or "Research Report")
     summary = str(state.get("summary") or "No summary available.")
-    suggested_mode = "NEWS" if agreement > 0.4 else "MEME"
-    ticker = "".join(ch for ch in topic.upper() if ch.isalnum())[:6] or "ALPHA"
-    
+
     # Include financial metrics if available
     financial_metrics = _build_financial_metrics(state)
 
-    result = {
-        "type": suggested_mode,
-        "token": {
-            "name": topic[:60],
-            "ticker": ticker,
-            "description": summary[:220],
-        },
+    result: dict[str, Any] = {
+        "type": "REPORT",
+        "title": topic[:80],
         "intelligence_summary": summary,
         "thesis": [
             "Consensus report generated with multi-provider analysis.",
@@ -114,22 +108,19 @@ def _fallback_meme_data(state: GraphState, agreement: float) -> dict[str, Any]:
         "pillars": consensus.get("pillars", []),
         "anomalies": consensus.get("anomalies", []),
         "citations": [],
-        "brand": {
-            "aesthetic": "Institutional",
-            "primary_color": "#06b6d4",
-        },
     }
-    
+
     # Add financial metrics if available
     if financial_metrics:
         result["financial_metrics"] = financial_metrics
-    
+
     return result
+
 
 async def architect_node(state: GraphState) -> GraphState:
     """
-    The Architect node takes the final research and synthesizes it into a 
-    'Meme Page Payload'—a structured format for launching a token or providing a news brief.
+    The Architect node synthesizes research into a structured payload
+    with thesis, citations, consensus metrics, and optional financial data.
     """
     state["logs"].append("Architecting final payload...")
 
@@ -144,9 +135,6 @@ async def architect_node(state: GraphState) -> GraphState:
     confidence = consensus.get("confidence_score", 0.7)
     consensus_depth = consensus.get("consensus_depth", "moderate")
 
-    # Determine mode: Default to NEWS if technical/heavy agreement, MEME if social/viral
-    suggested_mode = "NEWS" if agreement > 0.4 else "MEME"
-
     # Build financial context for prompt
     financial = state.get("financial_intelligence")
     financial_context = ""
@@ -157,7 +145,7 @@ async def architect_node(state: GraphState) -> GraphState:
             current = asset.get("current_price")
             forecast = asset.get("forecast_7d", {})
             risk = asset.get("risk_level")
-            
+
             summary = f"- {symbol}:"
             if current:
                 summary += f" Current ${current:,.2f}"
@@ -166,7 +154,7 @@ async def architect_node(state: GraphState) -> GraphState:
             if risk:
                 summary += f", Risk: {risk.upper()}"
             assets_summary.append(summary)
-        
+
         financial_context = f"""
 Financial Intelligence (SynthData):
 {chr(10).join(assets_summary)}
@@ -175,15 +163,15 @@ Forecast Direction: {financial.get("aggregate_metrics", {}).get("forecast_direct
 """
 
     prompt = f"""
-    You are a Strategic Architect for the Monad economy.
-    Based on the following research and enhanced consensus data, create a high-conviction structured payload.
+    You are an expert research analyst synthesizing findings into a structured intelligence payload.
+    Based on the following research and consensus data, create a high-conviction structured summary.
 
     Research Report:
     {state["final_report_md"]}
 
-    Enhanced Consensus Data:
+    Consensus Data:
     - Pillars (Verified Facts): {pillars}
-    - Anomalies (Fringe/Alpha): {anomalies}
+    - Anomalies (Fringe/Emerging): {anomalies}
     - Agreement Score: {agreement}
     - Confidence Score: {confidence}
     - Consensus Depth: {consensus_depth}
@@ -191,26 +179,20 @@ Forecast Direction: {financial.get("aggregate_metrics", {}).get("forecast_direct
     {financial_context}
 
     TASK:
-    Generate a JSON payload for the Forge UI.
-    If the topic is viral/community-centric, use MODE: "MEME".
-    If the topic is technical/news-centric, use MODE: "NEWS".
-    
-    IMPORTANT: If financial intelligence is provided above, incorporate the risk levels and 
+    Generate a JSON payload summarizing this research for downstream consumers.
+
+    IMPORTANT: If financial intelligence is provided above, incorporate the risk levels and
     forecast direction into your conviction points and thesis. The financial metrics should
     inform the "financial_metrics" field in the output.
 
     Output strictly as JSON:
     {{
-        "type": "MEME" or "NEWS",
-        "token": {{
-            "name": "Human-friendly Trend Name",
-            "ticker": "TICKER",
-            "description": "2-sentence punchy summary"
-        }},
+        "type": "REPORT",
+        "title": "Concise research title",
         "intelligence_summary": "Neutral, multi-model consensus brief focused on the {len(pillars)} verified pillars with {consensus_depth} depth analysis.",
         "thesis": [
-            "Conviction point 1...",
-            "Conviction point 2..."
+            "Key finding 1...",
+            "Key finding 2..."
         ],
         "consensus_metrics": {{
             "model_agreement": {agreement},
@@ -224,10 +206,6 @@ Forecast Direction: {financial.get("aggregate_metrics", {}).get("forecast_direct
         "citations": [
             {{"source": "Source Name", "url": "url", "quote": "key snippet"}}
         ],
-        "brand": {{
-            "aesthetic": "e.g., Cyberpunk, Institutional, Minimalist",
-            "primary_color": "vibrant hex color"
-        }},
         "financial_metrics": {{
             "overall_risk": "low|medium|high|extreme",
             "forecast_direction": "bullish|bearish|neutral",
@@ -235,54 +213,46 @@ Forecast Direction: {financial.get("aggregate_metrics", {}).get("forecast_direct
         }}
     }}
     """
-    
+
     try:
         response = await ai_service.get_response(
             prompt,
             system_prompt="You are a master of synthesis and structured intelligence."
         )
 
-        meme_data = _extract_json_object(response)
-        if not isinstance(meme_data, dict):
+        payload = _extract_json_object(response)
+        if not isinstance(payload, dict):
             raise ValueError("Architect payload is not a JSON object")
 
         # Add metadata and carry over consensus fields if missing.
-        meme_data["generated_at"] = state["created_at"]
-        meme_data["confidence_score"] = state["confidence_score"]
+        payload["generated_at"] = state["created_at"]
+        payload["confidence_score"] = state["confidence_score"]
 
-        if "type" not in meme_data:
-            meme_data["type"] = suggested_mode
-        if not isinstance(meme_data.get("token"), dict):
-            meme_data["token"] = _fallback_meme_data(state, agreement)["token"]
-        else:
-            meme_data["token"].setdefault("name", str(state.get("topic") or "Trend Insight"))
-            meme_data["token"].setdefault("ticker", "ALPHA")
-            meme_data["token"].setdefault(
-                "description",
-                str(state.get("summary") or "No summary available."),
-            )
-        if "intelligence_summary" not in meme_data:
-            meme_data["intelligence_summary"] = str(state.get("summary") or "No summary available.")
-        if "thesis" not in meme_data or not isinstance(meme_data.get("thesis"), list):
-            meme_data["thesis"] = _fallback_meme_data(state, agreement)["thesis"]
-        if "consensus_metrics" not in meme_data or not isinstance(meme_data.get("consensus_metrics"), dict):
-            meme_data["consensus_metrics"] = _fallback_meme_data(state, agreement)["consensus_metrics"]
-        if "brand" not in meme_data or not isinstance(meme_data.get("brand"), dict):
-            meme_data["brand"] = _fallback_meme_data(state, agreement)["brand"]
+        if "type" not in payload:
+            payload["type"] = "REPORT"
+        # Ensure title is set
+        payload.setdefault("title", str(state.get("topic") or "Research Report")[:80])
 
-        if "pillars" not in meme_data:
-            meme_data["pillars"] = pillars
-        if "anomalies" not in meme_data:
-            meme_data["anomalies"] = anomalies
+        if "intelligence_summary" not in payload:
+            payload["intelligence_summary"] = str(state.get("summary") or "No summary available.")
+        if "thesis" not in payload or not isinstance(payload.get("thesis"), list):
+            payload["thesis"] = _fallback_payload(state, agreement)["thesis"]
+        if "consensus_metrics" not in payload or not isinstance(payload.get("consensus_metrics"), dict):
+            payload["consensus_metrics"] = _fallback_payload(state, agreement)["consensus_metrics"]
 
-        state["meme_page_data"] = meme_data
+        if "pillars" not in payload:
+            payload["pillars"] = pillars
+        if "anomalies" not in payload:
+            payload["anomalies"] = anomalies
+
+        state["research_payload"] = payload
         state["logs"].append(
-            f"Payload Architected: [{meme_data['type']}] {meme_data['token']['name']}"
+            f"Payload Architected: {payload.get('title', 'Research Report')}"
         )
 
     except Exception as e:
         state["logs"].append(f"Architect node failed: {e}")
-        state["meme_page_data"] = _fallback_meme_data(state, agreement)
+        state["research_payload"] = _fallback_payload(state, agreement)
         state["logs"].append("Architect fallback payload generated.")
 
     return state

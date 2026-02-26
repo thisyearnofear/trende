@@ -2,7 +2,7 @@
 
 import { use, useEffect } from 'react';
 import { useTrendData } from '@/hooks/useTrendData';
-import { ForgeViewer } from '@/components/ForgeViewer';
+import { ReportViewer } from @/components/ReportViewerer';
 import { AttestationBadge } from '@/components/AttestationBadge';
 import { ShieldCheck, ArrowLeft, Loader2, Link2, Fingerprint, Lock } from 'lucide-react';
 import Link from 'next/link';
@@ -135,7 +135,7 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                         {/* Verification Content */}
                         <div className="grid grid-cols-1 gap-12">
                             {data.summary && (
-                                <ForgeViewer summary={data.summary} mode="news" queryId={queryId} />
+                                <ReportViewer summary={data.summary} mode="news" queryId={queryId} />
                             )}
                         </div>
 

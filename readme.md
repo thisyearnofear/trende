@@ -1,12 +1,12 @@
-# Trende: The Verifiable AI Oracle for the Multichain Agent Economy
+# Trende: Multi-Source AI Research with Cryptographic Proof
 
-Trende analyzes social media trends (Twitter/X, TikTok, LinkedIn, news) using multiple AI models and produces **cryptographically verified research reports**.
+Trende researches any topic across social media, news, forums, and market data using multiple AI models, then produces **cryptographically verified research reports**.
 
 **What it does:**
-1. **Research**: Multi-platform trend analysis via LangGraph agents
-2. **Verify**: TEE-attested output with cryptographic signatures (Eigen)
-3. **Settle**: On-chain prediction markets via Chainlink oracle
-4. **Monetize**: ACP integration for autonomous agent-to-agent commerce
+1. **Research**: Multi-platform analysis across 17 data sources via LangGraph agents
+2. **Verify**: Every report is TEE-attested with cryptographic signatures (Eigen)
+3. **Distribute**: Publish to Paragraph, settle on-chain via Chainlink, or serve via A2A API
+4. **Automate**: ACP integration lets other AI agents hire Trende for research
 
 **Live deployments**: Arbitrum Sepolia + Base Sepolia ✅
 

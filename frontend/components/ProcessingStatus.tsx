@@ -41,7 +41,7 @@ const STAGES = [
   { id: "planner", label: "PLAN", description: "Strategy & Source Selection", detail: "Prompt decomposition, source selection, and query design." },
   { id: "researcher", label: "HARVEST", description: "Data Mining & Social Signal", detail: "Parallel connector execution with rate limits, caching, and source normalization." },
   { id: "validator", label: "VALIDATE", description: "Truth Verification", detail: "Cross-source reliability scoring and noise reduction." },
-  { id: "consensus", label: "FORGE", description: "Multi-Model Consensus", detail: "Divergence analysis + neutral synthesis across selected models." },
+  { id: "consensus", label: "SYNTHESIZE", description: "Multi-Model Consensus", detail: "Divergence analysis + neutral synthesis across selected models." },
   { id: "architect", label: "ATTEST", description: "TEE Proof Signing", detail: "Final payload shaping, trace metadata, and proof-ready output." },
 ];
 
@@ -74,7 +74,7 @@ const SIMULATED_LOGS: Record<string, string[]> = {
     "AUDITING DATA INTEGRITY...",
   ],
   consensus: [
-    "INITIALIZING CONSENSUS FORGE...",
+    "INITIALIZING CONSENSUS ENGINE...",
     "ROUTING PRIMARY INFERENCE THROUGH VENICE PRIVACY LANE...",
     "CONSULTING VENICE AI (PRIVACY-FIRST)...",
     "CONSULTING AISA ROUTE...",

@@ -6,7 +6,7 @@ import { QueryInput, MISSION_PROFILES } from "@/components/QueryInput";
 import { PlatformTabs } from "@/components/PlatformTabs";
 import { TrendSummary } from "@/components/TrendSummary";
 import { ProcessingStatus } from "@/components/ProcessingStatus";
-import { ForgeViewer } from "@/components/ForgeViewer";
+import { ReportViewer } from "@/components/ReportViewer";
 import { QueryRequest } from "@/lib/types";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
@@ -1939,7 +1939,7 @@ export default function Home() {
               {showForgeInline && data.summary && activeQueryId && (
                 <div className="md:col-span-2">
                   <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <ForgeViewer summary={data.summary} mode="news" queryId={activeQueryId} />
+                    <ReportViewer summary={data.summary} mode="news" queryId={activeQueryId} />
                   </div>
                 </div>
               )}

@@ -53,7 +53,7 @@ const personaMessages = {
     "Claim-level triangulation is ranking evidence by recency, specificity, and corroboration.",
     "Evidence weighting is combining freshness, breadth, and agreement into confidence.",
     "Attestation payload assembly is binding output hashes to model-provider metadata.",
-    "Architect stage is structuring a shareable brief + forge payload from validated findings.",
+    "Architect stage is structuring a shareable research report from validated findings.",
     "Attestation is signing the result so provenance can be verified later.",
     "Wallet-bound persistence layer is preparing save-ready research records.",
     "Pipeline finalization complete. Persisting telemetry and preparing UI payload.",
@@ -61,7 +61,7 @@ const personaMessages = {
   complete: [
     "Analysis complete. Your conviction brief is ready.",
     "TEE attestation signed. Results are verifiable.",
-    "Found strong signal convergence. Check the Forge.",
+    "Found strong signal convergence. Check the report.",
   ],
   error: [
     "Hit a snag in the pipeline. Retrying...",

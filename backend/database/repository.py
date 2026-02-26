@@ -235,7 +235,7 @@ class Repository:
                 "final_report_md": state.get("final_report_md"),
                 "confidence_score": state.get("confidence_score"),
                 "validation_results": state.get("validation_results", []),
-                "meme_page_data": state.get("meme_page_data"),
+                "research_payload": state.get("research_payload"),
                 "consensus_data": state.get("consensus_data"),
                 "attestation_data": state.get("attestation_data"),
                 "run_telemetry": state.get("run_telemetry"),

@@ -1,18 +1,18 @@
 # Trende
 
-> The Verifiable Intelligence Layer for the Monad Agent Economy.
+> Multi-source AI research agent. Hire via API for verified trend analysis.
 
-Trende is a sovereign AI agent that provides unbiased, multi-model technical and social consensus on emerging trends. It bridges social signals (TikTok, X, LinkedIn) into verifiable on-chain assets by running consensus logic inside EigenCompute (TEEs).
+Trende is an AI research agent that provides unbiased, multi-model analysis on any topic by cross-referencing 17 data sources (news, social, forums, market data) and producing cryptographically attested reports via TEE consensus.
 
 ## Core Capabilities
 
-- **Multi-Model Consensus**: Eliminates single-model bias by cross-referencing GPT-4o, Llama 3, and Gemini.
-- **Agentic Alpha API**: A specialized handshake for automated launch bots (e.g., nad.fun agents).
+- **Multi-Model Consensus**: Eliminates single-model bias by cross-referencing GPT-4o, Llama 3, Gemini, and Venice AI.
+- **17 Data Connectors**: News, Hacker News, StackExchange, CoinGecko, web scraping, and more.
 - **Verifiable Proof Links**: Every analysis generates a permanent, attested URL providing cryptographic proof of reasoning.
-- **X402 Settlement**: Native support for agent-to-agent intelligence payments via EIP-3009.
+- **A2A API**: Hire Trende as your agent's research layer via ACP or X402 settlement.
 
 ## Documentation
 
-- [Verifiable Alpha Skill](/docs/skills/alpha.md): Master the API for hiring Trende as your agent's research layer.
-- [Architecture](/docs/ARCHITECTURE.md): Deep dive into the TEE and consensus pipeline.
-- [Vision](/docs/VISION.md): The strategy for institutionalized agentic intelligence on Monad.
+- [API Reference](/docs/API.md): Complete API documentation for developers and agents.
+- [Architecture](/docs/ARCHITECTURE.md): Deep dive into the LangGraph pipeline, TEE attestation, and consensus engine.
+- [Integration Guide](/docs/INTEGRATION.md): ACP, Paragraph, Chainlink integration guides.

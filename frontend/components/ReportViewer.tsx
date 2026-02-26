@@ -9,35 +9,27 @@ import { cn } from '@/lib/utils';
 import { useTheme } from './ThemeProvider';
 import { api } from '@/lib/api';
 
-interface ForgeViewerProps {
+interface ReportViewerProps {
     summary: TrendSummaryType;
     mode: 'meme' | 'news';
     queryId: string;
 }
 
-interface MemeCitation {
+interface Citation {
     source?: string;
     url?: string;
     quote?: string;
 }
 
-interface MemeData {
-    token?: {
-        name?: string;
-        ticker?: string;
-        description?: string;
-    };
+interface ResearchData {
+    title?: string;
     intelligence_summary?: string;
     thesis?: string[];
     consensus_metrics?: {
         model_agreement?: number;
         main_divergence?: string;
     };
-    citations?: MemeCitation[];
-    brand?: {
-        aesthetic?: string;
-        primary_color?: string;
-    };
+    citations?: Citation[];
 }
 
 interface AgentManifest {
@@ -51,13 +43,9 @@ interface AgentManifest {
     };
 }
 
-export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
-    const fallbackMemeData: MemeData = {
-        token: {
-            name: "Consensus Brief",
-            ticker: "ALPHA",
-            description: summary.overview || "No high-level overview provided.",
-        },
+export function ReportViewer({ summary, mode, queryId }: ReportViewerProps) {
+    const fallbackData: ResearchData = {
+        title: "Consensus Brief",
         intelligence_summary: summary.overview || "No intelligence summary available.",
         thesis: summary.keyThemes?.length
             ? summary.keyThemes.slice(0, 4).map((theme) => `Theme: ${theme}`)
@@ -67,12 +55,8 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
             main_divergence: summary.consensusData?.main_divergence || "No major divergence reported.",
         },
         citations: [],
-        brand: {
-            aesthetic: "Institutional",
-            primary_color: "#06b6d4",
-        },
     };
-    const data = ((summary.memePageData as MemeData) || fallbackMemeData) as MemeData;
+    const data = ((summary.researchPayload as ResearchData) || fallbackData) as ResearchData;
     const consensus = summary.consensusData;
     const attestation = summary.attestationData;
     const { showToast } = useToast();
@@ -86,7 +70,6 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
     const [manifestData, setManifestData] = useState<AgentManifest | null>(null);
     const [copiedManifest, setCopiedManifest] = useState(false);
     const [copiedSignature, setCopiedSignature] = useState(false);
-    const [isDeploying, setIsDeploying] = useState(false);
     const [isDrafting, setIsDrafting] = useState(false);
     const [isPodcasting, setIsPodcasting] = useState(false);
     const [isMonitoring, setIsMonitoring] = useState(false);
@@ -207,23 +190,6 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
             }
         } catch {
             setVerifyStatus('Error connecting to Alpha API.');
-        }
-    };
-
-    const handleDeployToken = async () => {
-        setIsDeploying(true);
-        showToast('Submitting deploy manifest action...', 'info');
-        try {
-            const response = await api.submitAction({
-                action_type: 'generate_alpha_manifest',
-                task_id: queryId,
-            });
-            addOrUpdateAction(response.action);
-            showToast(`Action queued: ${response.action.action_type}`, 'success');
-        } catch {
-            showToast('Failed to queue deploy action.', 'error');
-        } finally {
-            setIsDeploying(false);
         }
     };
 
@@ -376,12 +342,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                             </div>
                             <div className="flex-1">
                                 <h1 className={cn("text-xl sm:text-2xl font-bold flex items-center gap-2", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>
-                                    {data.token?.name || 'Research Forge'}
-                                    {data.token?.ticker && (
-                                        <span className={cn("text-sm font-mono px-2 py-0.5 rounded", isSoft ? "soft-ui-in text-[var(--text-secondary)]" : "bg-slate-800 text-slate-400")}>
-                                            ${data.token.ticker}
-                                        </span>
-                                    )}
+                                    {data.title || 'Research Report'}
                                 </h1>
                                 <div className="flex items-center gap-3 mt-1">
                                     <p className={`text-sm ${isSoft ? 'text-[var(--text-secondary)]' : 'text-slate-400'}`}>
@@ -432,8 +393,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                     <div className={cn("mt-6 pt-6 border-t", isSoft ? "border-[var(--text-muted)]/10" : "border-slate-800")}>
                         <p className={cn("text-lg leading-relaxed font-medium italic", isSoft ? "text-[var(--text-primary)]" : "text-slate-200")}>
                             &quot;
-                            {data.token?.description ||
-                                data.intelligence_summary ||
+                            {data.intelligence_summary ||
                                 summary.overview ||
                                 'No overview available.'}
                             &quot;
@@ -833,35 +793,12 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                     </div>
 
                     {/* Agentic Action Matrix */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pt-6 border-t border-white/5">
-                        <button
-                            onClick={handleDeployToken}
-                            disabled={isDeploying}
-                            className={cn(
-                                "flex items-center justify-between p-3 sm:p-4 rounded-2xl transition-all group lg:col-span-1",
-                                isSoft ? "soft-ui-button" : "bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-amber-500/5"
-                            )}
-                        >
-                            <div className="flex items-center gap-3 sm:gap-4">
-                                <div className={cn(
-                                    "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform",
-                                    isSoft ? "soft-ui-out border-0" : "bg-amber-500/10 border-amber-500/20"
-                                )}>
-                                    <Rocket className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--accent-amber)]" />
-                                </div>
-                                <div className="text-left">
-                                    <div className={cn("text-[11px] sm:text-xs font-bold uppercase tracking-wider", isSoft ? "text-[var(--text-primary)]" : "text-slate-100")}>Deploy Token</div>
-                                    <div className={cn("text-[9px] sm:text-[10px]", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>Launch {data.token?.ticker || 'ALPHA'} on BNB Chain</div>
-                                </div>
-                            </div>
-                            <Zap className={cn("w-4 h-4 transition-colors", isSoft ? "text-[var(--text-muted)] group-hover:text-[var(--accent-amber)]" : "text-slate-700 group-hover:text-amber-500")} />
-                        </button>
-
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 pt-6 border-t border-white/5">
                         <button
                             onClick={handleDraftArticle}
                             disabled={isDrafting}
                             className={cn(
-                                "flex items-center justify-between p-3 sm:p-4 rounded-2xl transition-all group lg:col-span-1",
+                                "flex items-center justify-between p-3 sm:p-4 rounded-2xl transition-all group",
                                 isSoft ? "soft-ui-button" : "bg-slate-950 border border-slate-800 hover:border-cyan-500/50 hover:bg-cyan-500/5"
                             )}
                         >
@@ -1030,7 +967,7 @@ export function ForgeViewer({ summary, mode, queryId }: ForgeViewerProps) {
                         </div>
                         {actions.length === 0 ? (
                             <div className={cn("rounded-xl border p-4 text-xs", isSoft ? "soft-ui-in border-0 text-[var(--text-muted)]" : "border-slate-800 bg-slate-900/70 text-slate-500")}>
-                                No actions yet. Trigger a Forge action to start the timeline.
+                                No actions yet. Trigger a report action to start the timeline.
                             </div>
                         ) : (
                             <div className="space-y-2">

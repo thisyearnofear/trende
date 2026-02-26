@@ -52,7 +52,7 @@ const STAGES: Stage[] = [
     id: 'architect', 
     label: 'Architect', 
     icon: Blocks, 
-    description: 'Structuring output for Forge and Launchpad.',
+    description: 'Structuring research output and attestations.',
     details: ['Synthesizing consensus', 'Generating attestations', 'Preparing outputs'],
     teeAction: 'Attestation signed',
   },
