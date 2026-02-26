@@ -516,56 +516,64 @@ export default function Home() {
     ],
     []
   );
-  const handleAskTrende = useCallback((seed?: string) => {
-    const question = (seed ?? agentPrompt).trim();
-    if (!question) return;
-    const q = question.toLowerCase();
+  const handleAskTrende = useCallback(async (seed?: string) => {
+      const question = (seed ?? agentPrompt).trim();
+      if (!question || !queryId) return;
 
-    const citations: string[] = [];
-    let answer = "";
-    if (q.includes("disagree") || q.includes("diverg")) {
-      answer =
-        data?.summary?.consensusData?.main_divergence ||
-        "Divergence is low in this run; models are largely aligned on the core thesis.";
-      const agreement = Math.round((data?.telemetry?.agreementScore || 0) * 100);
-      citations.push(`[consensus.agreement:${agreement}%]`);
-      if (data?.summary?.consensusData?.providers?.length) {
-        citations.push(`[providers:${data.summary.consensusData.providers.length}]`);
+      // Add user question immediately
+      setAgentReplies((prev) => [...prev.slice(-7), { 
+        q: question, 
+        a: "Thinking...", 
+        citations: [], 
+        ts: Date.now() 
+      }]);
+      setAgentPrompt("");
+
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/trends/${queryId}/ask`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get answer');
+        }
+
+        const result = await response.json();
+
+        // Update with real answer
+        setAgentReplies((prev) => {
+          const updated = [...prev];
+          const lastIndex = updated.length - 1;
+          if (updated[lastIndex]?.q === question) {
+            updated[lastIndex] = {
+              q: question,
+              a: result.answer,
+              citations: result.citations || [],
+              ts: Date.now(),
+            };
+          }
+          return updated;
+        });
+      } catch (error) {
+        console.error('Ask Trende error:', error);
+        // Update with error message
+        setAgentReplies((prev) => {
+          const updated = [...prev];
+          const lastIndex = updated.length - 1;
+          if (updated[lastIndex]?.q === question) {
+            updated[lastIndex] = {
+              q: question,
+              a: "Sorry, I couldn't generate an answer. Please try again.",
+              citations: [],
+              ts: Date.now(),
+            };
+          }
+          return updated;
+        });
       }
-    } else if (q.includes("source") || q.includes("firecrawl") || q.includes("synthdata") || q.includes("fallback")) {
-      const top = (sourceBreakdown || []).slice(0, 5);
-      const lanes = (sourceRoutes || []).filter((r) => r.fallback_used).length;
-      const topText = top.length
-        ? top.map((r) => `${r.platform}/${r.source}: ${r.items}`).join(" | ")
-        : "No source contribution rows were captured.";
-      answer = `Top contribution: ${topText}. Fallback lanes used: ${lanes}.`;
-      citations.push(`[fallback_lanes:${lanes}]`);
-      top.slice(0, 3).forEach((row) => citations.push(`[src:${row.platform}/${row.source}:${row.items}]`));
-    } else if (q.includes("confidence") || q.includes("score")) {
-      answer = `Run confidence is ${weightedConfidence}%. Agreement is ${Math.round((data?.telemetry?.agreementScore || 0) * 100)}%, with ${stats.platforms} platform(s) and ${sourceCount} source items.`;
-      citations.push(`[confidence:${weightedConfidence}%]`);
-      citations.push(`[platforms:${stats.platforms}]`);
-      citations.push(`[sources:${sourceCount}]`);
-    } else if (q.includes("next") || q.includes("improve") || q.includes("refine")) {
-      answer = `Next best move: keep primary routes, set Firecrawl to AUTO, enable SynthData for market-heavy prompts, and tighten directive scope to 1-2 explicit outcomes with a timeframe.`;
-      citations.push(`[hint:firecrawl:auto]`);
-      citations.push(`[hint:synthdata:market]`);
-    } else if (q.includes("tweet") || q.includes("plain language") || q.includes("summary")) {
-      const summary = (data?.summary?.overview || "").replace(/\s+/g, " ").trim();
-      answer = summary ? `${summary.slice(0, 420)}${summary.length > 420 ? "..." : ""}` : "Summary is not available yet for this run.";
-      citations.push(`[overview:${summary ? "available" : "missing"}]`);
-    } else {
-      const summary = (data?.summary?.overview || "").replace(/\s+/g, " ").trim();
-      answer =
-        summary
-          ? `From this run: ${summary.slice(0, 360)}${summary.length > 360 ? "..." : ""}`
-          : "I can answer from this run’s telemetry, sources, disagreement signal, and confidence drivers. Ask me about any of those.";
-      citations.push(`[telemetry:run_scoped]`);
-    }
-
-    setAgentReplies((prev) => [...prev.slice(-7), { q: question, a: answer, citations, ts: Date.now() }]);
-    setAgentPrompt("");
-  }, [agentPrompt, data?.summary?.consensusData?.main_divergence, data?.summary?.consensusData?.providers, data?.summary?.overview, data?.telemetry?.agreementScore, sourceBreakdown, sourceCount, sourceRoutes, stats.platforms, weightedConfidence]);
+    }, [agentPrompt, queryId]);
 
   useEffect(() => {
     if (!activeQueryId || typeof window === "undefined") return;

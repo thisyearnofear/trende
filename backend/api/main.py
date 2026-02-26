@@ -2680,6 +2680,105 @@ async def publish_trend(
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": "Publishing workflow failed."})
 
+
+@app.post("/api/trends/{task_id}/ask", response_model=None)
+async def ask_about_task(task_id: str, request: dict[str, Any]) -> dict[str, Any]:
+    """
+    AI-powered Q&A about a specific research task.
+    Takes a question and returns an AI-generated answer based on the task context.
+    """
+    question = request.get("question", "").strip()
+    if not question:
+        return JSONResponse(status_code=400, content={"error": "Question is required"})
+
+    task = _get_task(task_id)
+    if not task:
+        return JSONResponse(status_code=404, content={"error": "Task not found"})
+
+    # Build context from task data
+    summary = task.get("summary") or {}
+    consensus = task.get("consensus_data") or {}
+    telemetry = task.get("run_telemetry") or {}
+    research_payload = task.get("research_payload") or {}
+    
+    context_parts = []
+    
+    # Add overview
+    if summary.get("overview"):
+        context_parts.append(f"Research Overview: {summary['overview']}")
+    
+    # Add thesis points
+    if research_payload.get("thesis"):
+        thesis_text = "\n".join(f"- {t}" for t in research_payload["thesis"])
+        context_parts.append(f"Key Findings:\n{thesis_text}")
+    
+    # Add consensus metrics
+    if consensus:
+        context_parts.append(
+            f"Consensus Metrics: {consensus.get('agreement_score', 0):.0%} agreement, "
+            f"{len(consensus.get('providers', []))} models, "
+            f"divergence: {consensus.get('main_divergence', 'none')}"
+        )
+    
+    # Add telemetry
+    if telemetry:
+        context_parts.append(
+            f"Data Quality: {telemetry.get('findings_count', 0)} sources, "
+            f"{telemetry.get('confidence_score', 0):.0%} confidence, "
+            f"{telemetry.get('data_sufficiency', 'unknown')} sufficiency"
+        )
+    
+    # Add source breakdown
+    source_breakdown = telemetry.get("source_breakdown", [])
+    if source_breakdown:
+        top_sources = source_breakdown[:3]
+        sources_text = ", ".join(f"{s['platform']}/{s['source']}: {s['items']}" for s in top_sources)
+        context_parts.append(f"Top Sources: {sources_text}")
+    
+    context = "\n\n".join(context_parts)
+    
+    # Generate AI answer
+    prompt = f"""You are a research assistant helping users understand their research results.
+
+Research Context:
+{context}
+
+User Question: {question}
+
+Provide a clear, concise answer based on the research context above. If the question asks about something not in the context, say so. Keep your answer under 200 words."""
+
+    try:
+        from backend.services.ai_service import ai_service
+        
+        answer = await ai_service.get_response(
+            prompt,
+            system_prompt="You are a helpful research assistant. Be concise and factual.",
+            provider="venice"  # Use Venice for privacy
+        )
+        
+        # Extract relevant citations from context
+        citations = []
+        if "confidence" in question.lower() or "score" in question.lower():
+            citations.append(f"[confidence:{telemetry.get('confidence_score', 0):.0%}]")
+        if "source" in question.lower():
+            citations.append(f"[sources:{telemetry.get('findings_count', 0)}]")
+        if "agree" in question.lower() or "diverg" in question.lower():
+            citations.append(f"[agreement:{consensus.get('agreement_score', 0):.0%}]")
+        
+        return {
+            "question": question,
+            "answer": answer,
+            "citations": citations,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
+    except Exception as e:
+        print(f"Ask Trende error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Failed to generate answer", "details": str(e)}
+        )
+
+
 # SynthData Endpoints
 
 class SynthDataForecastRequest(BaseModel):
