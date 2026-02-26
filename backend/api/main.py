@@ -2386,7 +2386,6 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
 async def export_task_report(task_id: str, format: str = "pdf") -> Response:
     task = _get_task(task_id)
     if not task:
-    if not task:
         return Response(status_code=404, content=json.dumps({"error": "Task not found"}))
 
     normalized_format = (format or "pdf").strip().lower()
