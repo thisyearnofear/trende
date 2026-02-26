@@ -33,7 +33,7 @@ import { RunFlowDivider } from "@/components/RunFlowDivider";
 import { HeroSection } from "./_components/HeroSection";
 import { IntelligenceEngineSection } from "./_components/IntelligenceEngineSection";
 import { CommonsSection } from "./_components/CommonsSection";
-import { TrustStackCard } from "./_components/TrustStackCard";
+import { VerificationCard } from "./_components/VerificationCard";
 import { HistoryPanel } from "./_components/HistoryPanel";
 import { ResultsView } from "./_components/ResultsView";
 import { AskTrende } from "./_components/AskTrende";
@@ -126,7 +126,7 @@ export default function Home() {
           window.localStorage.removeItem(LAST_QUERY_STORAGE_KEY);
         }
       }
-      showToast("Previous mission was not found on backend. Please launch a new mission.", "info");
+      showToast("Previous research was not found on backend. Please start a new research.", "info");
     },
     [showToast],
   );
@@ -386,7 +386,7 @@ export default function Home() {
             <IconButton
               icon={History}
               onClick={() => setShowHistory(!showHistory)}
-              tooltip="Mission History"
+              tooltip="Research History"
               variant="ghost"
               size="sm"
             />
@@ -433,12 +433,12 @@ export default function Home() {
         {/* Intelligence Engine Steps */}
         <IntelligenceEngineSection />
 
-        {/* Mission Control */}
+        {/* Research Control */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-black tracking-tight flex items-center gap-2">
               <Zap className="w-6 h-6 text-[var(--accent-amber)]" />
-              Mission Control
+              Research Control
             </h2>
             {activeQueryId && (
               <Button
@@ -497,9 +497,9 @@ export default function Home() {
           />
         )}
 
-        {/* Trust Stack */}
+        {/* Verification */}
         {data && (
-          <TrustStackCard
+          <VerificationCard
             variant={status === "completed" ? "results" : "info"}
             data={data}
           />

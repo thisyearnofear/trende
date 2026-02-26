@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card, Button, IconButton, Tooltip } from "@/components/DesignSystem";
 import { TrendSummary } from "@/components/TrendSummary";
 import { ReportViewer } from "@/components/ReportViewer";
@@ -39,7 +40,7 @@ interface SourceRow {
   items: number;
 }
 
-interface TrustStackData {
+interface VerificationData {
   tee?: {
     status: string;
     provider: string;
@@ -111,7 +112,7 @@ interface ResultsData {
       oracleSettlement?: string;
       explorerUrl?: string;
     };
-    trustStack?: TrustStackData;
+    verification?: VerificationData;
     warnings?: string[];
   };
 }
@@ -121,40 +122,15 @@ interface ResultsViewProps {
   data: ResultsData;
   briefOpen: boolean;
   setBriefOpen: (open: boolean) => void;
-  showForgeInline: boolean;
-  setShowForgeInline: (show: boolean) => void;
-  weightedConfidence: number;
-  confidenceDrivers: ConfidenceDriver[];
-  reliabilityFlags: string[];
-  panelSummaries: PanelSummaries;
-  sourceIndexById: Record<string, number>;
+  showReportInline: boolean;
+  setShowReportInline: (show: boolean) => void;
   resultsFlowCopy: {
     brief: string;
-    forge: string;
+    report: string;
     feed: string;
   };
-  forgeAgreement: number;
-  forgeAttestationStatus: string;
-  sourceRoutes: SourceRoute[];
-  sourceBreakdown: SourceRow[];
-  chainlinkStatusLabel: string;
-  chainlinkProof: ResultsData["telemetry"]["chainlinkProof"];
-  trustStack: TrustStackData;
-  sourceCount: number;
-  stats: { platforms: number };
-  onSaveResearch: () => void;
+  onSaveResearch: (label: string, tags: string[]) => void;
   isSavingResearch: boolean;
-  saveVisibility: "private" | "unlisted" | "public";
-  setSaveVisibility: (v: "private" | "unlisted" | "public") => void;
-  onPublishToParagraph: () => void;
-  isPublishingToParagraph: boolean;
-  onDownloadReport: () => void;
-  onCopyShareLink: () => void;
-  onAskTrende: (seed?: string) => void;
-  agentReplies: Array<{ q: string; a: string; citations: string[]; ts: number }>;
-  agentPrompt: string;
-  setAgentPrompt: (prompt: string) => void;
-  askSuggestions: string[];
 }
 
 function ResultsFlowDivider({
@@ -164,9 +140,9 @@ function ResultsFlowDivider({
 }: {
   title: string;
   body: string;
-  icon: "brief" | "forge" | "feed";
+  icon: "brief" | "report" | "feed";
 }) {
-  const Icon = icon === "brief" ? Sparkles : icon === "forge" ? Shield : Radio;
+  const Icon = icon === "brief" ? Sparkles : icon === "report" ? Shield : Radio;
   return (
     <div className="md:col-span-2 relative py-1 sm:py-2">
       <div className="absolute left-0 right-0 top-1/2 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
@@ -190,35 +166,66 @@ export function ResultsView({
   data,
   briefOpen,
   setBriefOpen,
-  showForgeInline,
-  setShowForgeInline,
-  weightedConfidence,
-  confidenceDrivers,
-  reliabilityFlags,
-  panelSummaries,
-  sourceIndexById,
+  showReportInline,
+  setShowReportInline,
   resultsFlowCopy,
-  sourceRoutes,
-  sourceBreakdown,
-  chainlinkStatusLabel,
-  chainlinkProof,
-  trustStack,
-  sourceCount,
-  stats,
   onSaveResearch,
   isSavingResearch,
-  saveVisibility,
-  setSaveVisibility,
-  onPublishToParagraph,
-  isPublishingToParagraph,
-  onDownloadReport,
-  onCopyShareLink,
-  onAskTrende,
-  agentReplies,
-  agentPrompt,
-  setAgentPrompt,
-  askSuggestions,
 }: ResultsViewProps) {
+  const [saveVisibility, setSaveVisibility] = useState<"private" | "unlisted" | "public">("private");
+  
+  // Compute values from data
+  const sourceRoutes = data.telemetry?.sourceRoutes || [];
+  const sourceBreakdown = data.telemetry?.sourceBreakdown || [];
+  const chainlinkProof = data.telemetry?.chainlinkProof;
+  const verification = data.telemetry?.verification || {};
+  const sourceCount = data.results?.reduce((sum, r) => sum + (r.items?.length || 0), 0) || 0;
+  
+  const weightedConfidence = Math.round((data.summary?.confidenceScore || 0) * 100);
+  const reportAgreement = Math.round(((data.summary?.consensusData?.agreement_score || data.summary?.consensusData?.agreementScore || 0) * 100));
+  const reportAttestationStatus = data.summary?.attestationData?.status || "pending";
+  
+  const chainlinkStatusLabel = chainlinkProof?.status || verification?.chainlink?.status || "available";
+  
+  const sourceIndexById: Record<string, number> = {};
+  let sourceOrdinal = 1;
+  (data.results || []).forEach((platform) => {
+    (platform.items || []).forEach((item) => {
+      if (!sourceIndexById[item.id]) {
+        sourceIndexById[item.id] = sourceOrdinal++;
+      }
+    });
+  });
+  
+  const confidenceDrivers: ConfidenceDriver[] = [
+    { label: "Source Coverage", value: Math.min(100, sourceCount * 2), accent: "cyan", weight: 0.3 },
+    { label: "Model Agreement", value: reportAgreement, accent: "amber", weight: 0.4 },
+    { label: "Data Quality", value: Math.min(100, (sourceRoutes.filter(r => r.status === "ok").length / Math.max(1, sourceRoutes.length)) * 100), accent: "emerald", weight: 0.3 },
+  ];
+  
+  const reliabilityFlags: string[] = [];
+  if (reportAgreement < 65) {
+    reliabilityFlags.push("Low model agreement detected - divergent perspectives present");
+  }
+  if (sourceCount < 10) {
+    reliabilityFlags.push("Limited source coverage - consider expanding data sources");
+  }
+  if (data.telemetry?.warnings && data.telemetry.warnings.length > 0) {
+    reliabilityFlags.push(...data.telemetry.warnings);
+  }
+  
+  const panelSummaries: PanelSummaries = {
+    brief: "Top-line thesis and confidence drivers",
+    drivers: "What strengthens this analysis",
+    risks: "Gaps and reliability concerns",
+    feed: "Source-level evidence",
+    forge: "Synthesized intelligence report",
+  };
+
+  const handleSave = () => {
+    onSaveResearch("Research Report", []);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
       {/* Mission Header */}
@@ -260,7 +267,7 @@ export function ResultsView({
               variant="primary"
               size="sm"
               className="rounded-lg shadow-lg shadow-cyan-500/20"
-              onClick={onSaveResearch}
+              onClick={handleSave}
               disabled={isSavingResearch}
             >
               {isSavingResearch ? (
@@ -268,33 +275,8 @@ export function ResultsView({
               ) : (
                 <CheckCircle2 className="w-4 h-4 mr-2" />
               )}
-              {isSavingResearch ? "Vaulting..." : "Secure to Vault"}
+              {isSavingResearch ? "Saving..." : "Save Research"}
             </Button>
-          </div>
-
-          <div className="flex gap-2">
-            <Tooltip content="Draft to Paragraph">
-              <IconButton
-                icon={<span className="text-base">✍️</span>}
-                onClick={onPublishToParagraph}
-                ariaLabel="Paragraph Draft"
-                disabled={isPublishingToParagraph}
-              />
-            </Tooltip>
-            <Tooltip content="Download PDF">
-              <IconButton
-                icon={<Copy className="w-4 h-4" />}
-                onClick={onDownloadReport}
-                ariaLabel="Download"
-              />
-            </Tooltip>
-            <Tooltip content="Share Link">
-              <IconButton
-                icon={<Share2 className="w-4 h-4" />}
-                onClick={onCopyShareLink}
-                ariaLabel="Share"
-              />
-            </Tooltip>
           </div>
         </div>
       </div>
@@ -302,7 +284,7 @@ export function ResultsView({
       <Card accent="cyan" className="p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3 mb-3">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent-cyan)]">
-            Trust Stack
+            Verification
           </p>
           <span className="text-[10px] font-mono text-[var(--text-muted)]">
             What was verified
@@ -311,23 +293,23 @@ export function ResultsView({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3">
             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">TEE</p>
-            <p className="text-sm font-black mt-1">{trustStack?.tee?.status || "pending"}</p>
+            <p className="text-sm font-black mt-1">{verification?.tee?.status || "pending"}</p>
             <p className="text-[11px] font-mono text-[var(--text-secondary)] mt-1">
-              Provider: {trustStack?.tee?.provider || "eigen"}
+              Provider: {verification?.tee?.provider || "eigen"}
             </p>
           </div>
           <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3">
             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Consensus</p>
-            <p className="text-sm font-black mt-1">{trustStack?.consensus?.status || "degraded"}</p>
+            <p className="text-sm font-black mt-1">{verification?.consensus?.status || "degraded"}</p>
             <p className="text-[11px] font-mono text-[var(--text-secondary)] mt-1">
-              {(trustStack?.consensus?.providers?.length || 0)} routes • {Math.round((trustStack?.consensus?.agreementScore || 0) * 100)}% agreement
+              {(verification?.consensus?.providers?.length || 0)} routes • {Math.round((verification?.consensus?.agreementScore || 0) * 100)}% agreement
             </p>
           </div>
           <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3">
             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Chainlink</p>
             <p className="text-sm font-black mt-1">{chainlinkStatusLabel}</p>
             <p className="text-[11px] font-mono text-[var(--text-secondary)] mt-1">
-              {trustStack?.chainlink?.network || "oracle lane ready"}
+              {verification?.chainlink?.network || "oracle lane ready"}
             </p>
           </div>
         </div>
@@ -381,64 +363,7 @@ export function ResultsView({
         </div>
       </Card>
 
-      <Card accent="emerald" className="p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent-emerald)]">
-            Ask Trende
-          </p>
-          <span className="text-[10px] font-mono text-[var(--text-muted)]">
-            Interactive run copilot
-          </span>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {askSuggestions.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => onAskTrende(s)}
-                  className="px-2 py-1 text-[10px] font-black uppercase tracking-wider rounded border border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                value={agentPrompt}
-                onChange={(e) => setAgentPrompt(e.target.value)}
-                placeholder="Ask about disagreement, sources, confidence, or next steps..."
-                className="flex-1 px-3 py-2 text-xs font-mono border border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-primary)]"
-              />
-              <Button variant="primary" size="sm" onClick={() => onAskTrende()}>
-                Ask
-              </Button>
-            </div>
-          </div>
-          <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3 max-h-44 overflow-auto space-y-2">
-            {agentReplies.length === 0 ? (
-              <p className="text-[11px] font-mono text-[var(--text-muted)]">
-                Ask Trende to parse this run and extract specific signals.
-              </p>
-            ) : (
-              agentReplies.map((row) => (
-                <div key={row.ts} className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-cyan-300">{row.q}</p>
-                  <p className="text-[11px] font-mono text-[var(--text-secondary)]">{row.a}</p>
-                  {row.citations?.length > 0 && (
-                    <p className="text-[10px] font-mono text-[var(--text-muted)]">
-                      {row.citations.join(" ")}
-                    </p>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {(chainlinkProof || trustStack?.chainlink?.configured) && (
+      {(chainlinkProof || verification?.chainlink?.configured) && (
         <Card accent="amber" className="p-4 sm:p-5">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="min-w-0">
@@ -450,11 +375,11 @@ export function ResultsView({
               </p>
               <div className="flex flex-wrap gap-2 mt-3 text-[10px] font-mono">
                 <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)] uppercase">
-                  Status: {chainlinkProof?.status || trustStack?.chainlink?.status || "available"}
+                  Status: {chainlinkProof?.status || verification?.chainlink?.status || "available"}
                 </span>
-                {(chainlinkProof?.network || trustStack?.chainlink?.network) && (
+                {(chainlinkProof?.network || verification?.chainlink?.network) && (
                   <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)] uppercase">
-                    Network: {chainlinkProof?.network || trustStack?.chainlink?.network}
+                    Network: {chainlinkProof?.network || verification?.chainlink?.network}
                   </span>
                 )}
                 {chainlinkProof?.requestId && (
@@ -535,9 +460,9 @@ export function ResultsView({
         </div>
 
         <ResultsFlowDivider
-          title="Forge Layer"
-          body={resultsFlowCopy.forge}
-          icon="forge"
+          title="Report Layer"
+          body={resultsFlowCopy.report}
+          icon="report"
         />
 
         <div className="md:col-span-1">
@@ -684,7 +609,7 @@ export function ResultsView({
                     <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
                       <Bot className="w-4 h-4 text-emerald-400" />
                     </div>
-                    <span className="text-sm font-black uppercase tracking-widest text-white">Forge Intelligence</span>
+                    <span className="text-sm font-black uppercase tracking-widest text-white">Report Intelligence</span>
                     {(data.summary.consensusData?.agreement_score || 0) < 0.65 && (
                       <span className="text-[9px] uppercase font-black px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded border border-amber-500/30">
                         Disagreement Detected
@@ -721,13 +646,13 @@ export function ResultsView({
                       variant="secondary"
                       size="sm"
                       className="bg-white/5 border-white/5 hover:bg-white/10"
-                      onClick={() => setShowForgeInline((prev) => !prev)}
+                      onClick={() => setShowReportInline((prev) => !prev)}
                     >
-                      {showForgeInline ? "Close Forge" : "Open In-line"}
+                      {showReportInline ? "Close Report" : "Open In-line"}
                     </Button>
                     <Link href={`/proof/${activeQueryId}`}>
                       <Button variant="primary" size="sm" className="shadow-lg shadow-emerald-500/20">
-                        Full Forge
+                        Full Report
                       </Button>
                     </Link>
                   </div>
@@ -737,7 +662,7 @@ export function ResultsView({
           </div>
         )}
 
-        {showForgeInline && data.summary && activeQueryId && (
+        {showReportInline && data.summary && activeQueryId && (
           <div className="md:col-span-2">
             <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <ReportViewer summary={data.summary} mode="news" queryId={activeQueryId} />

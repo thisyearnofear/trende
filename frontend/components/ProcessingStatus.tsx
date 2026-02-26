@@ -118,7 +118,7 @@ const WAIT_WAYPOINTS = [
   "Evidence quality checks removing stale/off-topic noise.",
   "Multi-model consensus measuring agreement vs divergence.",
   "TEE attestation packaging report for verification.",
-  "Final report + proof manifest delivered to mission vault.",
+  "Final report + proof manifest delivered to saved research.",
 ];
 
 // ============================================

@@ -55,17 +55,17 @@ const MODEL_RUNTIME_SECONDS: Record<string, number> = {
   aisa: 24,
 };
 
-type MissionEvent = {
+type ResearchEvent = {
   name: string;
   payload: Record<string, unknown>;
 };
 
 const TELEMETRY_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-function emitMissionEvent(event: MissionEvent, sessionId?: string) {
+function emitResearchEvent(event: ResearchEvent, sessionId?: string) {
   if (typeof window === 'undefined') return;
   const detail = { ...event, ts: new Date().toISOString() };
-  window.dispatchEvent(new CustomEvent('trende:mission_event', { detail }));
+  window.dispatchEvent(new CustomEvent('trende:research_event', { detail }));
   const body = JSON.stringify({
     name: event.name,
     payload: event.payload,
@@ -73,7 +73,7 @@ function emitMissionEvent(event: MissionEvent, sessionId?: string) {
     source: 'query_input',
     stage: typeof event.payload.stage === 'string' ? event.payload.stage : undefined,
   });
-  const endpoint = `${TELEMETRY_API_BASE}/api/telemetry/mission-event`;
+  const endpoint = `${TELEMETRY_API_BASE}/api/telemetry/research-event`;
   try {
     if (navigator.sendBeacon) {
       navigator.sendBeacon(endpoint, new Blob([body], { type: 'application/json' }));
@@ -89,7 +89,7 @@ function emitMissionEvent(event: MissionEvent, sessionId?: string) {
     // non-fatal telemetry failure
   }
   if (process.env.NODE_ENV !== 'production') {
-    console.debug('[trende:mission_event]', detail);
+    console.debug('[trende:research_event]', detail);
   }
 }
 
@@ -116,7 +116,7 @@ const PLATFORM_OPTIONS: PlatformOption[] = [
   { id: 'tinyfish', label: 'TinyFish 🤖', hint: 'AI agent that reads primary sources for deep research', isPremium: true, enabled: true },
 ];
 
-export const MISSION_PROFILES = [
+export const RESEARCH_PROFILES = [
   {
     id: 'alpha-hunter',
     label: 'Standard Research',
@@ -149,14 +149,17 @@ export const MISSION_PROFILES = [
   }
 ];
 
+// Backward compatibility
+export const MISSION_PROFILES = RESEARCH_PROFILES;
+
 const SUGGESTIONS = [
-  'Which Base and Arbitrum ecosystem narratives show simultaneous pickup across news, Hacker News, and CoinGecko this week?',
-  'Identify AI-agent infra projects where technical discussion is rising before mainstream media coverage.',
-  'Where does social hype diverge from fundamentals in DePIN + AI compute markets right now?',
-  'Find opportunities where TEE attestation and verifiable consensus create a defensible product moat.',
-  'Where does EigenLayer/EigenCompute adoption create immediate opportunities for verifiable AI products?',
-  'Which privacy-preserving AI narratives are gaining conviction across builders and market signals?',
-  'What Base + Arbitrum L2 narratives are converging and where is momentum diverging by audience?',
+  'What are the main trends in AI agent development this week?',
+  'Analyze sentiment around recent blockchain scalability solutions',
+  'Which Base and Arbitrum ecosystem narratives show simultaneous pickup across news and developer communities?',
+  'Compare market reactions to recent tech earnings announcements',
+  'Identify emerging trends in renewable energy adoption',
+  'Where does social hype diverge from fundamentals in DePIN + AI compute markets?',
+  'What privacy-preserving AI narratives are gaining traction across builders and market signals?',
 ];
 
 export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: QueryInputProps) {
@@ -166,6 +169,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
   const [relevanceThreshold, setRelevanceThreshold] = useState(DEFAULT_THRESHOLD);
   const [composerStage, setComposerStage] = useState<ComposerStage>('directive');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [simpleMode, setSimpleMode] = useState(true);
   const [augmentation, setAugmentation] = useState<{ firecrawl: AugmentMode; synthdata: AugmentMode }>({
     firecrawl: DEFAULT_AUGMENTATION.firecrawl,
     synthdata: DEFAULT_AUGMENTATION.synthdata,
@@ -396,7 +400,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
   }, [canGoNextControl, currentControlIndex]);
 
   useEffect(() => {
-    emitMissionEvent({
+    emitResearchEvent({
       name: 'composer_stage_view',
       payload: {
         stage: composerStage,
@@ -415,8 +419,8 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
       const generated =
         existing ||
         (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-          ? `mission-${crypto.randomUUID()}`
-          : `mission-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+          ? `research-${crypto.randomUUID()}`
+          : `research-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
       window.localStorage.setItem(storageKey, generated);
       sessionIdRef.current = generated;
     } catch {
@@ -428,7 +432,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
     const startedAt = mountTimeRef.current;
     return () => {
       if (!submittedRef.current && idea.trim()) {
-        emitMissionEvent({
+        emitResearchEvent({
           name: 'composer_dropoff',
           payload: {
             stage: composerStage,
@@ -449,7 +453,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
     setControlsSection('profile');
     onLaunchIntent?.();
     submittedRef.current = true;
-    emitMissionEvent({
+    emitResearchEvent({
       name: 'composer_submit',
       payload: {
         stage: composerStage,
@@ -521,55 +525,13 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
             </div>
           </div>
 
-          {/* Starter Missions */}
-          <div className="space-y-3 sm:space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          {/* Starter Suggestions - Only show in simple mode */}
+          {simpleMode && (
+            <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-cyan-400 opacity-60" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Mission Stages</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Quick Start</span>
               </div>
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
-                <button
-                  type="button"
-                  onClick={() => goToStage('directive')}
-                  className={cn(
-                    "px-1.5 py-1 sm:px-2 rounded border text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
-                    composerStage === 'directive'
-                      ? "border-cyan-400/80 bg-cyan-500/15 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
-                      : "border-white/20 text-[var(--text-muted)] hover:border-cyan-400/50 hover:text-cyan-200"
-                  )}
-                >
-                  1 Directive
-                </button>
-                <button
-                  type="button"
-                  onClick={() => goToStage('setup')}
-                  className={cn(
-                    "px-1.5 py-1 sm:px-2 rounded border text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
-                    composerStage === 'setup'
-                      ? "border-cyan-400/80 bg-cyan-500/15 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
-                      : "border-white/20 text-[var(--text-muted)] hover:border-cyan-400/50 hover:text-cyan-200",
-                    !advancedSeen && "animate-pulse"
-                  )}
-                >
-                  2 Controls
-                </button>
-                <button
-                  type="button"
-                  onClick={() => goToStage('launch')}
-                  className={cn(
-                    "px-1.5 py-1 sm:px-2 rounded border text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
-                    composerStage === 'launch'
-                      ? "border-emerald-400/80 bg-emerald-500/15 text-emerald-200 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]"
-                      : "border-white/20 text-[var(--text-muted)] hover:border-emerald-400/50 hover:text-emerald-200"
-                  )}
-                >
-                  3 Launch
-                </button>
-              </div>
-            </div>
-
-            {composerStage === 'directive' && (
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 {SUGGESTIONS.slice(0, 3).map((suggestion) => (
                   <button
@@ -594,8 +556,86 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
                   </button>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Research Stages - Only show in advanced mode */}
+          {!simpleMode && (
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400 opacity-60" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Research Stages</span>
+                </div>
+                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
+                  <button
+                    type="button"
+                    onClick={() => goToStage('directive')}
+                    className={cn(
+                      "px-1.5 py-1 sm:px-2 rounded border text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                      composerStage === 'directive'
+                        ? "border-cyan-400/80 bg-cyan-500/15 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
+                        : "border-white/20 text-[var(--text-muted)] hover:border-cyan-400/50 hover:text-cyan-200"
+                    )}
+                  >
+                    1 Directive
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToStage('setup')}
+                    className={cn(
+                      "px-1.5 py-1 sm:px-2 rounded border text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                      composerStage === 'setup'
+                        ? "border-cyan-400/80 bg-cyan-500/15 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
+                        : "border-white/20 text-[var(--text-muted)] hover:border-cyan-400/50 hover:text-cyan-200",
+                      !advancedSeen && "animate-pulse"
+                    )}
+                  >
+                    2 Controls
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToStage('launch')}
+                    className={cn(
+                      "px-1.5 py-1 sm:px-2 rounded border text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                      composerStage === 'launch'
+                        ? "border-emerald-400/80 bg-emerald-500/15 text-emerald-200 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]"
+                        : "border-white/20 text-[var(--text-muted)] hover:border-emerald-400/50 hover:text-emerald-200"
+                    )}
+                  >
+                    3 Launch
+                  </button>
+                </div>
+              </div>
+
+              {composerStage === 'directive' && (
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  {SUGGESTIONS.slice(0, 3).map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => setIdea(suggestion)}
+                      disabled={disabled}
+                      className={cn(
+                        "flex-1 text-[11px] sm:text-xs font-mono p-2.5 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl glass transition-all text-left flex flex-col justify-between",
+                        selectedSuggestion === suggestion
+                          ? "border-cyan-400/70 bg-cyan-500/10 text-[var(--text-primary)] shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
+                          : "border-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-cyan-400/50 hover:bg-white/10"
+                      )}
+                    >
+                      <span className={cn(
+                        "font-black uppercase tracking-[0.2em] text-[9px] sm:text-[10px] block mb-1.5 sm:mb-2",
+                        selectedSuggestion === suggestion ? "text-cyan-300 opacity-100" : "text-[var(--accent-cyan)] opacity-60"
+                      )}>
+                        {selectedSuggestion === suggestion ? "Selected" : "One-Click"}
+                      </span>
+                      <span className="line-clamp-2 sm:line-clamp-3 leading-relaxed">{suggestion}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Input Area */}
           <div className="relative group/input">
@@ -612,8 +652,47 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
             </div>
           </div>
 
-          {composerStage === 'directive' && (
-            <div className="flex justify-end">
+          {/* Simple Mode: Just Search Button */}
+          {simpleMode && (
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+              <Button
+                type="submit"
+                className="flex-1 rounded-xl px-8 shadow-2xl transition-all active:scale-95"
+                variant="primary"
+                disabled={!idea.trim() || isLoading || disabled}
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-3 justify-center">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="font-black uppercase tracking-widest text-xs">Researching</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 justify-center">
+                    <Rocket className="w-4 h-4" />
+                    <span className="font-black uppercase tracking-widest text-xs">Start Research</span>
+                  </div>
+                )}
+              </Button>
+              <button
+                type="button"
+                onClick={() => setSimpleMode(false)}
+                className="px-4 py-3 text-xs font-black uppercase tracking-widest rounded-xl glass border-white/10 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-cyan-400/50 transition-all"
+              >
+                Advanced Controls
+              </button>
+            </div>
+          )}
+
+          {/* Advanced Mode: Continue to Controls */}
+          {!simpleMode && composerStage === 'directive' && (
+            <div className="flex justify-between items-center">
+              <button
+                type="button"
+                onClick={() => setSimpleMode(true)}
+                className="px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl glass border-white/10 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all"
+              >
+                ← Simple Mode
+              </button>
               <Button
                 type="button"
                 variant="secondary"
@@ -626,38 +705,62 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
             </div>
           )}
 
-          <div className="relative group/spec">
-            <button
-              type="button"
-              onClick={openAdvancedWithHighlight}
-              className="w-full text-left px-4 py-3 rounded-xl glass border border-white/10 hover:border-cyan-400/60 transition-all"
-            >
-              <p className="text-xs font-mono text-[var(--text-primary)] line-clamp-1">
-                &quot;{idea.trim() || "Set your mission directive above"}&quot;
-              </p>
-              <div className="flex flex-wrap items-center gap-2 mt-2 text-[10px] font-black uppercase tracking-wider">
-                <span className="px-2 py-1 rounded bg-cyan-500/10 text-cyan-300">{platforms.length} sources</span>
-                <span className="px-2 py-1 rounded bg-amber-500/10 text-amber-300">{models.length} models</span>
-                <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-300">{Math.round(relevanceThreshold * 100)}% threshold</span>
-              </div>
-            </button>
-            <div className="pointer-events-none absolute z-[95] left-0 right-0 mt-2 opacity-0 translate-y-1 group-hover/spec:opacity-100 group-hover/spec:translate-y-0 transition-all duration-200">
-              <div className="rounded-xl p-3 border border-cyan-300/55 bg-slate-950/96 backdrop-blur-xl shadow-[0_20px_56px_rgba(0,0,0,0.62)]">
-                <p className="text-[10px] font-black uppercase tracking-widest text-cyan-300 mb-1">Mission Configuration</p>
-                <p className="text-[10px] font-mono text-white/90">
-                  Sources: {platforms.join(", ")}
+          {/* Configuration Preview - Only show in simple mode */}
+          {simpleMode && (
+            <div className="relative group/spec">
+              <button
+                type="button"
+                onClick={() => setSimpleMode(false)}
+                className="w-full text-left px-4 py-3 rounded-xl glass border border-white/10 hover:border-cyan-400/60 transition-all"
+              >
+                <p className="text-xs font-mono text-[var(--text-primary)] line-clamp-1">
+                  &quot;{idea.trim() || "Set your research question above"}&quot;
                 </p>
-                <p className="text-[10px] font-mono text-white/90 mt-1">
-                  Models: {models.join(", ")}
+                <div className="flex flex-wrap items-center gap-2 mt-2 text-[10px] font-black uppercase tracking-wider">
+                  <span className="px-2 py-1 rounded bg-cyan-500/10 text-cyan-300">{platforms.length} sources</span>
+                  <span className="px-2 py-1 rounded bg-amber-500/10 text-amber-300">{models.length} models</span>
+                  <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-300">{Math.round(relevanceThreshold * 100)}% threshold</span>
+                  <span className="text-[var(--text-muted)]">→ Click to customize</span>
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* Advanced Controls */}
+          {!simpleMode && (
+            <div className="relative group/spec">
+              <button
+                type="button"
+                onClick={openAdvancedWithHighlight}
+                className="w-full text-left px-4 py-3 rounded-xl glass border border-white/10 hover:border-cyan-400/60 transition-all"
+              >
+                <p className="text-xs font-mono text-[var(--text-primary)] line-clamp-1">
+                  &quot;{idea.trim() || "Set your research question above"}&quot;
                 </p>
-                <p className="text-[10px] font-mono text-white/80 mt-1">
-                  Augmentation: firecrawl={augmentation.firecrawl}, synthdata={augmentation.synthdata}
-                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-2 text-[10px] font-black uppercase tracking-wider">
+                  <span className="px-2 py-1 rounded bg-cyan-500/10 text-cyan-300">{platforms.length} sources</span>
+                  <span className="px-2 py-1 rounded bg-amber-500/10 text-amber-300">{models.length} models</span>
+                  <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-300">{Math.round(relevanceThreshold * 100)}% threshold</span>
+                </div>
+              </button>
+              <div className="pointer-events-none absolute z-[95] left-0 right-0 mt-2 opacity-0 translate-y-1 group-hover/spec:opacity-100 group-hover/spec:translate-y-0 transition-all duration-200">
+                <div className="rounded-xl p-3 border border-cyan-300/55 bg-slate-950/96 backdrop-blur-xl shadow-[0_20px_56px_rgba(0,0,0,0.62)]">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-cyan-300 mb-1">Research Configuration</p>
+                  <p className="text-[10px] font-mono text-white/90">
+                    Sources: {platforms.join(", ")}
+                  </p>
+                  <p className="text-[10px] font-mono text-white/90 mt-1">
+                    Models: {models.join(", ")}
+                  </p>
+                  <p className="text-[10px] font-mono text-white/80 mt-1">
+                    Augmentation: firecrawl={augmentation.firecrawl}, synthdata={augmentation.synthdata}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {effectiveShowAdvanced && (
+          {effectiveShowAdvanced && !simpleMode && (
             <div ref={setupFocusRef} className="space-y-8 pt-6 border-t border-white/5 animate-in fade-in duration-300">
               <div className="glass border border-white/10 rounded-xl p-3">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Controls Guidance</p>
@@ -969,7 +1072,7 @@ export function QueryInput({ onSubmit, onLaunchIntent, isLoading, disabled }: Qu
 
               {composerStage === 'launch' && (
                 <div className="space-y-4 pt-6 border-t border-white/5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Mission Receipt</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Research Receipt</p>
                   <div className="glass border border-white/10 rounded-xl p-4 space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="glass border border-white/10 rounded-xl p-3">
