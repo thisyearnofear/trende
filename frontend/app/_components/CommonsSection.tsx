@@ -17,12 +17,12 @@ interface CommonsSectionProps {
   commonsResearch: CommonsItem[];
   commonsLoading: boolean;
   showCommons: boolean;
-  setShowCommons: (show: boolean) => void;
+  setShowCommons: React.Dispatch<React.SetStateAction<boolean>>;
   commonsSearch: string;
   setCommonsSearch: (search: string) => void;
   visibleCommons: CommonsItem[];
   filteredCommons: CommonsItem[];
-  setCommonsVisibleCount: (count: number) => void;
+  setCommonsVisibleCount: React.Dispatch<React.SetStateAction<number>>;
   onLoadItem: (id: string) => void;
 }
 

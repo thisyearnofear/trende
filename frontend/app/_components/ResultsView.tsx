@@ -121,9 +121,9 @@ interface ResultsViewProps {
   activeQueryId: string;
   data: ResultsData;
   briefOpen: boolean;
-  setBriefOpen: (open: boolean) => void;
+  setBriefOpen: React.Dispatch<React.SetStateAction<boolean>>;
   showReportInline: boolean;
-  setShowReportInline: (show: boolean) => void;
+  setShowReportInline: React.Dispatch<React.SetStateAction<boolean>>;
   resultsFlowCopy: {
     brief: string;
     report: string;
