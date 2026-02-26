@@ -2,7 +2,7 @@
 
 import { Card, Button, IconButton, Tooltip } from "@/components/DesignSystem";
 import { TrendSummary } from "@/components/TrendSummary";
-import { ForgeViewer } from "@/components/ForgeViewer";
+import { ReportViewer } from "@/components/ReportViewer";
 import { PlatformTabs } from "@/components/PlatformTabs";
 import { RunFlowDivider } from "@/components/RunFlowDivider";
 import {
@@ -740,7 +740,7 @@ export function ResultsView({
         {showForgeInline && data.summary && activeQueryId && (
           <div className="md:col-span-2">
             <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <ForgeViewer summary={data.summary} mode="news" queryId={activeQueryId} />
+              <ReportViewer summary={data.summary} mode="news" queryId={activeQueryId} />
             </div>
           </div>
         )}
