@@ -135,3 +135,22 @@ class AskTrendeRequest(BaseModel):
         if len(self.question) > 500:
             raise ValueError("Question must be 500 characters or less")
         return self
+
+
+class MissionTelemetryRequest(BaseModel):
+    """Request model for mission telemetry events."""
+    name: str
+    payload: dict[str, Any] = Field(default_factory=dict)
+    session_id: str | None = None
+    source: str | None = None
+    stage: str | None = None
+
+    @model_validator(mode="after")
+    def validate_event(self) -> "MissionTelemetryRequest":
+        self.name = (self.name or "").strip().lower()[:120]
+        if not self.name:
+            raise ValueError("name is required.")
+        self.session_id = (self.session_id or "").strip()[:120] or None
+        self.source = (self.source or "").strip()[:80] or None
+        self.stage = (self.stage or "").strip()[:80] or None
+        return self
