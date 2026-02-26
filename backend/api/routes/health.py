@@ -152,3 +152,45 @@ async def synthdata_health() -> dict[str, Any]:
             "configured": True,
             "message": f"SynthData API error: {str(e)}",
         }
+
+
+@router.get("/runs")
+async def run_health(limit: int = 50) -> dict[str, Any]:
+    """
+    Runtime guardrail snapshot for recent runs.
+    Highlights stuck runs, attestation issues, export-risk runs, and provider instability.
+    """
+    from backend.database.repository import Repository
+    from backend.api.trends_utils import task_runtime_alerts
+    from backend.api.main import _get_task
+    from shared.models import QueryStatus
+
+    repo = Repository()
+    records = repo.get_all_tasks(limit=limit)
+    inspected: list[dict[str, Any]] = []
+    issue_count = 0
+
+    for item in records:
+        task_id = item.get("task_id")
+        if not task_id:
+            continue
+        full = _get_task(task_id) or item
+        alerts = task_runtime_alerts(full)
+        if alerts:
+            issue_count += 1
+        inspected.append(
+            {
+                "task_id": task_id,
+                "status": full.get("status", QueryStatus.PENDING),
+                "created_at": full.get("created_at"),
+                "updated_at": full.get("updated_at"),
+                "alerts": alerts,
+            }
+        )
+
+    return {
+        "ok": issue_count == 0,
+        "inspected": len(inspected),
+        "issues": issue_count,
+        "runs": inspected,
+    }
