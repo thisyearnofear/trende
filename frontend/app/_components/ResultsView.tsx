@@ -6,6 +6,7 @@ import { TrendSummary } from "@/components/TrendSummary";
 import { ReportViewer } from "@/components/ReportViewer";
 import { PlatformTabs } from "@/components/PlatformTabs";
 import { RunFlowDivider } from "@/components/RunFlowDivider";
+import { TrendSummary as TrendSummaryType } from "@/lib/types";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -72,21 +73,6 @@ interface PanelSummaries {
   forge: string;
 }
 
-interface SummaryData {
-  overview?: string;
-  confidenceScore?: number;
-  consensusData?: {
-    agreement_score?: number;
-    agreementScore?: number;
-    main_divergence?: string;
-    providers?: { length: number }[];
-    warnings?: string[];
-  };
-  attestationData?: {
-    status: string;
-  };
-}
-
 interface QueryData {
   id: string;
   idea?: string;
@@ -96,7 +82,7 @@ interface QueryData {
 
 interface ResultsData {
   query?: QueryData;
-  summary?: SummaryData;
+  summary?: TrendSummaryType;
   results?: Array<{
     platform: string;
     items: Array<{ id: string; timestamp: string }>;
