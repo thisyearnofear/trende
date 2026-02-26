@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Response
 
-from backend.api.services.background_service import background_service
+from backend.api.background_service import background_service
 from backend.services.x402_service import X402Payment, x402_service
 from shared.models import QueryStatus
 

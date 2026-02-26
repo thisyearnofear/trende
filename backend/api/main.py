@@ -23,7 +23,7 @@ from backend.api.routes import commons as commons_routes
 from backend.api.routes import health as health_routes
 from backend.api.routes import synthdata as synthdata_routes
 from backend.api.routes import user as user_routes
-from backend.api.services.background_service import background_service
+from backend.api.background_service import background_service
 from backend.services.acp_service import acp_service
 from backend.integrations.connectors.synthdata import SynthDataConnector
 from backend.database.repository import Repository, init_db
