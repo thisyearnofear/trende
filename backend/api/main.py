@@ -18,6 +18,8 @@ from pydantic import BaseModel, Field, model_validator
 
 from backend.agents.workflow import create_workflow, run_editorial_task
 from backend.api.routes import acp as acp_routes
+from backend.api.routes import agent as agent_routes
+from backend.api.routes import commons as commons_routes
 from backend.api.routes import health as health_routes
 from backend.api.routes import synthdata as synthdata_routes
 from backend.api.routes import user as user_routes
@@ -83,6 +85,12 @@ app.include_router(synthdata_routes.router)
 
 # User routes
 app.include_router(user_routes.router)
+
+# Commons routes
+app.include_router(commons_routes.router)
+
+# Agent routes
+app.include_router(agent_routes.router)
 
 # CORS middleware
 app.add_middleware(
@@ -251,33 +259,7 @@ async def run_agent_action(action_id: str) -> None:
 # save_research endpoint moved to backend/api/routes/trends.py
 
 
-@app.get("/api/commons")
-async def get_public_commons(limit: int = 50, sponsor: str | None = None) -> dict[str, Any]:
-    """
-    Public Research Commons - browse completed high-quality public research.
-
-    This endpoint is publicly accessible without authentication.
-    Quality-gating defaults exclude sparse/partial runs unless server config opts in.
-    """
-    records = repo.get_public_research(limit=limit, sponsor=sponsor)
-
-    return {
-        "research": [
-            {
-                "id": item.get("task_id"),
-                "topic": item.get("topic", ""),
-                "sponsor": item.get("sponsor_address"),
-                "platforms": item.get("platforms", []),
-                "hasAttestation": item.get("has_attestation", False),
-                "createdAt": item.get("created_at", ""),
-            }
-            for item in records
-        ],
-        "total": len(records),
-        "filter": {
-            "sponsor": sponsor,
-        },
-    }
+# get_public_commons endpoint moved to routes/commons.py
 
 
 # get_status endpoint moved to backend/api/routes/trends.py
@@ -290,55 +272,7 @@ async def get_public_commons(limit: int = 50, sponsor: str | None = None) -> dic
 # export_task_report endpoint moved to backend/api/routes/trends.py
 
 
-@app.get("/api/agent/alpha/{task_id}", response_model=None)
-async def get_agent_alpha(
-    task_id: str, payment: X402Payment | None = None
-) -> dict[str, Any] | Response:
-    """
-    Agent-to-Agent (A2A) Endpoint.
-    Returns a compact, verifiable conviction manifest for external launch bots.
-    """
-    # 1. Verification Logic
-    require_x402 = os.getenv("REQUIRE_X402", "false").lower() == "true"
-    if require_x402 and (not payment or not x402_service.verify_payment(payment)):
-        return Response(status_code=402, content="Intelligence Purchase Required (X402)")
-
-    # 2. Data Retrieval
-    task = _get_task(task_id)
-    if not task or task.get("status") != QueryStatus.COMPLETED:
-        return Response(
-            status_code=404, content=json.dumps({"error": "Alpha not ready or task not found"})
-        )
-
-    data = task.get("research_payload", {})
-    if not data:
-        return Response(
-            status_code=404, content=json.dumps({"error": "Architect failed to generate manifest"})
-        )
-
-    # 3. Manifest Construction (Compatible with nad.fun Skill Spec)
-    # We embed the Trende proof link into the description to ensure permanent verifiability.
-    base_url = os.getenv("FRONTEND_URL", "https://trende.vercel.app")
-    proof_url = f"{base_url}/meme/{task_id}"
-
-    token = data.get("token", {})
-    description = f"{token.get('description', '')}\n\n--- VERIFIED BY TRENDE ---\nProof of Multi-Model Consensus: {proof_url}"
-
-    return {
-        "manifest": {
-            "name": token.get("name"),
-            "symbol": token.get("ticker"),
-            "description": description,
-            "image_uri": "https://trende.vercel.app/api/assets/placeholder.png",  # TODO: Dynamic asset generation
-            "twitter": "",
-            "telegram": "",
-            "website": proof_url,
-            "trende_proof_id": task_id,
-            "attestation": task.get("attestation_data"),
-        },
-        "status": "verifiable_alpha",
-        "settlement": "X402_COMPLETED",
-    }
+# get_agent_alpha endpoint moved to routes/agent.py
 
 
 # stream_status endpoint moved to backend/api/routes/trends.py
@@ -352,13 +286,6 @@ async def get_agent_alpha(
 
 
 # SynthData Endpoints
-
-class SynthDataForecastRequest(BaseModel):
-    asset: str
-    include_options: bool = False
-    include_liquidation: bool = False
-    leverage: float = 10.0
-
 
 # list_synthdata_assets endpoint moved to routes/synthdata.py
 
