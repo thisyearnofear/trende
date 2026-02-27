@@ -18,11 +18,15 @@ from pydantic import BaseModel, Field, model_validator
 
 from backend.agents.workflow import create_workflow, run_editorial_task
 from backend.api.routes import acp as acp_routes
+from backend.api.routes import actions as actions_routes
 from backend.api.routes import agent as agent_routes
 from backend.api.routes import commons as commons_routes
 from backend.api.routes import health as health_routes
 from backend.api.routes import synthdata as synthdata_routes
+from backend.api.routes import telemetry as telemetry_routes
+from backend.api.routes import trends as trends_routes
 from backend.api.routes import user as user_routes
+from backend.api.routes.user import get_client_ip
 from backend.api.background_service import background_service
 from backend.services.acp_service import acp_service
 from backend.integrations.connectors.synthdata import SynthDataConnector
@@ -91,6 +95,15 @@ app.include_router(commons_routes.router)
 
 # Agent routes
 app.include_router(agent_routes.router)
+
+# Trends routes
+app.include_router(trends_routes.router)
+
+# Actions routes
+app.include_router(actions_routes.router)
+
+# Telemetry routes
+app.include_router(telemetry_routes.router)
 
 # CORS middleware
 app.add_middleware(
