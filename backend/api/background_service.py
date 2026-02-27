@@ -238,7 +238,11 @@ class BackgroundTaskService:
             if task:
                 task["status"] = QueryStatus.FAILED
                 task["error"] = str(e)
-                task["logs"].append(f"❌ CRITICAL ERROR: {str(e)}")
+                logs = task.get("logs", [])
+                if not isinstance(logs, list):
+                    logs = []
+                logs.append(f"❌ CRITICAL ERROR: {str(e)}")
+                task["logs"] = logs[-200:]
                 self.save_task(task_id, task)
 
     def _provider_failure_rate(self, consensus_data: dict[str, Any]) -> float:
@@ -246,7 +250,11 @@ class BackgroundTaskService:
         providers = consensus_data.get("providers", [])
         if not providers:
             return 0.0
-        failed = sum(1 for p in providers if p.get("failed", False))
+        failed = 0
+        for provider in providers:
+            # Some routes emit provider IDs as strings, not provider metadata objects.
+            if isinstance(provider, dict):
+                failed += 1 if provider.get("failed", False) else 0
         return failed / len(providers)
 
     # =========================================================================
