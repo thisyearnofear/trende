@@ -26,13 +26,12 @@ class TaskService:
         self._cache: dict[str, dict[str, Any]] = {}
     
     def get_task(self, task_id: str) -> dict[str, Any] | None:
-        """Get task from cache or Repository (source of truth)."""
-        if task_id in self._cache:
-            return self._cache[task_id]
+        """Get task from Repository first to avoid stale cache across services."""
         task = self._repo.get_task(task_id)
         if task:
             self._cache[task_id] = task
-        return task
+            return task
+        return self._cache.get(task_id)
     
     def save_task(self, task_id: str, task: dict[str, Any]) -> None:
         """Save task to Repository (source of truth) and update cache."""
