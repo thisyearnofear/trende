@@ -9,55 +9,77 @@
  * Contract: TrendeOracle @ 0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b (Arbitrum Sepolia)
  */
 
-import cre, { type Runtime, type EVMLog } from "@chainlink/cre-sdk";
-import { Runner } from "@chainlink/cre-sdk";
 import {
-  decodeEventLog,
+  EVMClient,
+  type EVMLog,
+  type Runtime,
+  Runner,
+  handler,
+  hexToBytes,
   bytesToHex,
-  keccak256,
-  toHex,
-  encodeAbiParameters,
-  parseAbiParameters,
-} from "viem";
-import { configSchema, marketCreatedEventAbi, type Config } from "./types.js";
+  hexToBase64,
+} from "@chainlink/cre-sdk";
+import type { Config, ConsensusResult } from "./types.js";
 import { fetchGDELT, fetchCoinGecko, askVenice, askOpenRouter, askTrendeAPI } from "./providers.js";
 import { computeConsensus } from "./consensus.js";
 import type { AIProviderResponse } from "./types.js";
 
-// ─── Oracle Settlement (inline, single call site) ──────────────────────
+// Pre-computed keccak256("MarketCreated(bytes32,string,uint256)")
+const MARKET_CREATED_TOPIC =
+  "0x978ff0c9cb36151d8adf2a6c6204dbebfc2053171bb0ad00daafbfb5e6343c7d";
 
-function hexToBase64(hex: string): string {
-  const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
-  const bytes = new Uint8Array(
-    clean.match(/.{1,2}/g)!.map((b) => parseInt(b, 16))
-  );
-  return Buffer.from(bytes).toString("base64");
+// ─── Helpers ────────────────────────────────────────────────────────────
+
+/** ABI-decode a MarketCreated event from raw log data (manual, no viem dependency) */
+function decodeMarketCreated(log: EVMLog): { marketId: string; topic: string } {
+  // topics[0] = event signature, topics[1] = indexed bytes32 marketId
+  const marketId = bytesToHex(log.topics[1]);
+  // data = abi.encode(string topic, uint256 endTime)
+  // string is dynamic: first 32 bytes = offset, then length, then content
+  const dataHex = bytesToHex(log.data).slice(2); // remove 0x
+  // offset to string data (first 32 bytes, skip)
+  // uint256 endTime is at bytes 32-63 (skip)
+  // string offset points to byte 64: length at 64-95, content at 96+
+  const stringLenHex = dataHex.slice(128, 192);
+  const stringLen = parseInt(stringLenHex, 16);
+  const topicHex = dataHex.slice(192, 192 + stringLen * 2);
+  let topic = "";
+  for (let i = 0; i < topicHex.length; i += 2) {
+    topic += String.fromCharCode(parseInt(topicHex.slice(i, i + 2), 16));
+  }
+  return { marketId, topic };
 }
+
+/** Simple ABI-encode for (bytes32, uint256, string) — produces raw hex without 0x */
+function encodeSettlementData(marketId: string, score: number, summary: string): string {
+  const cleanId = marketId.startsWith("0x") ? marketId.slice(2) : marketId;
+  const scoreHex = BigInt(score).toString(16).padStart(64, "0");
+  const summaryBytes = new TextEncoder().encode(summary.slice(0, 256));
+  // offset to string (3 * 32 = 96 = 0x60)
+  const offset = "0000000000000000000000000000000000000000000000000000000000000060";
+  const len = summaryBytes.length.toString(16).padStart(64, "0");
+  let content = "";
+  for (const b of summaryBytes) content += b.toString(16).padStart(2, "0");
+  // pad content to 32-byte boundary
+  const padded = content.padEnd(Math.ceil(content.length / 64) * 64, "0");
+  return cleanId + scoreHex + offset + len + padded;
+}
+
+// ─── Oracle Settlement ─────────────────────────────────────────────────
 
 function settleOracle(
   runtime: Runtime<Config>,
-  marketId: `0x${string}`,
+  marketId: string,
   consensus: ConsensusResult
 ): string {
   const evmCfg = runtime.config.evms[0];
-  const network = cre.getNetwork({
-    chainFamily: "evm",
-    chainSelectorName: evmCfg.chainSelectorName,
-    isTestnet: true,
-  });
-  const evmClient = new cre.capabilities.EVMClient(
-    network.chainSelector.selector
-  );
+  const chainSelector =
+    EVMClient.SUPPORTED_CHAIN_SELECTORS[
+      evmCfg.chainSelectorName as keyof typeof EVMClient.SUPPORTED_CHAIN_SELECTORS
+    ];
+  const evmClient = new EVMClient(chainSelector);
 
-  // ABI-encode: (bytes32 marketId, uint256 score, string summary)
-  const reportData = encodeAbiParameters(
-    parseAbiParameters("bytes32 marketId, uint256 score, string summary"),
-    [
-      marketId,
-      BigInt(consensus.score),
-      consensus.summary.slice(0, 256),
-    ]
-  );
+  const reportData = "0x" + encodeSettlementData(marketId, consensus.score, consensus.summary);
 
   // CRE DON signs the payload via BFT consensus
   const signed = runtime
@@ -71,9 +93,10 @@ function settleOracle(
 
   const result = evmClient
     .writeReport(runtime, {
-      receiver: evmCfg.oracleAddress,
+      receiver: hexToBytes(evmCfg.oracleAddress),
       report: signed,
       gasConfig: { gasLimit: evmCfg.gasLimit },
+      $report: true,
     })
     .result();
 
@@ -82,24 +105,14 @@ function settleOracle(
 
 // ─── Handler ────────────────────────────────────────────────────────────
 
-const EVENT_SIGNATURE = "MarketCreated(bytes32,string,uint256)";
-
 function onMarketCreated(
   runtime: Runtime<Config>,
   log: EVMLog
 ): string {
   // 1. Decode the MarketCreated event
-  const topics = log.topics.map((t) => bytesToHex(t)) as [
-    `0x${string}`,
-    ...`0x${string}`[],
-  ];
-  const decoded = decodeEventLog({
-    abi: marketCreatedEventAbi,
-    data: bytesToHex(log.data),
-    topics,
-  });
-  const marketId = decoded.args.marketId as `0x${string}`;
-  const topic = decoded.args.topic as string;
+  const { marketId, topic } = decodeMarketCreated(log);
+
+  runtime.log(`Processing market ${marketId} for topic: ${topic}`);
 
   // 2. Fetch verifiable data context (GDELT + CoinGecko)
   const gdelt = fetchGDELT(runtime, topic);
@@ -141,22 +154,17 @@ function onMarketCreated(
 
 function initWorkflow(config: Config) {
   const evmCfg = config.evms[0];
-  const network = cre.getNetwork({
-    chainFamily: "evm",
-    chainSelectorName: evmCfg.chainSelectorName,
-    isTestnet: true,
-  });
-  const evmClient = new cre.capabilities.EVMClient(
-    network.chainSelector.selector
-  );
-
-  const eventHash = keccak256(toHex(EVENT_SIGNATURE));
+  const chainSelector =
+    EVMClient.SUPPORTED_CHAIN_SELECTORS[
+      evmCfg.chainSelectorName as keyof typeof EVMClient.SUPPORTED_CHAIN_SELECTORS
+    ];
+  const evmClient = new EVMClient(chainSelector);
 
   return [
-    cre.handler(
+    handler(
       evmClient.logTrigger({
-        addresses: [evmCfg.oracleAddress],
-        topics: [{ values: [eventHash] }],
+        addresses: [hexToBase64(evmCfg.oracleAddress)],
+        topics: [{ values: [hexToBase64(MARKET_CREATED_TOPIC)] }],
         confidence: "CONFIDENCE_LEVEL_FINALIZED",
       }),
       onMarketCreated
@@ -167,7 +175,7 @@ function initWorkflow(config: Config) {
 // ─── Bootstrap ──────────────────────────────────────────────────────────
 
 export async function main() {
-  const runner = await Runner.newRunner<Config>({ configSchema });
+  const runner = await Runner.newRunner<Config>();
   await runner.run(initWorkflow);
 }
 

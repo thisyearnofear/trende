@@ -187,6 +187,49 @@ forge script script/DeployTrende.s.sol:DeployTrende \
 
 ---
 
+## CRE Workflow (Chainlink Runtime Environment)
+
+### Prerequisites
+
+```bash
+# Install CRE CLI (one-time)
+curl -sSL https://get.cre.chain.link | bash
+export PATH="$HOME/.cre:$HOME/.cre/bin:$PATH"
+
+# Authenticate
+cre login
+```
+
+### Simulate Locally
+
+```bash
+# Set required API keys
+export VENICE_API_KEY=your_venice_key
+export OPENROUTER_API_KEY=your_openrouter_key
+
+# Run simulation (trigger-index 0 = EVM log trigger)
+cre workflow simulate ./backend/chainlink/cre/workflow --non-interactive --trigger-index 0
+```
+
+### Workflow Structure
+
+| File | Purpose |
+|------|---------|
+| `workflow/main.ts` | Entry point — EVM log trigger + handler registration |
+| `workflow/providers.ts` | GDELT, CoinGecko, Venice, OpenRouter, Trende API calls |
+| `workflow/consensus.ts` | Multi-model score aggregation |
+| `workflow/secrets.yaml` | Secret name mappings (resolved from env in simulation) |
+| `workflow/config.json` | Chain selector, oracle address, gas config |
+
+### Status
+
+- ✅ Workflow compiles successfully
+- ✅ EVM log trigger registers without error (WASM subscribe fixed)
+- ✅ All 11 contract tests passing
+- ⚠️ Full simulation requires `VENICE_API_KEY` + `OPENROUTER_API_KEY` in environment
+
+---
+
 ## ACP Integration Setup
 
 ### 1. Register Agent
@@ -253,6 +296,36 @@ pip install -e ".[dev]"
 1. Check sentinel logs: `docker logs trende-backend | grep SENTINEL`
 2. Verify subscription funded: [functions.chain.link](https://functions.chain.link)
 3. Confirm consumer added to subscription in UI
+
+---
+
+### CRE Simulate: WASM `unreachable` trap
+
+**Symptom**: `Failed to create engine: failed to execute subscribe: wasm trap: wasm unreachable instruction executed`
+
+**Cause**: `logTrigger` expects `FilterLogTriggerRequestJson` — `addresses` and `topics[].values` must be **base64-encoded** bytes, not hex strings.
+
+**Solution**: Use `hexToBase64()` from the SDK (already fixed in `main.ts`):
+```ts
+evmClient.logTrigger({
+  addresses: [hexToBase64(evmCfg.oracleAddress)],
+  topics: [{ values: [hexToBase64(MARKET_CREATED_TOPIC)] }],
+  confidence: "CONFIDENCE_LEVEL_FINALIZED",
+})
+```
+
+---
+
+### CRE Simulate: Missing env vars
+
+**Symptom**: `environment variable VENICE_API_KEY for secret value not found`
+
+**Solution**:
+```bash
+export VENICE_API_KEY=your_key
+export OPENROUTER_API_KEY=your_key
+cre workflow simulate ./backend/chainlink/cre/workflow --non-interactive --trigger-index 0
+```
 
 ---
 

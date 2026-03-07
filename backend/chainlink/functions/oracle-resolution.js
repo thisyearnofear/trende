@@ -5,7 +5,7 @@
 const topic = args[0];
 // In a production environment, this would call the Trende API with an attestation check.
 // For the hackathon, we fetch the consensus from the Trende public endpoint or a simulated result.
-const url = `https://trende-api.famile.xyz/api/consensus/resolve?topic=${encodeURIComponent(topic)}`;
+const url = `https://api.trende.famile.xyz/api/consensus/resolve?topic=${encodeURIComponent(topic)}`;
 
 console.log(`Resolving market for topic: ${topic}`);
 

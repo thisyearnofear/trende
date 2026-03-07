@@ -185,10 +185,31 @@ curl -X POST https://api.trende.famile.xyz/api/attest/verify \
 
 The `backend/chainlink/cre/workflow/` module ports consensus to **Chainlink Runtime Environment**:
 
-1. **EVM Log Trigger** watches for `MarketCreated` events
+1. **EVM Log Trigger** watches for `MarketCreated` events on TrendeOracle
 2. **Data fetch** from GDELT + CoinGecko via CRE HTTP capability (BFT consensus)
 3. **Multi-model AI consensus** across Venice, OpenRouter, Trende API
 4. **Signed report** submitted on-chain via `runtime.report()` + `evmClient.writeReport()`
+
+#### CRE Simulation
+
+```bash
+# Prerequisites: cre login, set API keys in environment
+export VENICE_API_KEY=your_key
+export OPENROUTER_API_KEY=your_key
+
+cre workflow simulate ./backend/chainlink/cre/workflow --non-interactive --trigger-index 0
+```
+
+#### Key Implementation Notes
+
+- `logTrigger` accepts `FilterLogTriggerRequestJson` — `addresses` and `topics[].values` must be **base64-encoded** bytes (protobuf JSON convention), not hex strings. Use `hexToBase64()` from the SDK.
+- Contract: TrendeOracle @ `0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b` (Arbitrum Sepolia)
+- Event topic: `keccak256("MarketCreated(bytes32,string,uint256)")` = `0x978ff0c9...`
+- Chain selector name: `ethereum-testnet-sepolia-arbitrum-1`
+
+#### Contract Tests (All Passing ✅)
+
+All 11 Foundry tests pass covering: market creation, events, access control, fulfillment flow, error handling, and `splitResponse` edge cases.
 
 ### Active Deployments
 

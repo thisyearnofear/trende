@@ -1,25 +1,14 @@
-import { z } from "zod";
+// ─── Config Type ────────────────────────────────────────────────────────
 
-// ─── Config Schema ──────────────────────────────────────────────────────
-
-export const configSchema = z.object({
-  evms: z
-    .array(
-      z.object({
-        chainSelectorName: z.string().min(1),
-        oracleAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/u),
-        gasLimit: z
-          .string()
-          .regex(/^\d+$/)
-          .refine((val) => Number(val) > 0),
-      })
-    )
-    .min(1),
-  trendeApiUrl: z.string().url(),
-  consensusThreshold: z.number().min(0).max(1).default(0.5),
-});
-
-export type Config = z.infer<typeof configSchema>;
+export type Config = {
+  evms: Array<{
+    chainSelectorName: string;
+    oracleAddress: string;
+    gasLimit: string;
+  }>;
+  trendeApiUrl: string;
+  consensusThreshold: number;
+};
 
 // ─── Data Source Types ──────────────────────────────────────────────────
 
@@ -68,19 +57,5 @@ export const marketCreatedEventAbi = [
       { name: "topic", type: "string", indexed: false },
       { name: "endTime", type: "uint256", indexed: false },
     ],
-  },
-] as const;
-
-export const settleMarketAbi = [
-  {
-    type: "function",
-    name: "resolveMarket",
-    inputs: [
-      { name: "marketId", type: "bytes32" },
-      { name: "source", type: "string" },
-      { name: "encryptedSecretsUrls", type: "bytes" },
-    ],
-    outputs: [{ name: "requestId", type: "bytes32" }],
-    stateMutability: "nonpayable",
   },
 ] as const;

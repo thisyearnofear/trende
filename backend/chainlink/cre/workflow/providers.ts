@@ -7,8 +7,12 @@
  * Provider priority: Venice (primary) → OpenRouter variants → OpenAI (fallback)
  */
 
-import cre, { type Runtime, type HTTPSendRequester } from "@chainlink/cre-sdk";
-import { consensusIdenticalAggregation } from "@chainlink/cre-sdk";
+import {
+  HTTPClient,
+  type HTTPSendRequester,
+  type Runtime,
+  consensusIdenticalAggregation,
+} from "@chainlink/cre-sdk";
 import type {
   Config,
   AIProviderResponse,
@@ -22,14 +26,33 @@ function ok(resp: { statusCode: number }): boolean {
   return resp.statusCode >= 200 && resp.statusCode < 300;
 }
 
+const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+function uint8ToBase64(bytes: Uint8Array): string {
+  let result = "";
+  for (let i = 0; i < bytes.length; i += 3) {
+    const b0 = bytes[i];
+    const b1 = i + 1 < bytes.length ? bytes[i + 1] : 0;
+    const b2 = i + 2 < bytes.length ? bytes[i + 2] : 0;
+    result += BASE64_CHARS[(b0 >> 2) & 0x3f];
+    result += BASE64_CHARS[((b0 << 4) | (b1 >> 4)) & 0x3f];
+    result += i + 1 < bytes.length ? BASE64_CHARS[((b1 << 2) | (b2 >> 6)) & 0x3f] : "=";
+    result += i + 2 < bytes.length ? BASE64_CHARS[b2 & 0x3f] : "=";
+  }
+  return result;
+}
+
 function encodeBody(data: unknown): string {
-  return Buffer.from(
-    new TextEncoder().encode(JSON.stringify(data))
-  ).toString("base64");
+  const json = JSON.stringify(data);
+  const bytes = new Uint8Array(json.length);
+  for (let i = 0; i < json.length; i++) bytes[i] = json.charCodeAt(i);
+  return uint8ToBase64(bytes);
 }
 
 function decodeBody(body: Uint8Array): string {
-  return new TextDecoder().decode(body);
+  let s = "";
+  for (let i = 0; i < body.length; i++) s += String.fromCharCode(body[i]);
+  return s;
 }
 
 // ─── System prompt shared by all AI providers ───────────────────────────
@@ -51,7 +74,7 @@ export function fetchGDELT(
   runtime: Runtime<Config>,
   topic: string
 ): GDELTArticle | null {
-  const httpClient = new cre.capabilities.HTTPClient();
+  const httpClient = new HTTPClient();
 
   const fetcher = (sendRequester: HTTPSendRequester, _config: Config) => {
     const url =
@@ -90,7 +113,7 @@ export function fetchCoinGecko(
   runtime: Runtime<Config>,
   coinId: string
 ): CoinGeckoData | null {
-  const httpClient = new cre.capabilities.HTTPClient();
+  const httpClient = new HTTPClient();
 
   const fetcher = (sendRequester: HTTPSendRequester, _config: Config) => {
     const url =
@@ -134,7 +157,7 @@ export function askVenice(
   context: string
 ): AIProviderResponse {
   const apiKey = runtime.getSecret({ id: "VENICE_API_KEY" }).result();
-  const httpClient = new cre.capabilities.HTTPClient();
+  const httpClient = new HTTPClient();
 
   const fetcher = (sendRequester: HTTPSendRequester, _config: Config): AIProviderResponse => {
     const body = encodeBody({
@@ -185,7 +208,7 @@ export function askOpenRouter(
   context: string
 ): AIProviderResponse {
   const apiKey = runtime.getSecret({ id: "OPENROUTER_API_KEY" }).result();
-  const httpClient = new cre.capabilities.HTTPClient();
+  const httpClient = new HTTPClient();
 
   const fetcher = (sendRequester: HTTPSendRequester, _config: Config): AIProviderResponse => {
     const body = encodeBody({
@@ -237,7 +260,7 @@ export function askTrendeAPI(
   runtime: Runtime<Config>,
   topic: string
 ): AIProviderResponse {
-  const httpClient = new cre.capabilities.HTTPClient();
+  const httpClient = new HTTPClient();
 
   const fetcher = (sendRequester: HTTPSendRequester, config: Config): AIProviderResponse => {
     const url =
