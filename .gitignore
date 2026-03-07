@@ -5,6 +5,8 @@
 .env.production
 .env.test
 .env.test.local
+eigen-attestor/.env.deploy
+eigen-attestor/.env.tls*
 
 # Python
 __pycache__/
