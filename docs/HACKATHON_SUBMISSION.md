@@ -35,7 +35,7 @@ Chainlink is the core orchestration and settlement layer in this project.
 - CRE fetches independent external context and AI responses across nodes.
 - CRE computes consensus and signs the result.
 - Chainlink Functions supports verifiable API sourcing for key external datasets.
-- The final report resolves a live market through the Trende oracle contract.
+- The final report resolves a live market through the Trende oracle contract's CRE receiver path.
 
 Without Chainlink, this is just a centralized research tool. With Chainlink, it becomes an on-chain intelligence primitive.
 
@@ -56,7 +56,7 @@ The demo focuses on one end-to-end path:
 - Directory: [/Users/udingethe/Dev/trende/backend/chainlink/cre/workflow](/Users/udingethe/Dev/trende/backend/chainlink/cre/workflow)
 - Trigger: EVM log trigger on `MarketCreated`
 - Execution: HTTP fetches + AI inference + agreement scoring
-- Output: signed report submitted on-chain
+- Output: signed report submitted on-chain to `TrendeOracle.onReport(...)`
 
 ### Chainlink Functions
 
@@ -73,8 +73,8 @@ The demo focuses on one end-to-end path:
 5. CRE fetches context from GDELT and CoinGecko.
 6. CRE queries Venice, OpenRouter, and Trende API.
 7. CRE computes agreement and a final score.
-8. CRE submits a signed settlement report.
-9. `TrendeOracle` resolves the market on-chain.
+8. CRE submits a signed settlement report to the oracle receiver.
+9. `TrendeOracle.onReport(...)` resolves the market on-chain.
 10. The result becomes reusable by other agents.
 
 ## Agent Economy Use Case

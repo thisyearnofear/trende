@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {TrendeOracle} from "../src/TrendeOracle.sol";
+import {IReceiver} from "@chainlink/contracts/src/v0.8/keystone/interfaces/IReceiver.sol";
 
 /// @notice Minimal mock router that implements sendRequest and routes fulfillment back.
 contract MockFunctionsRouter {
@@ -41,10 +42,12 @@ contract TrendeOracleTest is Test {
     TrendeOracle oracle;
     MockFunctionsRouter router;
     address owner = address(this);
+    address creForwarder = address(0xBEEF);
 
     function setUp() public {
         router = new MockFunctionsRouter();
         oracle = new TrendeOracle(address(router), 558, bytes32("testdon"));
+        oracle.setCREForwarder(creForwarder);
     }
 
     // ── Market Creation ─────────────────────────────────────────────
@@ -170,5 +173,49 @@ contract TrendeOracleTest is Test {
         assertTrue(resolved);
         assertEq(score, 0);
         assertEq(summary, "No signal detected");
+    }
+
+    // ── CRE Receiver Path ───────────────────────────────────────────
+
+    function test_onReport_updatesMarket() public {
+        bytes32 marketId = oracle.createMarket("CRE market", 1 hours);
+        bytes memory report = abi.encode(marketId, uint256(91), "CRE consensus settled");
+
+        vm.prank(creForwarder);
+        oracle.onReport(hex"", report);
+
+        (, , , bool resolved, uint256 score, string memory summary) = oracle.markets(marketId);
+        assertTrue(resolved);
+        assertEq(score, 91);
+        assertEq(summary, "CRE consensus settled");
+    }
+
+    function test_onReport_onlyForwarder() public {
+        bytes32 marketId = oracle.createMarket("Unauthorized CRE", 1 hours);
+        bytes memory report = abi.encode(marketId, uint256(42), "Should fail");
+
+        vm.prank(address(0xDEAD));
+        vm.expectRevert(abi.encodeWithSelector(TrendeOracle.OnlyCREForwarder.selector, address(0xDEAD)));
+        oracle.onReport(hex"", report);
+    }
+
+    function test_onReport_discardsDuplicateResolution() public {
+        bytes32 marketId = oracle.createMarket("CRE stale", 1 hours);
+        bytes memory report = abi.encode(marketId, uint256(77), "First result");
+
+        vm.prank(creForwarder);
+        oracle.onReport(hex"", report);
+
+        vm.prank(creForwarder);
+        oracle.onReport(hex"", abi.encode(marketId, uint256(88), "Ignored result"));
+
+        (, , , bool resolved, uint256 score, string memory summary) = oracle.markets(marketId);
+        assertTrue(resolved);
+        assertEq(score, 77);
+        assertEq(summary, "First result");
+    }
+
+    function test_supportsReceiverInterface() public view {
+        assertTrue(oracle.supportsInterface(type(IReceiver).interfaceId));
     }
 }

@@ -4,12 +4,14 @@ pragma solidity ^0.8.19;
 import {FunctionsClient} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/FunctionsClient.sol";
 import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
 import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
+import {IReceiver} from "@chainlink/contracts/src/v0.8/keystone/interfaces/IReceiver.sol";
+import {IERC165} from "@chainlink/contracts/src/v0.8/vendor/openzeppelin-solidity/v5.0.2/contracts/utils/introspection/IERC165.sol";
 
 /**
  * @title TrendeOracle
  * @notice On-chain social trend prediction market oracle powered by Trende AI consensus.
  */
-contract TrendeOracle is FunctionsClient, ConfirmedOwner {
+contract TrendeOracle is FunctionsClient, ConfirmedOwner, IReceiver {
     using FunctionsRequest for FunctionsRequest.Request;
 
     struct Market {
@@ -31,12 +33,16 @@ contract TrendeOracle is FunctionsClient, ConfirmedOwner {
     uint64 public subscriptionId;
     uint32 public callbackGasLimit = 300000;
     bytes32 public donId;
+    address public creForwarder;
 
     event MarketCreated(bytes32 indexed marketId, string topic, uint256 endTime);
     event MarketResolved(bytes32 indexed marketId, uint256 score, string summary);
     event Response(bytes32 indexed requestId, bytes response, bytes err);
+    event CREForwarderUpdated(address indexed forwarder);
+    event CREReportHandled(bytes32 indexed marketId, uint256 score, bool applied);
 
     error UnexpectedRequestID(bytes32 requestId);
+    error OnlyCREForwarder(address caller);
 
     constructor(
         address router, 
@@ -45,6 +51,11 @@ contract TrendeOracle is FunctionsClient, ConfirmedOwner {
     ) FunctionsClient(router) ConfirmedOwner(msg.sender) {
         subscriptionId = _subscriptionId;
         donId = _donId;
+    }
+
+    function setCREForwarder(address forwarder) external onlyOwner {
+        creForwarder = forwarder;
+        emit CREForwarderUpdated(forwarder);
     }
 
     function createMarket(string memory topic, uint256 duration) external onlyOwner returns (bytes32) {
@@ -112,14 +123,27 @@ contract TrendeOracle is FunctionsClient, ConfirmedOwner {
         if (marketId != bytes32(0) && err.length == 0) {
             string memory result = string(response);
             (uint256 score, string memory summary) = splitResponse(result);
-            
-            Market storage market = markets[marketId];
-            market.outcomeScore = score;
-            market.summary = summary;
-            market.resolved = true;
-            
-            emit MarketResolved(marketId, score, summary);
+
+            _applyResolution(marketId, score, summary);
         }
+    }
+
+    /**
+     * @notice Receive a Chainlink CRE report forwarded by the configured forwarder.
+     * @dev metadata is currently unused by TrendeOracle, but retained for future audit hooks.
+     */
+    function onReport(bytes calldata metadata, bytes calldata report) external override {
+        if (msg.sender != creForwarder) revert OnlyCREForwarder(msg.sender);
+        metadata;
+
+        (bytes32 marketId, uint256 score, string memory summary) = abi.decode(report, (bytes32, uint256, string));
+
+        bool applied = _applyResolutionIfPending(marketId, score, summary);
+        emit CREReportHandled(marketId, score, applied);
+    }
+
+    function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
+        return interfaceId == type(IReceiver).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
 
     /**
@@ -161,5 +185,24 @@ contract TrendeOracle is FunctionsClient, ConfirmedOwner {
             }
         }
         return result;
+    }
+
+    function _applyResolutionIfPending(bytes32 marketId, uint256 score, string memory summary) internal returns (bool) {
+        Market storage market = markets[marketId];
+        if (market.marketId == bytes32(0) || market.resolved) {
+            return false;
+        }
+
+        _applyResolution(marketId, score, summary);
+        return true;
+    }
+
+    function _applyResolution(bytes32 marketId, uint256 score, string memory summary) internal {
+        Market storage market = markets[marketId];
+        market.outcomeScore = score;
+        market.summary = summary;
+        market.resolved = true;
+
+        emit MarketResolved(marketId, score, summary);
     }
 }

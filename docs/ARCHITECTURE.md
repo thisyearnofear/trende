@@ -188,7 +188,7 @@ The `backend/chainlink/cre/workflow/` module ports consensus to **Chainlink Runt
 1. **EVM Log Trigger** watches for `MarketCreated` events on TrendeOracle
 2. **Data fetch** from GDELT + CoinGecko via CRE HTTP capability (BFT consensus)
 3. **Multi-model AI consensus** across Venice, OpenRouter, Trende API
-4. **Signed report** submitted on-chain via `runtime.report()` + `evmClient.writeReport()`
+4. **Signed report** submitted on-chain via `runtime.report()` + `evmClient.writeReport()` into `TrendeOracle.onReport(...)`
 
 #### CRE Simulation
 
@@ -209,7 +209,7 @@ cre workflow simulate ./backend/chainlink/cre/workflow --non-interactive --trigg
 
 #### Contract Tests (All Passing ✅)
 
-All 11 Foundry tests pass covering: market creation, events, access control, fulfillment flow, error handling, and `splitResponse` edge cases.
+All 15 Foundry tests pass covering: market creation, events, access control, Functions fulfillment flow, CRE receiver flow, duplicate/stale CRE reports, and `splitResponse` edge cases.
 
 ### Active Deployments
 

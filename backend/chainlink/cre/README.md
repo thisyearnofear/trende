@@ -19,7 +19,7 @@ CRE Workflow DON (EVM Log Trigger)
   │
   ├─► Compute cross-provider agreement (Jaccard index + score averaging)
   │
-  └─► Sign & write settlement report → TrendeOracle.resolveMarket
+  └─► Sign & write settlement report → TrendeOracle.onReport (via Chainlink forwarder)
 ```
 
 Every HTTP call runs independently on each CRE node. Results are aggregated via Byzantine Fault Tolerant consensus before the workflow proceeds. The final settlement report is cryptographically signed by the DON.
@@ -64,7 +64,7 @@ cre deploy
 2. **Data fetch**: GDELT and CoinGecko provide verifiable context about the topic.
 3. **AI consensus**: Venice and OpenRouter each analyze the topic independently. The Trende API provides a third signal from its own multi-model pipeline (Venice + AIsa + OpenRouter variants with TEE attestation).
 4. **Agreement scoring**: Jaccard index across provider responses, same algorithm as `consensus.go` and `ai_service.py:_calculate_agreement_score`.
-5. **Settlement**: The DON signs the consensus score and submits it to TrendeOracle on-chain.
+5. **Settlement**: The DON signs the consensus score and submits it to `TrendeOracle.onReport(...)` through the configured Chainlink forwarder.
 
 ## Consensus Algorithm
 

@@ -45,7 +45,7 @@ Show the Chainlink architecture quickly:
 
 Say:
 
-"A market is created on Arbitrum Sepolia. That emits `MarketCreated`. Our Chainlink CRE workflow listens for that event, fetches external context, queries multiple AI providers, computes agreement, and writes a signed settlement report back on-chain."
+"A market is created on Arbitrum Sepolia. That emits `MarketCreated`. Our Chainlink CRE workflow listens for that event, fetches external context, queries multiple AI providers, computes agreement, and writes a signed settlement report back on-chain through the oracle's CRE receiver."
 
 Keep this visual. Do not stay in code too long.
 

@@ -7,6 +7,7 @@
  * Pipeline: Fetch data → Query AI providers → Compute consensus → Settle on-chain
  *
  * Contract: TrendeOracle @ 0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b (Arbitrum Sepolia)
+ * Delivery: evmClient.writeReport() -> Chainlink forwarder -> TrendeOracle.onReport(...)
  */
 
 import {

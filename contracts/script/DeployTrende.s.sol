@@ -49,6 +49,13 @@ contract DeployTrende is Script {
         TrendeOracle oracle = new TrendeOracle(router, subId, donId);
         console2.log("TrendeOracle deployed at:", address(oracle));
 
+        address creForwarder = vm.envOr("CHAINLINK_CRE_FORWARDER", address(0));
+        if (creForwarder != address(0)) {
+            oracle.setCREForwarder(creForwarder);
+            console2.log("CRE forwarder configured:");
+            console2.log(creForwarder);
+        }
+
         vm.stopBroadcast();
 
         // Output for .env update
