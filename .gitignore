@@ -66,4 +66,6 @@ contracts/node_modules/
 contracts/lib/forge-std/
 contracts/lib/chainlink/
 contracts/lib/chainlink-brownie-contracts/
-\n# CRE build artifacts\nbackend/chainlink/cre/workflow/.cre_build_tmp.js
+
+# CRE build artifacts
+backend/chainlink/cre/workflow/.cre_build_tmp.js

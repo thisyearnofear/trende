@@ -13,8 +13,8 @@ export CHAINLINK_SUBSCRIPTION_ID=<your_sub_id>
 export ARBITRUM_SEPOLIA_RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
 
 # Known constants (Arbitrum Sepolia)
-export CRE_FORWARDER=0x76c9cf548b4179F8901cda1f8623568b58215E62
-export WORKFLOW_NAME="trende-cre-workflow-staging"
+export CHAINLINK_CRE_FORWARDER=0x76c9cf548b4179F8901cda1f8623568b58215E62
+export CHAINLINK_CRE_EXPECTED_WORKFLOW_NAME="trende-cre-workflow-staging"
 ```
 
 ---
@@ -24,25 +24,24 @@ export WORKFLOW_NAME="trende-cre-workflow-staging"
 Deploy with all CRE metadata in one shot (avoids 4 separate `cast send` calls later if you already have the workflow ID and author):
 
 ```bash
-cd /Users/udingethe/dev/trende/contracts
+cd /Users/udingethe/Dev/trende/contracts
 
 # Option A: Deploy now, set CRE metadata after cre deploy (recommended for first run)
-forge script script/DeployTrende.s.sol \
+forge script script/DeployTrende.s.sol:DeployTrende \
   --rpc-url $ARBITRUM_SEPOLIA_RPC_URL \
   --broadcast \
   --verify \
   -vvvv
 
 # Option B: Deploy with all CRE metadata at once (use after you have WORKFLOW_ID + WORKFLOW_AUTHOR)
-forge script script/DeployTrende.s.sol \
+export CHAINLINK_CRE_EXPECTED_WORKFLOW_AUTHOR=<WORKFLOW_AUTHOR>
+export CHAINLINK_CRE_EXPECTED_WORKFLOW_ID=<WORKFLOW_ID>
+
+forge script script/DeployTrende.s.sol:DeployTrende \
   --rpc-url $ARBITRUM_SEPOLIA_RPC_URL \
   --broadcast \
   --verify \
-  -vvvv \
-  --env CHAINLINK_CRE_FORWARDER=$CRE_FORWARDER \
-  --env CHAINLINK_CRE_EXPECTED_WORKFLOW_NAME=$WORKFLOW_NAME \
-  --env CHAINLINK_CRE_EXPECTED_WORKFLOW_AUTHOR=<WORKFLOW_AUTHOR> \
-  --env CHAINLINK_CRE_EXPECTED_WORKFLOW_ID=<WORKFLOW_ID>
+  -vvvv
 ```
 
 ### Capture from deploy output
@@ -61,7 +60,7 @@ Replace `oracleAddress` with the newly deployed oracle:
 ```bash
 ORACLE_ADDRESS=<CHAINLINK_ORACLE_ADDRESS from Step 1>
 
-cat > /Users/udingethe/dev/trende/backend/chainlink/cre/workflow/config.json <<EOF
+cat > /Users/udingethe/Dev/trende/backend/chainlink/cre/workflow/config.json <<EOF
 {
   "evms": [
     {
@@ -83,13 +82,13 @@ EOF
 > ✅ **Already verified passing** — score=40, agreement=1.00 on live Arbitrum Sepolia `MarketCreated` tx `0xcbcf881bd9cc0615a201e7db5ddc12e07423ea57617e362b063e066b0a43b364`
 
 ```bash
-cd /Users/udingethe/dev/trende/backend/chainlink/cre/workflow
+cd /Users/udingethe/Dev/trende/backend/chainlink/cre/workflow
 
 # ARM64 Mac: ensure native bun is on PATH
 export PATH="$HOME/.bun/bin:$PATH"
 
 # Source env vars (Venice + OpenRouter keys required)
-set -a && source /Users/udingethe/dev/trende/.env && set +a
+set -a && source /Users/udingethe/Dev/trende/.env && set +a
 
 # Simulate against a real MarketCreated tx
 cre workflow simulate . \
@@ -110,7 +109,7 @@ Expected output: `Settled market 0x... | score=40 | providers=1 | agreement=1.00
 > ⏳ **Blocked** — waiting on Chainlink deploy access approval (request submitted; email to `papaandthejimjams@gmail.com`)
 
 ```bash
-cd /Users/udingethe/dev/trende/backend/chainlink/cre/workflow
+cd /Users/udingethe/Dev/trende/backend/chainlink/cre/workflow
 
 # ARM64 Mac: ensure native bun is on PATH
 export PATH="$HOME/.bun/bin:$PATH"
@@ -124,7 +123,7 @@ cre workflow deploy . -T staging-settings -R .
 |---|---|---|
 | Workflow ID | printed as `workflowId` or `id` | `WORKFLOW_ID` |
 | Workflow Author / Owner | printed as `owner` or `author` | `WORKFLOW_AUTHOR` |
-| Workflow Name | confirmed as `trende-cre-workflow-staging` | `WORKFLOW_NAME` |
+| Workflow Name | confirmed as `trende-cre-workflow-staging` | `CHAINLINK_CRE_EXPECTED_WORKFLOW_NAME` |
 | Deploy tx hash | printed as `txHash` | `DEPLOY_TX` |
 
 ```bash
@@ -145,7 +144,7 @@ RPC=https://sepolia-rollup.arbitrum.io/rpc
 
 # 1. Set CRE forwarder
 cast send $ORACLE_ADDRESS \
-  "setCREForwarder(address)" $CRE_FORWARDER \
+  "setCREForwarder(address)" $CHAINLINK_CRE_FORWARDER \
   --private-key $PRIVATE_KEY \
   --rpc-url $RPC
 
@@ -157,7 +156,7 @@ cast send $ORACLE_ADDRESS \
 
 # 3. Set expected workflow name (contract hashes it internally via sha256)
 cast send $ORACLE_ADDRESS \
-  "setExpectedWorkflowName(string)" "$WORKFLOW_NAME" \
+  "setExpectedWorkflowName(string)" "$CHAINLINK_CRE_EXPECTED_WORKFLOW_NAME" \
   --private-key $PRIVATE_KEY \
   --rpc-url $RPC
 
