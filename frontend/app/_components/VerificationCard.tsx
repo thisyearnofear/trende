@@ -2,6 +2,9 @@
 
 import { Card } from "@/components/DesignSystem";
 
+const LIVE_CHAINLINK_ORACLE = "0xEEDeD7daC9D6b17f5D3915542A549B1AefCeed56";
+const LIVE_CHAINLINK_SIM_TX = "0xcad4b3455e9d53281d6393318272eb01b98311740abbcae393d738829b93a3e0";
+
 interface VerificationData {
   tee?: {
     status: string;
@@ -35,14 +38,23 @@ export function VerificationCard({ verification, chainlinkStatusLabel, variant }
               Verification
             </p>
             <p className="text-xs text-[var(--text-secondary)]">
-              TEE attestation + multi-model consensus are active by default. Chainlink oracle settlement is available once a mission finalizes.
+              TEE attestation and multi-model consensus are live by default. Chainlink receiver settlement is deployed, with CRE workflow deployment pending access approval.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-[10px] font-mono uppercase">
             <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">TEE: Active</span>
             <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">Consensus: Active</span>
-            <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">Chainlink: Standby</span>
+            <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">CRE Receiver: Live</span>
+            <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">Workflow: Pending</span>
           </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-mono text-[var(--text-secondary)]">
+          <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">
+            Oracle: {LIVE_CHAINLINK_ORACLE.slice(0, 8)}...{LIVE_CHAINLINK_ORACLE.slice(-6)}
+          </span>
+          <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">
+            Sim Tx: {LIVE_CHAINLINK_SIM_TX.slice(0, 8)}...{LIVE_CHAINLINK_SIM_TX.slice(-6)}
+          </span>
         </div>
       </Card>
     );
@@ -77,7 +89,7 @@ export function VerificationCard({ verification, chainlinkStatusLabel, variant }
           <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Chainlink</p>
           <p className="text-sm font-black mt-1">{chainlinkStatusLabel}</p>
           <p className="text-[11px] font-mono text-[var(--text-secondary)] mt-1">
-            {verification?.chainlink?.network || "oracle lane ready"}
+            {verification?.chainlink?.network || "CRE receiver live"}
           </p>
         </div>
       </div>

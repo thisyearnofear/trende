@@ -27,6 +27,9 @@ import {
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
+const LIVE_CHAINLINK_ORACLE = "0xEEDeD7daC9D6b17f5D3915542A549B1AefCeed56";
+const LIVE_CHAINLINK_SIM_TX = "0xcad4b3455e9d53281d6393318272eb01b98311740abbcae393d738829b93a3e0";
+
 interface SourceRoute {
   requested_platform: string;
   resolved_source: string | null;
@@ -149,6 +152,14 @@ export function ResultsView({
   const reportAttestationStatus = data.summary?.attestationData?.status || "pending";
   
   const chainlinkStatusLabel = chainlinkProof?.status || verification?.chainlink?.status || "available";
+  const chainlinkDisplayStatus =
+    chainlinkProof?.oracleSettlement === "requested"
+      ? "resolution requested"
+      : chainlinkProof?.oracleSettlement === "staged"
+        ? "market staged"
+        : verification?.chainlink?.configured
+          ? "receiver live"
+          : chainlinkStatusLabel;
   
   const sourceIndexById: Record<string, number> = {};
   const sourceLabelByOrdinal: Record<number, string> = {};
@@ -274,9 +285,9 @@ export function ResultsView({
           </div>
           <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3">
             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Chainlink</p>
-            <p className="text-sm font-black mt-1">{chainlinkStatusLabel}</p>
+            <p className="text-sm font-black mt-1">{chainlinkDisplayStatus}</p>
             <p className="text-[11px] font-mono text-[var(--text-secondary)] mt-1">
-              {verification?.chainlink?.network || "oracle lane ready"}
+              {verification?.chainlink?.network || "CRE receiver live"}
             </p>
           </div>
         </div>
@@ -335,20 +346,32 @@ export function ResultsView({
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent-amber)]">
-                Chainlink Proof
+                Chainlink Execution Proof
               </p>
               <p className="text-xs text-[var(--text-secondary)] mt-1">
-                Decentralized oracle trace for this run. Verifies request routing and on-chain execution intent.
+                Receiver path is live on Arbitrum Sepolia. CRE simulation is verified against a live market event while workflow deployment access is pending.
               </p>
               <div className="flex flex-wrap gap-2 mt-3 text-[10px] font-mono">
                 <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)] uppercase">
-                  Status: {chainlinkProof?.status || verification?.chainlink?.status || "available"}
+                  Status: {chainlinkDisplayStatus}
                 </span>
                 {(chainlinkProof?.network || verification?.chainlink?.network) && (
                   <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)] uppercase">
                     Network: {chainlinkProof?.network || verification?.chainlink?.network}
                   </span>
                 )}
+                <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">
+                  Oracle: {LIVE_CHAINLINK_ORACLE.slice(0, 10)}...{LIVE_CHAINLINK_ORACLE.slice(-6)}
+                </span>
+                <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)] uppercase">
+                  Receiver: live
+                </span>
+                <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)] uppercase">
+                  Workflow: pending
+                </span>
+                <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">
+                  Sim Tx: {LIVE_CHAINLINK_SIM_TX.slice(0, 10)}...{LIVE_CHAINLINK_SIM_TX.slice(-6)}
+                </span>
                 {chainlinkProof?.requestId && (
                   <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">
                     Request: {String(chainlinkProof.requestId).slice(0, 14)}...
@@ -364,12 +387,19 @@ export function ResultsView({
                 </span>
               </div>
               <div className="mt-3 space-y-1.5 text-[11px] font-mono text-[var(--text-secondary)]">
-                <p>1. Request submitted to DON: {chainlinkProof?.txHash ? "yes" : "pending"}</p>
-                <p>2. Oracle market staged: {chainlinkProof?.oracleSettlement === "staged" || chainlinkProof?.oracleSettlement === "requested" ? "yes" : "pending"}</p>
-                <p>3. Resolution requested: {chainlinkProof?.oracleSettlement === "requested" ? "yes" : "pending"}</p>
+                <p>1. Oracle receiver deployed: yes</p>
+                <p>2. CRE simulation against live market event: yes</p>
+                <p>3. Workflow deployment access: pending approval</p>
+                <p>4. Mission-specific oracle request: {chainlinkProof?.txHash ? "yes" : "pending"}</p>
               </div>
             </div>
             <div className="flex gap-2">
+              <a href={`https://sepolia.arbiscan.io/tx/${LIVE_CHAINLINK_SIM_TX}`} target="_blank" rel="noopener noreferrer">
+                <Button variant="secondary" size="sm">
+                  Open Sim Tx
+                  <ExternalLink className="w-3.5 h-3.5 ml-1" />
+                </Button>
+              </a>
               {(chainlinkProof?.explorerUrl || (chainlinkProof?.txHash ? `https://sepolia.basescan.org/tx/${chainlinkProof.txHash}` : null)) && (
                 <a href={chainlinkProof?.explorerUrl || `https://sepolia.basescan.org/tx/${chainlinkProof?.txHash}`} target="_blank" rel="noopener noreferrer">
                   <Button variant="secondary" size="sm">

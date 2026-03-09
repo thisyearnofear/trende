@@ -301,10 +301,10 @@ export function ReportViewer({ summary, mode, queryId }: ReportViewerProps) {
                         )} />
                         <span className="flex-1">
                             {oracleResolutionAction
-                                ? `✅ Settled on Arbitrum Sepolia — Chainlink DON consensus recorded on-chain`
+                                ? `✅ Oracle settlement recorded on-chain on Arbitrum Sepolia`
                                 : oracleAction.action_type === 'resolve_oracle_market'
-                                    ? `🔵 Chainlink DON processing consensus... awaiting oracle callback`
-                                    : `🟡 Market staged on Arbitrum Sepolia — awaiting resolution trigger`
+                                    ? `🔵 Chainlink resolution requested... awaiting oracle callback`
+                                    : `🟡 Market staged on Arbitrum Sepolia — receiver path live, awaiting resolution trigger`
                             }
                         </span>
                         {txHash && (

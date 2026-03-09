@@ -120,7 +120,7 @@ export function ContentCard({ item, sourceIndex, onClick, animationDelayMs = 0 }
                   "flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border animate-pulse-border",
                   isSoft ? "bg-[var(--accent-emerald)]/10 text-[var(--accent-emerald)] border-[var(--accent-emerald)]/30" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                 )}
-                title="Verified by Chainlink Oracle"
+                title="Verified through Trende's proof stack"
               >
                 <ShieldCheck className="w-2.5 h-2.5" />
                 Verified
