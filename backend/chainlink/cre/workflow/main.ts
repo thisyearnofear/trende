@@ -6,7 +6,7 @@
  * Trigger: EVM log — listens for MarketCreated events on TrendeOracle
  * Pipeline: Fetch data → Query AI providers → Compute consensus → Settle on-chain
  *
- * Contract: TrendeOracle @ 0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b (Arbitrum Sepolia)
+ * Contract: TrendeOracle @ see config.json oracleAddress (Arbitrum Sepolia)
  * Delivery: evmClient.writeReport() -> Chainlink forwarder -> TrendeOracle.onReport(...)
  */
 
@@ -19,6 +19,7 @@ import {
   hexToBytes,
   bytesToHex,
   hexToBase64,
+  getNetwork,
 } from "@chainlink/cre-sdk";
 import type { Config, ConsensusResult } from "./types.js";
 import { fetchGDELT, fetchCoinGecko, askVenice, askOpenRouter, askTrendeAPI } from "./providers.js";
@@ -74,11 +75,9 @@ function settleOracle(
   consensus: ConsensusResult
 ): string {
   const evmCfg = runtime.config.evms[0];
-  const chainSelector =
-    EVMClient.SUPPORTED_CHAIN_SELECTORS[
-      evmCfg.chainSelectorName as keyof typeof EVMClient.SUPPORTED_CHAIN_SELECTORS
-    ];
-  const evmClient = new EVMClient(chainSelector);
+  const network = getNetwork({ chainFamily: "evm", chainSelectorName: evmCfg.chainSelectorName });
+  if (!network) throw new Error(`Network not found: ${evmCfg.chainSelectorName}`);
+  const evmClient = new EVMClient(network.chainSelector.selector);
 
   const reportData = "0x" + encodeSettlementData(marketId, consensus.score, consensus.summary);
 
@@ -96,7 +95,7 @@ function settleOracle(
     .writeReport(runtime, {
       receiver: hexToBytes(evmCfg.oracleAddress),
       report: signed,
-      gasConfig: { gasLimit: evmCfg.gasLimit },
+      gasConfig: { gasLimit: evmCfg.gasLimit } as any,
       $report: true,
     })
     .result();
@@ -120,10 +119,10 @@ function onMarketCreated(
   const coinData = fetchCoinGecko(runtime, topic.toLowerCase().replace(/\s+/g, "-"));
 
   let context = "";
-  if (gdelt) {
+  if (gdelt.title) {
     context += `[GDELT] "${gdelt.title}" — ${gdelt.source} (${gdelt.timestamp})\n`;
   }
-  if (coinData) {
+  if (coinData.name) {
     context += `[CoinGecko] ${coinData.name} ($${coinData.price_usd}) 24h: ${coinData.price_change_24h}%\n`;
   }
   if (!context) {
@@ -155,11 +154,9 @@ function onMarketCreated(
 
 function initWorkflow(config: Config) {
   const evmCfg = config.evms[0];
-  const chainSelector =
-    EVMClient.SUPPORTED_CHAIN_SELECTORS[
-      evmCfg.chainSelectorName as keyof typeof EVMClient.SUPPORTED_CHAIN_SELECTORS
-    ];
-  const evmClient = new EVMClient(chainSelector);
+  const network = getNetwork({ chainFamily: "evm", chainSelectorName: evmCfg.chainSelectorName });
+  if (!network) throw new Error(`Network not found: ${evmCfg.chainSelectorName}`);
+  const evmClient = new EVMClient(network.chainSelector.selector);
 
   return [
     handler(

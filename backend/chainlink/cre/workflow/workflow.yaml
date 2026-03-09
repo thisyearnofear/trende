@@ -5,3 +5,5 @@ staging-settings:
     workflow-path: "./main.ts"
     config-path: "./config.json"
     secrets-path: "./secrets.yaml"
+  rpc-urls:
+    ethereum-testnet-sepolia-arbitrum-1: "https://sepolia-rollup.arbitrum.io/rpc"

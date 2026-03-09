@@ -73,7 +73,7 @@ const SYSTEM_PROMPT =
 export function fetchGDELT(
   runtime: Runtime<Config>,
   topic: string
-): GDELTArticle | null {
+): GDELTArticle {
   const httpClient = new HTTPClient();
 
   const fetcher = (sendRequester: HTTPSendRequester, _config: Config) => {
@@ -85,22 +85,25 @@ export function fetchGDELT(
       .sendRequest({ url, method: "GET" as const, headers: {} })
       .result();
 
-    if (!ok(resp)) return null;
+    if (!ok(resp)) return { title: "", url: "", source: "", timestamp: "" };
 
-    const data = JSON.parse(decodeBody(resp.body));
-    if (!data?.articles?.length) return null;
-
-    const article = data.articles[0];
-    return {
-      title: article.title,
-      url: article.url,
-      source: article.domain,
-      timestamp: article.seendate,
-    } as GDELTArticle;
+    try {
+      const data = JSON.parse(decodeBody(resp.body));
+      if (!data?.articles?.length) return { title: "", url: "", source: "", timestamp: "" };
+      const article = data.articles[0];
+      return {
+        title: article.title ?? "",
+        url: article.url ?? "",
+        source: article.domain ?? "",
+        timestamp: article.seendate ?? "",
+      } as GDELTArticle;
+    } catch (_) {
+      return { title: "", url: "", source: "", timestamp: "" };
+    }
   };
 
   return httpClient
-    .sendRequest(runtime, fetcher, consensusIdenticalAggregation<GDELTArticle | null>())
+    .sendRequest(runtime, fetcher, consensusIdenticalAggregation<GDELTArticle>())
     (runtime.config)
     .result();
 }
@@ -112,7 +115,7 @@ export function fetchGDELT(
 export function fetchCoinGecko(
   runtime: Runtime<Config>,
   coinId: string
-): CoinGeckoData | null {
+): CoinGeckoData {
   const httpClient = new HTTPClient();
 
   const fetcher = (sendRequester: HTTPSendRequester, _config: Config) => {
@@ -124,23 +127,26 @@ export function fetchCoinGecko(
       .sendRequest({ url, method: "GET" as const, headers: {} })
       .result();
 
-    if (!ok(resp)) return null;
+    if (!ok(resp)) return { name: "", symbol: "", price_usd: 0, market_cap: 0, price_change_24h: 0 };
 
-    const data = JSON.parse(decodeBody(resp.body));
-    if (!data?.length) return null;
-
-    const coin = data[0];
-    return {
-      name: coin.name,
-      symbol: coin.symbol,
-      price_usd: coin.current_price,
-      market_cap: coin.market_cap,
-      price_change_24h: coin.price_change_percentage_24h,
-    } as CoinGeckoData;
+    try {
+      const data = JSON.parse(decodeBody(resp.body));
+      if (!data?.length) return { name: "", symbol: "", price_usd: 0, market_cap: 0, price_change_24h: 0 };
+      const coin = data[0];
+      return {
+        name: coin.name ?? "",
+        symbol: coin.symbol ?? "",
+        price_usd: coin.current_price ?? 0,
+        market_cap: coin.market_cap ?? 0,
+        price_change_24h: coin.price_change_percentage_24h ?? 0,
+      } as CoinGeckoData;
+    } catch (_) {
+      return { name: "", symbol: "", price_usd: 0, market_cap: 0, price_change_24h: 0 };
+    }
   };
 
   return httpClient
-    .sendRequest(runtime, fetcher, consensusIdenticalAggregation<CoinGeckoData | null>())
+    .sendRequest(runtime, fetcher, consensusIdenticalAggregation<CoinGeckoData>())
     (runtime.config)
     .result();
 }
@@ -184,12 +190,14 @@ export function askVenice(
       return { provider: "venice", analysis: "", statusCode: resp.statusCode };
     }
 
-    const data = JSON.parse(decodeBody(resp.body));
-    return {
-      provider: "venice",
-      analysis: data.choices?.[0]?.message?.content ?? "",
-      statusCode: resp.statusCode,
-    };
+    let analysis = "";
+    try {
+      const data = JSON.parse(decodeBody(resp.body));
+      analysis = data.choices?.[0]?.message?.content ?? "";
+    } catch (_) {
+      analysis = "";
+    }
+    return { provider: "venice", analysis, statusCode: resp.statusCode };
   };
 
   return httpClient
@@ -237,12 +245,14 @@ export function askOpenRouter(
       return { provider: "openrouter", analysis: "", statusCode: resp.statusCode };
     }
 
-    const data = JSON.parse(decodeBody(resp.body));
-    return {
-      provider: "openrouter",
-      analysis: data.choices?.[0]?.message?.content ?? "",
-      statusCode: resp.statusCode,
-    };
+    let analysis = "";
+    try {
+      const data = JSON.parse(decodeBody(resp.body));
+      analysis = data.choices?.[0]?.message?.content ?? "";
+    } catch (_) {
+      analysis = "";
+    }
+    return { provider: "openrouter", analysis, statusCode: resp.statusCode };
   };
 
   return httpClient
@@ -279,21 +289,20 @@ export function askTrendeAPI(
       return { provider: "trende-api", analysis: "", statusCode: resp.statusCode };
     }
 
-    const data = JSON.parse(decodeBody(resp.body));
-    // Map the Trende API response format to our standard format
-    const score = Math.round((data.agreement_score ?? 0.5) * 100);
-    const analysis = JSON.stringify({
-      score,
-      narrative: data.top_narrative ?? "",
-      pillars: data.pillars ?? [],
-      summary: data.consensus_report ?? data.top_narrative ?? "",
-    });
-
-    return {
-      provider: "trende-api",
-      analysis,
-      statusCode: resp.statusCode,
-    };
+    let analysis = "";
+    try {
+      const data = JSON.parse(decodeBody(resp.body));
+      const score = Math.round((data.agreement_score ?? 0.5) * 100);
+      analysis = JSON.stringify({
+        score,
+        narrative: data.top_narrative ?? "",
+        pillars: data.pillars ?? [],
+        summary: data.consensus_report ?? data.top_narrative ?? "",
+      });
+    } catch (_) {
+      analysis = "";
+    }
+    return { provider: "trende-api", analysis, statusCode: resp.statusCode };
   };
 
   return httpClient
