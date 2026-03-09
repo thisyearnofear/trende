@@ -6,7 +6,7 @@ Trende: Verifiable Agent Intelligence for Prediction Markets
 
 ## One-Line Summary
 
-Trende turns noisy web and market signals into verifiable, agent-consumable conviction, then uses Chainlink CRE and Chainlink Functions to settle that intelligence on-chain as a prediction market primitive.
+Trende turns noisy web and market signals into verifiable, agent-consumable conviction, then uses Chainlink CRE and Chainlink Functions to move that intelligence toward on-chain prediction market settlement.
 
 ## Problem
 
@@ -35,7 +35,7 @@ Chainlink is the core orchestration and settlement layer in this project.
 - CRE fetches independent external context and AI responses across nodes.
 - CRE computes consensus and signs the result.
 - Chainlink Functions supports verifiable API sourcing for key external datasets.
-- The final report resolves a live market through the Trende oracle contract's CRE receiver path.
+- The final report is delivered through the Trende oracle contract's CRE receiver path, with live CRE simulation already verified against an Arbitrum Sepolia market event.
 
 Without Chainlink, this is just a centralized research tool. With Chainlink, it becomes an on-chain intelligence primitive.
 
@@ -46,7 +46,7 @@ The demo focuses on one end-to-end path:
 1. Create a market around a real topic.
 2. Show the CRE workflow trigger on `MarketCreated`.
 3. Show decentralized fetch + consensus across data and model providers.
-4. Show the signed settlement report and on-chain resolution.
+4. Show the signed settlement report path and the oracle receiver that accepts it.
 5. Show how another agent or user consumes the resulting conviction output.
 
 ## Chainlink Components Used
@@ -74,7 +74,7 @@ The demo focuses on one end-to-end path:
 6. CRE queries Venice, OpenRouter, and Trende API.
 7. CRE computes agreement and a final score.
 8. CRE submits a signed settlement report to the oracle receiver.
-9. `TrendeOracle.onReport(...)` resolves the market on-chain.
+9. The receiver settlement path is live; full CRE workflow deployment is pending Chainlink org access approval.
 10. The result becomes reusable by other agents.
 
 ## Agent Economy Use Case
@@ -92,15 +92,16 @@ The key product claim is that other agents can pay for, verify, and act on Trend
 ## What Makes This Competitive
 
 - clear use of CRE, not just generic oracle branding
-- real prediction market settlement path
+- real oracle receiver settlement path with verified CRE simulation
 - strong multi-agent narrative
 - verifiable trust stack: CRE + Functions + TEE
 - tangible product, not only infrastructure
 
 ## Networks and Contracts
 
-- TrendeOracle: `0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b`
+- TrendeOracle: `0xEEDeD7daC9D6b17f5D3915542A549B1AefCeed56`
 - Network: Arbitrum Sepolia
+- Verified simulation trigger tx: `0xcad4b3455e9d53281d6393318272eb01b98311740abbcae393d738829b93a3e0`
 
 ## What Judges Should Notice
 

@@ -203,20 +203,22 @@ cre workflow simulate ./backend/chainlink/cre/workflow --non-interactive --trigg
 #### Key Implementation Notes
 
 - `logTrigger` accepts `FilterLogTriggerRequestJson` — `addresses` and `topics[].values` must be **base64-encoded** bytes (protobuf JSON convention), not hex strings. Use `hexToBase64()` from the SDK.
-- Contract: TrendeOracle @ `0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b` (Arbitrum Sepolia)
+- Contract: TrendeOracle @ `0xEEDeD7daC9D6b17f5D3915542A549B1AefCeed56` (Arbitrum Sepolia)
 - Event topic: `keccak256("MarketCreated(bytes32,string,uint256)")` = `0x978ff0c9...`
 - Chain selector name: `ethereum-testnet-sepolia-arbitrum-1`
 
 #### Contract Tests (All Passing ✅)
 
-All 15 Foundry tests pass covering: market creation, events, access control, Functions fulfillment flow, CRE receiver flow, duplicate/stale CRE reports, and `splitResponse` edge cases.
+All 20 Foundry tests pass covering: market creation, events, access control, Functions fulfillment flow, CRE receiver flow, workflow metadata validation, duplicate/stale CRE reports, and `splitResponse` edge cases.
 
 ### Active Deployments
 
 | Network | Chain ID | TrendeOracle | Consumer | Status |
 |---------|----------|--------------|----------|--------|
 | Base Sepolia | 84532 | `0xe968...eA8b` | `0x95fa...bE21` | ✅ Live |
-| Arbitrum Sepolia | 421614 | `0xe968...eA8b` | `0x95fa...bE21` | ✅ Live |
+| Arbitrum Sepolia | 421614 | `0xEEDe...ed56` | `0xA4C4...DB84` | ✅ Live receiver path |
+
+Note: CRE workflow deployment for Arbitrum Sepolia is still pending Chainlink org deployment access approval. The live workflow path has been verified in simulation against tx `0xcad4b3455e9d53281d6393318272eb01b98311740abbcae393d738829b93a3e0`.
 
 ---
 

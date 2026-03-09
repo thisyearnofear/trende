@@ -80,6 +80,8 @@ smoothed = 0.1 + (0.8 × average_jaccard)
 
 ## Contract
 
-- **TrendeOracle**: `0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b`
+- **TrendeOracle**: `0xEEDeD7daC9D6b17f5D3915542A549B1AefCeed56`
 - **Network**: Arbitrum Sepolia (chain 421614)
 - **Subscription**: 558 (funded)
+- **Verified simulation tx**: `0xcad4b3455e9d53281d6393318272eb01b98311740abbcae393d738829b93a3e0`
+- **Deploy status**: receiver path is live; CRE workflow deployment is pending Chainlink org access approval

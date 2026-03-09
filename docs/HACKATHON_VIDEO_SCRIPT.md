@@ -1,5 +1,48 @@
 # Trende Hackathon Video Script
 
+## 2-Minute Version
+
+### 0:00 - 0:20
+
+"Trende is a verifiable intelligence engine for agents. It turns noisy web and market signals into conviction that can be checked, reused, and settled on-chain."
+
+Show:
+- landing page
+- agent/oracle framing
+
+### 0:20 - 0:45
+
+"The problem is that most AI outputs are black-box. For markets or autonomous agents, that is not good enough. We used Chainlink Functions for verifiable external data access, and Chainlink CRE for decentralized consensus and report delivery."
+
+Show:
+- brief architecture view
+- contracts/workflow folders
+
+### 0:45 - 1:15
+
+"On Arbitrum Sepolia, `TrendeOracle` emits `MarketCreated`. Our CRE workflow listens for that event, fetches external context, queries multiple providers, computes agreement, and writes a signed report into the oracle receiver path at `onReport(...)`."
+
+Show:
+- `backend/chainlink/cre/workflow/main.ts`
+- `contracts/src/TrendeOracle.sol`
+
+### 1:15 - 1:40
+
+"Here is the live oracle on Arbitrum Sepolia, and here is a fresh `MarketCreated` transaction we used to verify the CRE workflow in simulation. The workflow completed successfully with a score of 40 and agreement of 1.00."
+
+Show:
+- oracle address `0xEEDeD7daC9D6b17f5D3915542A549B1AefCeed56`
+- tx `0xcad4b3455e9d53281d6393318272eb01b98311740abbcae393d738829b93a3e0`
+- simulation output
+
+### 1:40 - 2:00
+
+"This is why Trende matters for the agent economy: trader agents, risk agents, and creator agents can all consume the same verifiable output instead of trusting a black-box answer. We already have the live receiver path and verified CRE simulation, and we will lock workflow metadata onchain as soon as Chainlink deployment access is enabled for the org."
+
+End on:
+- proof UI
+- oracle framing
+
 ## Goal
 
 Record a 3-5 minute demo that makes one thing obvious:

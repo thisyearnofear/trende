@@ -193,7 +193,7 @@ forge script script/DeployTrende.s.sol:DeployTrende \
 
 ```bash
 # Install CRE CLI (one-time)
-curl -sSL https://get.cre.chain.link | bash
+curl -sSL https://cre.chain.link/install.sh | bash
 export PATH="$HOME/.cre:$HOME/.cre/bin:$PATH"
 
 # Authenticate
@@ -237,9 +237,10 @@ Trende now follows this pattern in `contracts/src/TrendeOracle.sol`.
 - ✅ Workflow compiles successfully
 - ✅ EVM log trigger registers without error (WASM subscribe fixed)
 - ✅ CRE receiver settlement path implemented in `TrendeOracle.onReport(...)`
-- ✅ All 15 contract tests passing
+- ✅ Verified CRE simulation against live Arbitrum Sepolia tx `0xcad4b3455e9d53281d6393318272eb01b98311740abbcae393d738829b93a3e0`
+- ✅ All 20 contract tests passing
 - ⚠️ Full simulation requires `VENICE_API_KEY` + `OPENROUTER_API_KEY` in environment
-- ⚠️ Production deployment still requires the correct CRE forwarder address from Chainlink's Forwarder Directory
+- ⚠️ Workflow deployment is still blocked pending Chainlink org deployment access approval
 
 ---
 

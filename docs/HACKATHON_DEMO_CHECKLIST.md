@@ -3,8 +3,9 @@
 ## Must-Have Proof
 
 - one live market topic prepared
-- one contract address ready on Arbitrum Sepolia
+- one contract address ready on Arbitrum Sepolia: `0xEEDeD7daC9D6b17f5D3915542A549B1AefCeed56`
 - one example tx hash for market creation
+- one verified CRE simulation tx: `0xcad4b3455e9d53281d6393318272eb01b98311740abbcae393d738829b93a3e0`
 - one example tx hash or proof for market resolution
 - CRE workflow directory visible and runnable
 - attestation health green
@@ -34,7 +35,7 @@
 
 ## Competitive Gaps To Close
 
-- strongest gap: prove a real CRE-driven settlement path, not only backend intelligence
+- strongest gap: convert verified CRE simulation into live CRE deployment once Chainlink access is approved
 - strongest narrative requirement: show why another agent would rely on this output
 - strongest packaging requirement: keep the demo focused on one Chainlink-native loop
 

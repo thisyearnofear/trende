@@ -21,7 +21,7 @@
 ### Chainlink Oracle
 - ✅ Active chain: arbitrum-sepolia
 - ✅ Consumer address: 0x95fa0c32181d073FA9b07F0eC3961C845d00bE21
-- ✅ Oracle address: 0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b
+- ✅ Oracle address: 0xEEDeD7daC9D6b17f5D3915542A549B1AefCeed56
 - ✅ RPC URL: https://sepolia-rollup.arbitrum.io/rpc
 - ✅ Wallet configured (private key set)
 - ✅ Subscription ID: 0
@@ -92,7 +92,7 @@
 ✅ EIGEN_ATTEST_TOKEN=<configured>
 ✅ CHAINLINK_ACTIVE_CHAIN=arbitrum-sepolia
 ✅ CHAINLINK_CONSUMER_ADDRESS=0x95fa0c32181d073FA9b07F0eC3961C845d00bE21
-✅ CHAINLINK_ORACLE_ADDRESS=0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b
+✅ CHAINLINK_ORACLE_ADDRESS=0xEEDeD7daC9D6b17f5D3915542A549B1AefCeed56
 ✅ CHAINLINK_RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
 ✅ CHAINLINK_WALLET_PRIVATE_KEY=<configured>
 ```
