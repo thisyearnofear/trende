@@ -221,12 +221,25 @@ cre workflow simulate ./backend/chainlink/cre/workflow --non-interactive --trigg
 | `workflow/secrets.yaml` | Secret name mappings (resolved from env in simulation) |
 | `workflow/config.json` | Chain selector, oracle address, gas config |
 
+### Official CRE Receiver Model
+
+Chainlink's CRE docs require onchain write targets to use the receiver/forwarder pattern:
+
+1. The workflow generates a signed report.
+2. `evmClient.writeReport(...)` submits that report to the Chainlink-managed `KeystoneForwarder`.
+3. The forwarder verifies signatures and calls `onReport(bytes metadata, bytes report)` on the receiver contract.
+4. The receiver contract must support `IReceiver` via ERC165.
+
+Trende now follows this pattern in `contracts/src/TrendeOracle.sol`.
+
 ### Status
 
 - ✅ Workflow compiles successfully
 - ✅ EVM log trigger registers without error (WASM subscribe fixed)
-- ✅ All 11 contract tests passing
+- ✅ CRE receiver settlement path implemented in `TrendeOracle.onReport(...)`
+- ✅ All 15 contract tests passing
 - ⚠️ Full simulation requires `VENICE_API_KEY` + `OPENROUTER_API_KEY` in environment
+- ⚠️ Production deployment still requires the correct CRE forwarder address from Chainlink's Forwarder Directory
 
 ---
 
