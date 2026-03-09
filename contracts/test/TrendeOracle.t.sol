@@ -43,6 +43,9 @@ contract TrendeOracleTest is Test {
     MockFunctionsRouter router;
     address owner = address(this);
     address creForwarder = address(0xBEEF);
+    address workflowAuthor = address(0xCAFE);
+    bytes32 workflowId = bytes32("trende-workflow-id");
+    bytes10 workflowName = 0x32323262663431643362; // "222bf41d3b"
 
     function setUp() public {
         router = new MockFunctionsRouter();
@@ -204,10 +207,10 @@ contract TrendeOracleTest is Test {
         bytes memory report = abi.encode(marketId, uint256(77), "First result");
 
         vm.prank(creForwarder);
-        oracle.onReport(hex"", report);
+        oracle.onReport(_metadata(), report);
 
         vm.prank(creForwarder);
-        oracle.onReport(hex"", abi.encode(marketId, uint256(88), "Ignored result"));
+        oracle.onReport(_metadata(), abi.encode(marketId, uint256(88), "Ignored result"));
 
         (, , , bool resolved, uint256 score, string memory summary) = oracle.markets(marketId);
         assertTrue(resolved);
@@ -217,5 +220,79 @@ contract TrendeOracleTest is Test {
 
     function test_supportsReceiverInterface() public view {
         assertTrue(oracle.supportsInterface(type(IReceiver).interfaceId));
+    }
+
+    function test_onReport_validatesWorkflowId() public {
+        bytes32 marketId = oracle.createMarket("Workflow ID validation", 1 hours);
+        oracle.setExpectedWorkflowId(workflowId);
+
+        vm.prank(creForwarder);
+        oracle.onReport(_metadata(), abi.encode(marketId, uint256(66), "Validated"));
+
+        (, , , bool resolved, uint256 score, string memory summary) = oracle.markets(marketId);
+        assertTrue(resolved);
+        assertEq(score, 66);
+        assertEq(summary, "Validated");
+    }
+
+    function test_onReport_revertsOnWorkflowIdMismatch() public {
+        bytes32 marketId = oracle.createMarket("Bad workflow ID", 1 hours);
+        oracle.setExpectedWorkflowId(workflowId);
+
+        vm.prank(creForwarder);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TrendeOracle.InvalidWorkflowId.selector,
+                bytes32("wrong-workflow-id"),
+                workflowId
+            )
+        );
+        oracle.onReport(_metadata(bytes32("wrong-workflow-id"), workflowName, workflowAuthor), abi.encode(marketId, uint256(33), "Nope"));
+    }
+
+    function test_onReport_validatesWorkflowAuthorAndName() public {
+        bytes32 marketId = oracle.createMarket("Workflow author+name", 1 hours);
+        oracle.setExpectedWorkflowAuthor(workflowAuthor);
+        oracle.setExpectedWorkflowName("trende-cre-workflow-staging");
+
+        vm.prank(creForwarder);
+        oracle.onReport(_metadata(workflowId, workflowName, workflowAuthor), abi.encode(marketId, uint256(72), "Author validated"));
+
+        (, , , bool resolved, uint256 score, string memory summary) = oracle.markets(marketId);
+        assertTrue(resolved);
+        assertEq(score, 72);
+        assertEq(summary, "Author validated");
+    }
+
+    function test_onReport_revertsOnWorkflowAuthorMismatch() public {
+        bytes32 marketId = oracle.createMarket("Bad author", 1 hours);
+        oracle.setExpectedWorkflowAuthor(workflowAuthor);
+
+        vm.prank(creForwarder);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TrendeOracle.InvalidWorkflowAuthor.selector,
+                address(0xDEAD),
+                workflowAuthor
+            )
+        );
+        oracle.onReport(_metadata(workflowId, workflowName, address(0xDEAD)), abi.encode(marketId, uint256(44), "Nope"));
+    }
+
+    function test_setExpectedWorkflowName_requiresAuthorValidationAtRuntime() public {
+        bytes32 marketId = oracle.createMarket("Name needs author", 1 hours);
+        oracle.setExpectedWorkflowName("trende-cre-workflow-staging");
+
+        vm.prank(creForwarder);
+        vm.expectRevert(TrendeOracle.WorkflowNameRequiresAuthorValidation.selector);
+        oracle.onReport(_metadata(workflowId, workflowName, workflowAuthor), abi.encode(marketId, uint256(19), "Nope"));
+    }
+
+    function _metadata() internal view returns (bytes memory) {
+        return _metadata(workflowId, workflowName, workflowAuthor);
+    }
+
+    function _metadata(bytes32 id, bytes10 name, address author) internal pure returns (bytes memory) {
+        return abi.encodePacked(id, name, author);
     }
 }

@@ -56,6 +56,27 @@ contract DeployTrende is Script {
             console2.log(creForwarder);
         }
 
+        address expectedWorkflowAuthor = vm.envOr("CHAINLINK_CRE_EXPECTED_WORKFLOW_AUTHOR", address(0));
+        if (expectedWorkflowAuthor != address(0)) {
+            oracle.setExpectedWorkflowAuthor(expectedWorkflowAuthor);
+            console2.log("CRE expected workflow author configured:");
+            console2.log(expectedWorkflowAuthor);
+        }
+
+        bytes32 expectedWorkflowId = vm.envOr("CHAINLINK_CRE_EXPECTED_WORKFLOW_ID", bytes32(0));
+        if (expectedWorkflowId != bytes32(0)) {
+            oracle.setExpectedWorkflowId(expectedWorkflowId);
+            console2.log("CRE expected workflow ID configured:");
+            console2.logBytes32(expectedWorkflowId);
+        }
+
+        string memory expectedWorkflowName = vm.envOr("CHAINLINK_CRE_EXPECTED_WORKFLOW_NAME", string(""));
+        if (bytes(expectedWorkflowName).length != 0) {
+            oracle.setExpectedWorkflowName(expectedWorkflowName);
+            console2.log("CRE expected workflow name configured:");
+            console2.log(expectedWorkflowName);
+        }
+
         vm.stopBroadcast();
 
         // Output for .env update

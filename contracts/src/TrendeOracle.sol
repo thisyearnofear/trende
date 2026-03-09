@@ -13,6 +13,7 @@ import {IERC165} from "@chainlink/contracts/src/v0.8/vendor/openzeppelin-solidit
  */
 contract TrendeOracle is FunctionsClient, ConfirmedOwner, IReceiver {
     using FunctionsRequest for FunctionsRequest.Request;
+    bytes private constant HEX_CHARS = "0123456789abcdef";
 
     struct Market {
         bytes32 marketId;
@@ -34,15 +35,25 @@ contract TrendeOracle is FunctionsClient, ConfirmedOwner, IReceiver {
     uint32 public callbackGasLimit = 300000;
     bytes32 public donId;
     address public creForwarder;
+    address public expectedWorkflowAuthor;
+    bytes10 public expectedWorkflowName;
+    bytes32 public expectedWorkflowId;
 
     event MarketCreated(bytes32 indexed marketId, string topic, uint256 endTime);
     event MarketResolved(bytes32 indexed marketId, uint256 score, string summary);
     event Response(bytes32 indexed requestId, bytes response, bytes err);
     event CREForwarderUpdated(address indexed forwarder);
+    event ExpectedWorkflowAuthorUpdated(address indexed previousAuthor, address indexed newAuthor);
+    event ExpectedWorkflowNameUpdated(bytes10 indexed previousName, bytes10 indexed newName);
+    event ExpectedWorkflowIdUpdated(bytes32 indexed previousId, bytes32 indexed newId);
     event CREReportHandled(bytes32 indexed marketId, uint256 score, bool applied);
 
     error UnexpectedRequestID(bytes32 requestId);
     error OnlyCREForwarder(address caller);
+    error InvalidWorkflowAuthor(address received, address expected);
+    error InvalidWorkflowName(bytes10 received, bytes10 expected);
+    error InvalidWorkflowId(bytes32 received, bytes32 expected);
+    error WorkflowNameRequiresAuthorValidation();
 
     constructor(
         address router, 
@@ -56,6 +67,37 @@ contract TrendeOracle is FunctionsClient, ConfirmedOwner, IReceiver {
     function setCREForwarder(address forwarder) external onlyOwner {
         creForwarder = forwarder;
         emit CREForwarderUpdated(forwarder);
+    }
+
+    function setExpectedWorkflowAuthor(address author) external onlyOwner {
+        address previousAuthor = expectedWorkflowAuthor;
+        expectedWorkflowAuthor = author;
+        emit ExpectedWorkflowAuthorUpdated(previousAuthor, author);
+    }
+
+    function setExpectedWorkflowName(string calldata name) external onlyOwner {
+        bytes10 previousName = expectedWorkflowName;
+        if (bytes(name).length == 0) {
+            expectedWorkflowName = bytes10(0);
+            emit ExpectedWorkflowNameUpdated(previousName, bytes10(0));
+            return;
+        }
+
+        bytes32 hash = sha256(bytes(name));
+        bytes memory hexString = _bytesToHexString(abi.encodePacked(hash));
+        bytes memory first10 = new bytes(10);
+        for (uint256 i = 0; i < 10; i++) {
+            first10[i] = hexString[i];
+        }
+
+        expectedWorkflowName = bytes10(first10);
+        emit ExpectedWorkflowNameUpdated(previousName, expectedWorkflowName);
+    }
+
+    function setExpectedWorkflowId(bytes32 workflowId) external onlyOwner {
+        bytes32 previousId = expectedWorkflowId;
+        expectedWorkflowId = workflowId;
+        emit ExpectedWorkflowIdUpdated(previousId, workflowId);
     }
 
     function createMarket(string memory topic, uint256 duration) external onlyOwner returns (bytes32) {
@@ -134,7 +176,26 @@ contract TrendeOracle is FunctionsClient, ConfirmedOwner, IReceiver {
      */
     function onReport(bytes calldata metadata, bytes calldata report) external override {
         if (msg.sender != creForwarder) revert OnlyCREForwarder(msg.sender);
-        metadata;
+        if (
+            expectedWorkflowId != bytes32(0)
+                || expectedWorkflowAuthor != address(0)
+                || expectedWorkflowName != bytes10(0)
+        ) {
+            (bytes32 workflowId, bytes10 workflowName, address workflowOwner) = _decodeMetadata(metadata);
+
+            if (expectedWorkflowId != bytes32(0) && workflowId != expectedWorkflowId) {
+                revert InvalidWorkflowId(workflowId, expectedWorkflowId);
+            }
+            if (expectedWorkflowAuthor != address(0) && workflowOwner != expectedWorkflowAuthor) {
+                revert InvalidWorkflowAuthor(workflowOwner, expectedWorkflowAuthor);
+            }
+            if (expectedWorkflowName != bytes10(0)) {
+                if (expectedWorkflowAuthor == address(0)) revert WorkflowNameRequiresAuthorValidation();
+                if (workflowName != expectedWorkflowName) {
+                    revert InvalidWorkflowName(workflowName, expectedWorkflowName);
+                }
+            }
+        }
 
         (bytes32 marketId, uint256 score, string memory summary) = abi.decode(report, (bytes32, uint256, string));
 
@@ -204,5 +265,26 @@ contract TrendeOracle is FunctionsClient, ConfirmedOwner, IReceiver {
         market.resolved = true;
 
         emit MarketResolved(marketId, score, summary);
+    }
+
+    function _bytesToHexString(bytes memory data) internal pure returns (bytes memory) {
+        bytes memory hexString = new bytes(data.length * 2);
+        for (uint256 i = 0; i < data.length; i++) {
+            hexString[i * 2] = HEX_CHARS[uint8(data[i] >> 4)];
+            hexString[i * 2 + 1] = HEX_CHARS[uint8(data[i] & 0x0f)];
+        }
+        return hexString;
+    }
+
+    function _decodeMetadata(bytes memory metadata)
+        internal
+        pure
+        returns (bytes32 workflowId, bytes10 workflowName, address workflowOwner)
+    {
+        assembly {
+            workflowId := mload(add(metadata, 32))
+            workflowName := mload(add(metadata, 64))
+            workflowOwner := shr(mul(12, 8), mload(add(metadata, 74)))
+        }
     }
 }
