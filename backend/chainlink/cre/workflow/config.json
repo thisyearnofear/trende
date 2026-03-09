@@ -2,7 +2,7 @@
   "evms": [
     {
       "chainSelectorName": "ethereum-testnet-sepolia-arbitrum-1",
-      "oracleAddress": "0xBd5c0e7f8d5F4295a0633a5f3b411ee458Bc985C",
+      "oracleAddress": "0xEEDeD7daC9D6b17f5D3915542A549B1AefCeed56",
       "gasLimit": "500000"
     }
   ],

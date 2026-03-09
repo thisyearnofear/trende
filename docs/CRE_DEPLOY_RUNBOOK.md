@@ -79,7 +79,7 @@ EOF
 
 ## Step 3 — Simulate Workflow
 
-> ✅ **Already verified passing** — score=40, agreement=1.00 on live Arbitrum Sepolia `MarketCreated` tx `0xcbcf881bd9cc0615a201e7db5ddc12e07423ea57617e362b063e066b0a43b364`
+> ✅ **Already verified passing** — score=40, agreement=1.00 on live Arbitrum Sepolia `MarketCreated` tx `0xcad4b3455e9d53281d6393318272eb01b98311740abbcae393d738829b93a3e0`
 
 ```bash
 cd /Users/udingethe/Dev/trende/backend/chainlink/cre/workflow
@@ -96,7 +96,7 @@ cre workflow simulate . \
   -R . \
   --non-interactive \
   --trigger-index 0 \
-  --evm-tx-hash 0xcbcf881bd9cc0615a201e7db5ddc12e07423ea57617e362b063e066b0a43b364 \
+  --evm-tx-hash 0xcad4b3455e9d53281d6393318272eb01b98311740abbcae393d738829b93a3e0 \
   --evm-event-index 0
 ```
 
@@ -221,8 +221,8 @@ cast call $ORACLE_ADDRESS \
 ## Hackathon Artifacts to Save
 
 ```
-Oracle Address:      0xBd5c0e7f8d5F4295a0633a5f3b411ee458Bc985C
-Consumer Address:    0x983b3a94C8266310192135d60D77B871549B9CfF
+Oracle Address:      0xEEDeD7daC9D6b17f5D3915542A549B1AefCeed56
+Consumer Address:    0xA4C4FC79909165fFeAFEdEb47A93Db058383DB84
 Workflow ID:         <WORKFLOW_ID — set after cre deploy>
 Workflow Author:     <WORKFLOW_AUTHOR — set after cre deploy>
 Workflow Name:       trende-cre-workflow-staging
@@ -230,7 +230,7 @@ CRE Forwarder:       0x76c9cf548b4179F8901cda1f8623568b58215E62
 Deploy Tx Hash:      <DEPLOY_TX — set after cre deploy>
 Network:             Arbitrum Sepolia (chainId 421614)
 Chain Selector:      ethereum-testnet-sepolia-arbitrum-1
-Simulation Tx:       0xcbcf881bd9cc0615a201e7db5ddc12e07423ea57617e362b063e066b0a43b364 ✅
+Simulation Tx:       0xcad4b3455e9d53281d6393318272eb01b98311740abbcae393d738829b93a3e0 ✅
 MarketCreated Tx:    <tx hash from Step 7>
 MarketResolved Tx:   <tx hash from onReport callback>
 ```
