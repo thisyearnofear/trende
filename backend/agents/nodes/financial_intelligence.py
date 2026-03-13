@@ -87,10 +87,12 @@ async def financial_intelligence_node(state: GraphState) -> GraphState:
     include_options = any(word in topic_lower for word in ["option", "call", "put", "strike", "derivative"])
     include_liquidation = any(word in topic_lower for word in ["liquidation", "leverage", "long", "short", "perp", "future", "margin"])
     include_polymarket = any(word in topic_lower for word in ["prediction", "bet", "odds", "outcome", "event", "election"])
+    include_lp = any(word in topic_lower for word in ["yield", "lp", "liquidity", "pool", "uniswap"])
     
     # Fetch comprehensive insights for all detected assets
     asset_insights: List[Dict[str, Any]] = []
     polymarket_data: Optional[Dict[str, Any]] = None
+    lp_data: List[Dict[str, Any]] = []
     
     # Fetch asset data in parallel
     asset_tasks = [
@@ -107,20 +109,40 @@ async def financial_intelligence_node(state: GraphState) -> GraphState:
     polymarket_task = None
     if include_polymarket:
         polymarket_task = synthdata.get_polymarket_comparison(topic)
+
+    # Optionally fetch LP optimization (limited to common pools for detected assets)
+    lp_tasks = []
+    if include_lp:
+        for asset, _ in detected_assets:
+            if asset in ["BTC", "ETH", "SOL"]:
+                lp_tasks.append(synthdata.get_lp_optimization(f"{asset}-USDC"))
     
     # Execute all tasks in one gather to avoid serial waits.
     try:
         gather_tasks = list(asset_tasks)
         if polymarket_task:
             gather_tasks.append(polymarket_task)
+        if lp_tasks:
+            gather_tasks.extend(lp_tasks)
+            
         gathered = await asyncio.gather(*gather_tasks, return_exceptions=True)
+        
         results = gathered[: len(asset_tasks)]
+        
+        idx = len(asset_tasks)
         if polymarket_task:
-            maybe_polymarket = gathered[-1]
+            maybe_polymarket = gathered[idx]
             if isinstance(maybe_polymarket, Exception):
                 state["logs"].append(f"⚠️  SYNTHDATA: Failed to fetch Polymarket comparison: {maybe_polymarket}")
             else:
                 polymarket_data = maybe_polymarket
+            idx += 1
+            
+        if lp_tasks:
+            lp_results = gathered[idx:]
+            for res in lp_results:
+                if res and not isinstance(res, Exception):
+                    lp_data.append(res)
     except Exception as e:
         state["logs"].append(f"⚠️  SYNTHDATA: Error fetching financial data: {e}")
         state["financial_intelligence"] = None
@@ -163,7 +185,9 @@ async def financial_intelligence_node(state: GraphState) -> GraphState:
     financial_summary = await _synthesize_financial_intelligence(
         topic=topic,
         asset_insights=asset_insights,
-        polymarket_data=polymarket_data
+        polymarket_data=polymarket_data,
+        lp_data=lp_data,
+        social_findings=findings
     )
     
     # Calculate aggregate risk metrics
@@ -175,6 +199,7 @@ async def financial_intelligence_node(state: GraphState) -> GraphState:
         "summary": financial_summary,
         "aggregate_metrics": aggregate_metrics,
         "polymarket_comparison": polymarket_data,
+        "lp_optimization": lp_data,
         "data_source": "SynthData (Bittensor Subnet 50)",
         "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
@@ -199,10 +224,13 @@ def _extract_leverage(topic: str) -> float:
 async def _synthesize_financial_intelligence(
     topic: str,
     asset_insights: List[Dict[str, Any]],
-    polymarket_data: Optional[Dict[str, Any]]
+    polymarket_data: Optional[Dict[str, Any]],
+    lp_data: List[Dict[str, Any]] = None,
+    social_findings: List[Any] = None
 ) -> str:
     """
     Use AI to synthesize financial data into actionable intelligence.
+    Includes divergence detection between social sentiment and ML forecasts.
     """
     # Build context for AI
     context_parts = []
@@ -235,32 +263,48 @@ Range (10th-90th percentile): ${forecast_7d.get('p10', 0):,.2f} - ${forecast_7d.
     
     if polymarket_data:
         context_parts.append(f"""
-Prediction Market Data (Polymarket):
+Prediction Market Data (Polymarket vs SynthData):
 {polymarket_data}
+""")
+
+    if lp_data:
+        context_parts.append(f"""
+DeFi LP Optimization (Uniswap V3):
+{lp_data}
+""")
+
+    if social_findings:
+        social_context = "\n".join([
+            f"- {f.title}: {f.content[:200]}..." 
+            for f in social_findings[:5]
+        ])
+        context_parts.append(f"""
+Social Sentiment & News Findings:
+{social_context}
 """)
     
     joined_context = "\n---\n".join(context_parts)
 
     prompt = f"""
-You are a financial intelligence analyst. Synthesize the following quantitative market data
-into a concise, actionable summary for the research topic: "{topic}"
+You are a high-stakes financial intelligence analyst. Synthesize the following quantitative
+and qualitative data into a "Verifiable Alpha" summary for: "{topic}"
 
-Financial Data:
+Financial & Social Data:
 {joined_context}
 
-Provide a brief synthesis (3-5 sentences) that:
-1. Highlights key price forecast signals
-2. Notes any significant risk factors
-3. Compares quantitative forecasts with qualitative research sentiment if relevant
-4. Suggests how this financial intelligence should inform the overall trend assessment
+Provide a brief, high-impact synthesis (3-5 sentences) that:
+1. **Divergence Alert**: Specifically identify any "Risk Divergence" where social sentiment (bullish/bearish) conflicts with SynthData's probabilistic ML forecasts.
+2. **Arbitrage Opportunity**: If Polymarket data is present, highlight any pricing discrepancies where SynthData forecasts suggest the market is mispriced.
+3. **Actionable DeFi Alpha**: If LP data is present, provide the optimal range for capital efficiency.
+4. **Summary**: State the "Ensemble Verdict" — the combined signal from all sources.
 
-Keep it factual, quantitative, and directly relevant to the research topic.
+Keep it factual, professional, and highlight the technical edge provided by the Bittensor Subnet 50 ensemble.
 """
     
     try:
         summary = await ai_service.get_response(
             prompt,
-            system_prompt="You are a quantitative financial analyst specializing in probabilistic forecasting.",
+            system_prompt="You are a quantitative financial analyst specializing in probabilistic forecasting and arbitrage detection.",
             provider="auto"
         )
         return summary.strip()
@@ -346,11 +390,22 @@ async def enhance_consensus_with_financial_data(
         "assets": financial.get("assets", []),
         "aggregate_metrics": financial.get("aggregate_metrics", {}),
         "summary": financial.get("summary", ""),
+        "lp_optimization": financial.get("lp_optimization", []),
     }
     
     # If consensus report exists, append financial appendix
     report = consensus_bundle.get("consensus_report", "")
     if report and financial.get("summary"):
+        lp_summary = ""
+        if financial.get("lp_optimization"):
+            lp_summary = "\n### LP Optimization (Uniswap V3)\n"
+            for lp in financial.get("lp_optimization", []):
+                pool = lp.get("pool", "Unknown")
+                lower = lp.get("lower_bound")
+                upper = lp.get("upper_bound")
+                prob = lp.get("probability_in_range")
+                lp_summary += f"- **{pool}**: Range ${lower:,.2f} - ${upper:,.2f} (Prob: {prob:.1%})\n"
+
         financial_section = f"""
 
 ---
@@ -359,7 +414,7 @@ async def enhance_consensus_with_financial_data(
 *Powered by SynthData (Bittensor Subnet 50)*
 
 {financial["summary"]}
-
+{lp_summary}
 ### Key Metrics
 - **Overall Risk Level**: {financial.get("aggregate_metrics", {}).get("overall_risk", "unknown").upper()}
 - **Forecast Direction**: {financial.get("aggregate_metrics", {}).get("forecast_direction", "neutral").upper()}

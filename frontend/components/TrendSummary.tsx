@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { TrendSummary as TrendSummaryType } from '@/lib/types';
-import { TrendingUp, TrendingDown, Minus, Clock, ShieldCheck, Flame, Sparkles, Radar, ExternalLink } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Clock, ShieldCheck, Flame, Sparkles, Radar, ExternalLink, AlertCircle, Zap } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Card, Badge, Progress, Alert } from './DesignSystem';
@@ -38,6 +38,9 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
   const agreement = Math.round((consensus?.agreement_score || 0) * 100);
   const financial = summary?.financialIntelligence;
   const assetRows = financial?.assets?.slice(0, 3) || [];
+  const lpRows = financial?.lp_optimization || [];
+  const hasDivergence = financial?.summary?.toLowerCase().includes('divergence');
+  const hasArbitrage = financial?.summary?.toLowerCase().includes('arbitrage');
   const relatedMarkets = useMemo(() => summary?.relatedMarkets || [], [summary?.relatedMarkets]);
   const [highFitOnly, setHighFitOnly] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -364,21 +367,24 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
               <div className="flex items-center gap-2">
                 <Radar className="w-4 h-4 text-[var(--accent-cyan)]" />
                 <h4 className="text-xs font-black uppercase tracking-wider text-[var(--text-secondary)]">Financial Intelligence</h4>
+                <Badge variant="emerald" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-black text-[9px] px-1.5 py-0.5 uppercase tracking-tighter">
+                  Verifiable Alpha
+                </Badge>
               </div>
               <div className="flex flex-wrap gap-2">
+                {hasDivergence && (
+                  <Badge variant="rose" className={isSoft ? "soft-ui-out border-0" : "bg-rose-500/20 border-rose-500/40 text-rose-300 animate-pulse"}>
+                    <AlertCircle className="w-3 h-3 mr-1" /> Risk Divergence
+                  </Badge>
+                )}
+                {hasArbitrage && (
+                  <Badge variant="cyan" className={isSoft ? "soft-ui-out border-0" : "bg-cyan-500/20 border-cyan-500/40 text-cyan-200"}>
+                    <Zap className="w-3 h-3 mr-1" /> Arbitrage Opportunity
+                  </Badge>
+                )}
                 {financial.aggregate_metrics?.overall_risk && (
                   <Badge variant="amber" className={isSoft ? "soft-ui-out border-0" : "bg-amber-500/10 border-amber-500/30 text-amber-300"}>
                     Risk: {financial.aggregate_metrics.overall_risk}
-                  </Badge>
-                )}
-                {financial.aggregate_metrics?.forecast_direction && (
-                  <Badge variant="cyan" className={isSoft ? "soft-ui-out border-0" : "bg-cyan-500/10 border-cyan-500/30 text-cyan-300"}>
-                    Bias: {financial.aggregate_metrics.forecast_direction}
-                  </Badge>
-                )}
-                {typeof financial.aggregate_metrics?.asset_count === "number" && (
-                  <Badge variant="emerald" className={isSoft ? "soft-ui-out border-0" : "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"}>
-                    Assets: {financial.aggregate_metrics.asset_count}
                   </Badge>
                 )}
               </div>
@@ -388,27 +394,41 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
               <p className="text-xs leading-relaxed text-[var(--text-secondary)]">{financial.summary}</p>
             )}
 
-            {assetRows.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {assetRows.map((asset) => {
-                  const p50 = asset.forecast_7d?.p50 ?? asset.forecast_7d?.median;
-                  return (
-                    <div key={asset.symbol} className={cn("rounded-lg p-2.5 sm:p-3", isSoft ? "soft-ui-out" : "bg-slate-900/60 border border-white/5")}>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">{asset.symbol}</p>
-                      {typeof asset.current_price === "number" && (
-                        <p className="text-xs text-[var(--text-primary)]">Now: ${asset.current_price.toLocaleString()}</p>
-                      )}
-                      {typeof p50 === "number" && (
-                        <p className="text-xs text-[var(--accent-cyan)]">7d p50: ${p50.toLocaleString()}</p>
-                      )}
-                      {asset.risk_level && (
-                        <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mt-1">risk {asset.risk_level}</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {assetRows.map((asset) => {
+                const p50 = asset.forecast_7d?.p50 ?? asset.forecast_7d?.median;
+                return (
+                  <div key={asset.symbol} className={cn("rounded-lg p-3", isSoft ? "soft-ui-out" : "bg-slate-900/40 border border-white/5")}>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-1">{asset.symbol}</p>
+                    {typeof asset.current_price === "number" && (
+                      <p className="text-xs text-[var(--text-primary)] font-mono">Now: ${asset.current_price.toLocaleString()}</p>
+                    )}
+                    {typeof p50 === "number" && (
+                      <p className="text-xs text-[var(--accent-cyan)] font-mono">7d p50: ${p50.toLocaleString()}</p>
+                    )}
+                    {asset.risk_level && (
+                      <p className="text-[9px] font-black uppercase tracking-wider text-[var(--text-muted)] mt-2">risk level {asset.risk_level}</p>
+                    )}
+                  </div>
+                );
+              })}
+
+              {lpRows.slice(0, 3).map((lp, i) => (
+                <div key={i} className={cn("rounded-lg p-3", isSoft ? "soft-ui-out" : "bg-emerald-900/20 border border-emerald-500/10")}>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">LP Opt: {lp.pool}</p>
+                    <Badge variant="emerald" className="text-[8px] h-3 px-1">Efficient</Badge>
+                  </div>
+                  <p className="text-xs text-emerald-100 font-mono">${lp.lower_bound?.toLocaleString()} - ${lp.upper_bound?.toLocaleString()}</p>
+                  <p className="text-[9px] uppercase tracking-wider text-emerald-500/60 mt-2">confidence {Math.round((lp.probability_in_range || 0) * 100)}%</p>
+                </div>
+              ))}
+            </div>
+            
+            <p className="text-[9px] font-mono text-[var(--text-muted)] flex items-center gap-1.5 opacity-50">
+              <ShieldCheck className="w-2.5 h-2.5" />
+              Verifiable Alpha powered by SynthData (Bittensor Subnet 50)
+            </p>
           </section>
         )}
 

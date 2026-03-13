@@ -152,6 +152,13 @@ export interface TrendSummary {
     data_source?: string;
     generated_at?: string;
     polymarket_comparison?: Record<string, unknown> | null;
+    lp_optimization?: Array<{
+      pool: string;
+      lower_bound?: number;
+      upper_bound?: number;
+      probability_in_range?: number;
+      il_estimate?: number;
+    }>;
   };
   relatedMarkets?: Array<{
     provider: string;
