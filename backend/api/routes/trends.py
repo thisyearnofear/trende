@@ -609,6 +609,12 @@ async def export_task_report(task_id: str, format: str = "pdf") -> Response:
     )
 
 
+@router.get("/stream/{task_id}")
+async def stream_status_legacy(task_id: str) -> StreamingResponse:
+    """Legacy SSE route for older clients."""
+    return await stream_status(task_id)
+
+
 @router.get("/{task_id}/stream")
 async def stream_status(task_id: str) -> StreamingResponse:
     """Stream task status updates via SSE."""
