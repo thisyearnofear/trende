@@ -73,7 +73,7 @@ function emitResearchEvent(event: ResearchEvent, sessionId?: string) {
     source: 'query_input',
     stage: typeof event.payload.stage === 'string' ? event.payload.stage : undefined,
   });
-  const endpoint = `${TELEMETRY_API_BASE}/api/telemetry/research-event`;
+  const endpoint = `${TELEMETRY_API_BASE}/api/events/ingest`;
   try {
     if (navigator.sendBeacon) {
       navigator.sendBeacon(endpoint, new Blob([body], { type: 'application/json' }));

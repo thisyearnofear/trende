@@ -104,6 +104,7 @@ app.include_router(actions_routes.router)
 
 # Telemetry routes
 app.include_router(telemetry_routes.router)
+app.include_router(telemetry_routes.events_router)
 
 # CORS middleware
 app.add_middleware(

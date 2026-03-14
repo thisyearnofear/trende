@@ -13,6 +13,7 @@ from backend.api.services import TaskService
 
 
 router = APIRouter(prefix="/api/telemetry", tags=["telemetry"])
+events_router = APIRouter(prefix="/api/events", tags=["telemetry"])
 task_service = TaskService()
 
 
@@ -45,6 +46,16 @@ async def ingest_mission_event(
     if not created:
         return Response(status_code=500, content=json.dumps({"error": "Failed to store telemetry event"}))
     return {"ok": True, "event": created}
+
+
+@events_router.post("/ingest", response_model=None)
+async def ingest_event_alias(
+    event: ResearchTelemetryRequest,
+    request: Request,
+    x_wallet_address: str | None = Header(None, alias="X-Wallet-Address"),
+) -> Any:
+    """Alias endpoint to avoid adblock/telemetry filters in browsers."""
+    return await ingest_mission_event(event, request, x_wallet_address)
 
 
 @router.get("/mission-events")
