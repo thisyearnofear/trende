@@ -112,6 +112,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:3001", 
         "https://trende.famile.xyz",
+        "https://trendeapp.vercel.app",
         "https://api.trende.famile.xyz",
     ],
     allow_credentials=True,
