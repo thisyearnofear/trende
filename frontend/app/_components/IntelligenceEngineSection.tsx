@@ -32,7 +32,7 @@ const INTELLIGENCE_ENGINE_STEPS = [
   {
     id: "04",
     title: "Verified Intel",
-    detail: "Final conviction brief with cryptographic attestation.",
+    detail: "Final conviction brief with server-side verification.",
     icon: FileCheck,
   },
 ];

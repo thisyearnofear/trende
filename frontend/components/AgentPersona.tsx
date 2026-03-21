@@ -27,7 +27,7 @@ const personaMessages = {
   idle: [
     "I'm Trende. Ready to hunt for signals across the social graph.",
     "What conviction are we testing today?",
-    "Every completed run is signed so provenance can be checked later.",
+    "Every completed run keeps a verification trail for later review.",
   ],
   listening: [
     "Interesting angle...",
@@ -60,7 +60,7 @@ const personaMessages = {
   ],
   complete: [
     "Analysis complete. Your conviction brief is ready.",
-    "Server proof signed. Results are verifiable.",
+    "Server verification complete. Results are ready.",
     "Found strong signal convergence. Check the report.",
   ],
   error: [

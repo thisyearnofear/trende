@@ -119,7 +119,7 @@ export function CommonsSection({
                         <p className="font-mono text-sm line-clamp-3">{item.topic}</p>
                         {item.hasAttestation && (
                           <span className="shrink-0 text-[10px] font-black uppercase px-2 py-0.5 bg-[var(--accent-emerald)] text-[var(--bg-primary)]">
-                            Attested
+                            Verified
                           </span>
                         )}
                       </div>

@@ -59,7 +59,7 @@ const COPY_BY_PROFILE: Record<string, {
     },
     processing: {
       title: "Live Mission Stream",
-      body: "Cross-source harvest, model consensus, and attestation are streaming below.",
+      body: "Cross-source harvest, model consensus, and proof updates are streaming below.",
       icon: Radar,
     },
   },

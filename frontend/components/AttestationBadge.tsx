@@ -79,8 +79,8 @@ export function AttestationBadge({ attestation, size = 'md', showDetails = false
                         <div>
                             <h4 className={cn("text-sm font-bold mb-1", isSoft ? "text-[var(--text-primary)]" : "text-white")}>Server Proof</h4>
                             <p className={cn("text-xs leading-relaxed", isSoft ? "text-[var(--text-secondary)]" : "text-slate-400")}>
-                                This report is cryptographically signed by Trende&apos;s backend runtime,
-                                making the payload hash and provenance independently verifiable.
+                                This report is signed by Trende&apos;s backend runtime, making the payload hash
+                                and provenance independently verifiable.
                             </p>
                         </div>
                     </div>

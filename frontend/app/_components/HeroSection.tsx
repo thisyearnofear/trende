@@ -14,7 +14,7 @@ export function HeroSection() {
       <div className="relative">
         <div className="flex items-center gap-2 mb-4">
           <Fingerprint className="w-5 h-5 text-[var(--accent-cyan)]" />
-          <GlowText text="VERIFIED BY CRYPTOGRAPHY" className="text-xs font-mono" color="cyan" />
+          <GlowText text="SOURCE-BACKED INTELLIGENCE" className="text-xs font-mono" color="cyan" />
         </div>
 
         <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight mb-3">
@@ -34,7 +34,7 @@ export function HeroSection() {
 
         <p className="text-[var(--text-secondary)] font-mono text-sm max-w-2xl mb-4">
           <ScrambleText
-            text="Cut through the noise. Trende analyzes what's being said across social, on-chain, and forums to give you verified market conviction in seconds. Built with cryptographic proof."
+            text="Cut through the noise. Trende analyzes social, on-chain, and forum signals to give you source-backed market conviction in seconds."
             delay={0.8}
             className="text-[var(--text-secondary)] font-mono text-sm max-w-2xl mb-4"
           />
@@ -44,7 +44,7 @@ export function HeroSection() {
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[var(--accent-cyan)]" />
             <span className="text-xs text-[var(--text-secondary)]">
-              Verified by Cryptography
+              Source-Backed Analysis
             </span>
           </div>
           <div className="flex items-center gap-2">

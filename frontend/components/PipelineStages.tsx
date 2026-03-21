@@ -48,12 +48,12 @@ const STAGES: Stage[] = [
     details: ['Cross-referencing sources', 'Calculating confidence scores', 'Detecting bias patterns'],
     proofAction: 'Validation sealed',
   },
-  { 
-    id: 'architect', 
-    label: 'Architect', 
-    icon: Blocks, 
-    description: 'Structuring research output and attestations.',
-    details: ['Synthesizing consensus', 'Generating attestations', 'Preparing outputs'],
+  {
+    id: 'architect',
+    label: 'Architect',
+    icon: Blocks,
+    description: 'Structuring research output and proof artifacts.',
+    details: ['Synthesizing consensus', 'Generating proof records', 'Preparing outputs'],
     proofAction: 'Proof signed',
   },
 ];

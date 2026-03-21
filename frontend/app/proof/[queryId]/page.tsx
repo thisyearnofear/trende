@@ -127,7 +127,7 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                                 Proof of Technical & Social Research
                             </h2>
                             <p className="text-base sm:text-lg text-slate-400 max-w-2xl leading-relaxed">
-                                This document serves as a permanent cryptographic record of the multi-model consensus reached for the topic
+                                This document serves as a permanent server-verified record of the multi-model consensus reached for the topic
                                 <span className="text-emerald-400 font-medium px-1">&quot;{data.query?.idea}&quot;</span>.
                             </p>
                         </div>
@@ -146,8 +146,8 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                                     <Lock className="w-6 h-6 text-emerald-400" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-semibold text-white">Cryptographically Secured</h3>
-                                    <p className="text-xs text-emerald-400 font-mono">Server Proof • Non-Repudiable</p>
+                                    <h3 className="text-lg font-semibold text-white">Server-Verified</h3>
+                                    <p className="text-xs text-emerald-400 font-mono">Hetzner Runtime • Verifiable</p>
                                 </div>
                             </div>
 
@@ -171,7 +171,7 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                                         <ShieldCheck className="w-5 h-5 text-emerald-400 mb-2" />
                                         <h4 className="text-xs font-bold text-white mb-1 uppercase tracking-wider">Non-Repudiation</h4>
                                         <p className="text-xs text-slate-400">
-                                            Cryptographic signature proves this came from Trende&apos;s live runtime
+                                            Runtime signature proves this came from Trende&apos;s live backend
                                         </p>
                                     </div>
                                     <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-700/50">
@@ -193,8 +193,8 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
 
                             <p className="text-sm text-slate-400 leading-relaxed">
                                 This report was synthesized from parallel inferences across independent AI providers including Venice,
-                                AIsa, and OpenRouter. The resulting consensus was cryptographically signed on Trende&apos;s Hetzner
-                                runtime to ensure non-repudiation, verifiable provenance, and bias suppression.
+                                AIsa, and OpenRouter. The resulting consensus was signed on Trende&apos;s Hetzner
+                                runtime to preserve provenance, verifiability, and bias suppression.
                             </p>
 
                             <div className="pt-4 border-t border-slate-700/50 grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -203,7 +203,7 @@ export default function ProofPage({ params }: { params: Promise<{ queryId: strin
                                     <p className="text-xs text-slate-200 font-mono">{new Date(data.summary?.generatedAt || '').toUTCString()}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Attestation</p>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Proof ID</p>
                                     <p className="text-xs text-emerald-400 font-mono">{data.summary?.attestationData?.attestation_id?.slice(0, 16) || 'n/a'}</p>
                                 </div>
                                 <div>

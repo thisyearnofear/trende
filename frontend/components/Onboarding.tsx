@@ -88,7 +88,7 @@ export function Onboarding() {
                 </div>
                 <h2 className="text-2xl font-black uppercase tracking-tight mb-2">Trende Agent</h2>
                 <p className="text-[var(--text-secondary)] font-mono text-sm">
-                  Market Intelligence Verified by Cryptography
+                  Source-Backed Market Intelligence
                 </p>
               </div>
 
@@ -104,8 +104,8 @@ export function Onboarding() {
                 <div className={`flex items-start gap-3 p-2.5 sm:p-3 border-2 transition-colors ${isSoft ? 'soft-ui-out border-0' : 'border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--accent-cyan)]'}`} style={{ boxShadow: isSoft ? 'var(--soft-shadow-out)' : '3px 3px 0px 0px var(--shadow-color)' }}>
                   <div className="mt-0.5 sm:mt-1"><Shield className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--accent-emerald)]" /></div>
                   <div>
-                    <h4 className="font-black text-xs sm:text-sm uppercase tracking-wide">Verified Proofs</h4>
-                    <p className="text-[10px] sm:text-xs text-[var(--text-secondary)] font-mono mt-0.5 sm:mt-1">Every report is signed with cryptographic proof. You can independently verify the results.</p>
+                    <h4 className="font-black text-xs sm:text-sm uppercase tracking-wide">Runtime Verification</h4>
+                    <p className="text-[10px] sm:text-xs text-[var(--text-secondary)] font-mono mt-0.5 sm:mt-1">Every report includes a server-side proof trail and traceable sources, so the result can be checked later.</p>
                   </div>
                 </div>
 

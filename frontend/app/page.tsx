@@ -195,7 +195,7 @@ export default function Home() {
     }
     return {
       brief: "Top-line thesis, confidence drivers, and reliability gaps.",
-      report: "Consensus outputs prepared for attestation and downstream actions.",
+      report: "Consensus outputs prepared for proof packaging and downstream actions.",
       feed: "Source-level signal feed and platform breakdown.",
     };
   }, [activeMissionProfileId]);

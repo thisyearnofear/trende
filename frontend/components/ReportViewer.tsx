@@ -241,14 +241,14 @@ export function ReportViewer({ summary, mode, queryId }: ReportViewerProps) {
 
     const verifyAttestation = async () => {
         if (!attestation) {
-            setVerifyStatus('Missing attestation payload.');
+            setVerifyStatus('Missing proof payload.');
             setVerified(false);
             return;
         }
 
         try {
             setIsVerifying(true);
-            setVerifyStatus('Verifying cryptographic signature...');
+            setVerifyStatus('Verifying runtime signature...');
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
             const response = await fetch(`${baseUrl}/api/attest/verify`, {
                 method: 'POST',
@@ -777,7 +777,7 @@ export function ReportViewer({ summary, mode, queryId }: ReportViewerProps) {
                                     isMeme ? (isSoft ? 'bg-[var(--accent-cyan)]' : 'bg-cyan-600 hover:bg-cyan-500') : (isSoft ? 'bg-[var(--accent-emerald)]' : 'bg-emerald-600 hover:bg-emerald-500')
                                 )}
                             >
-                                {isMeme ? 'Get Attested Alpha Manifest' : 'Generate Alpha Link'}
+                                {isMeme ? 'Get Verified Alpha Manifest' : 'Generate Alpha Link'}
                             </button>
                         </div>
                     </div>
@@ -788,7 +788,7 @@ export function ReportViewer({ summary, mode, queryId }: ReportViewerProps) {
                         </div>
                         <div className={cn("rounded-xl border p-2.5 sm:p-3", isSoft ? "soft-ui-in border-0" : "border-slate-800 bg-slate-900/70")}>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent-cyan)] mb-1">DAO Risk Flow</p>
-                            <p className={cn("text-xs", isSoft ? "text-[var(--text-secondary)]" : "text-slate-400")}>Risk agent submits attested findings for governance review and vote staging.</p>
+                            <p className={cn("text-xs", isSoft ? "text-[var(--text-secondary)]" : "text-slate-400")}>Risk agent submits verified findings for governance review and vote staging.</p>
                         </div>
                         <div className={cn("rounded-xl border p-2.5 sm:p-3", isSoft ? "soft-ui-in border-0" : "border-slate-800 bg-slate-900/70")}>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent-amber)] mb-1">Creator Flow</p>
