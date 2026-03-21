@@ -558,7 +558,7 @@ export function TrendSummary({ summary, sourceLabelByOrdinal = {}, isLoading, da
           <span className={cn(
             "text-[9px] sm:text-[10px] font-black uppercase whitespace-nowrap",
             isSoft ? "text-[var(--text-muted)]" : "text-white/40"
-          )}>Attested on EigenCompute</span>
+          )}>Signed on Hetzner Runtime</span>
         </div>
       </div>
     </Card>

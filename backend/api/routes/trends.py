@@ -540,7 +540,7 @@ async def get_task_results(task_id: str) -> dict[str, Any] | Response:
             "trustStack": {
                 "tee": {
                     "status": "signed" if tee_status == "signed" else ("ready" if tee_status in {"ready", "signed"} else "pending"),
-                    "provider": (attestation_data or {}).get("provider", "eigen"),
+                    "provider": (attestation_data or {}).get("provider", "hetzner"),
                 },
                 "consensus": {
                     "status": consensus_status,

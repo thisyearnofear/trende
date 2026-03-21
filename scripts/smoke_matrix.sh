@@ -78,6 +78,6 @@ poll_run() {
 
 post_run "fast" '{"idea":"Fast smoke check: summarize current AI infra momentum.","platforms":["newsapi","hackernews"],"models":["venice","openrouter_llama_70b"],"relevanceThreshold":0.45}'
 post_run "standard" '{"idea":"Standard smoke check: compare privacy AI vs agent infra narratives this week.","platforms":["newsapi","web","hackernews","stackexchange"],"models":["venice","openrouter_llama_70b","openrouter_hermes"],"relevanceThreshold":0.6}'
-post_run "deep" '{"idea":"Deep smoke check: identify convergent signals across Eigen, Base, and BNB ecosystems.","platforms":["newsapi","web","hackernews","stackexchange","coingecko","tinyfish"],"models":["venice","aisa","openrouter_llama_70b","openrouter_hermes","openrouter_stepfun"],"relevanceThreshold":0.8}'
+post_run "deep" '{"idea":"Deep smoke check: identify convergent signals across Base, BNB, and onchain AI ecosystems.","platforms":["newsapi","web","hackernews","stackexchange","coingecko","tinyfish"],"models":["venice","aisa","openrouter_llama_70b","openrouter_hermes","openrouter_stepfun"],"relevanceThreshold":0.8}'
 
 echo "Smoke matrix complete."

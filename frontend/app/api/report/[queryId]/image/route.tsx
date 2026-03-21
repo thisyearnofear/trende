@@ -107,7 +107,7 @@ export async function GET(
                 TRENDE // INTELLIGENCE REPORT
               </div>
               <div style={{ fontSize: '14px', color: '#00ff88', letterSpacing: '2px' }}>
-                VERIFIABLE TEE-SECURED ALPHA
+                VERIFIABLE SERVER-SIGNED ALPHA
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
@@ -148,7 +148,7 @@ export async function GET(
           <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '2px solid #333', paddingTop: '18px' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>ATTESTATION</div>
-              <div style={{ fontSize: '14px', color: '#00ff88' }}>TEE_SIGNED_VERIFIED_OK</div>
+              <div style={{ fontSize: '14px', color: '#00ff88' }}>SERVER_SIGNED_VERIFIED_OK</div>
             </div>
             <div style={{ fontSize: '14px', color: '#666' }}>
               WWW.TRENDE.APP

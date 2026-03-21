@@ -32,8 +32,8 @@ Once research is complete, fetch the compact manifest for your execution layer (
     "website": "https://trende.vercel.app/meme/{task_id}",
     "trende_proof_id": "uuid-v4",
     "attestation": {
-      "provider": "eigen_compute",
-      "method": "TEE_ATTESTATION_V1",
+      "provider": "hetzner",
+      "method": "SERVER_SIGNATURE_V1",
       "signature": "0x..."
     }
   },

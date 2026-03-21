@@ -131,7 +131,7 @@ export const RESEARCH_PROFILES = [
     id: 'due-diligence',
     label: 'Due Diligence',
     icon: Shield,
-    description: 'Deep technical verification & TEE proof',
+    description: 'Deep technical verification & server proof',
     platforms: ['web', 'tinyfish', 'hackernews', 'stackexchange'],
     models: ['venice_default', 'venice_uncensored', 'venice_mistral', 'openrouter_hermes', 'aisa'],
     threshold: 0.8,

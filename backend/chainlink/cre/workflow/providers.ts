@@ -264,7 +264,7 @@ export function askOpenRouter(
 /**
  * Query the Trende API itself for a pre-computed consensus.
  * Acts as a third independent voice — the API runs its own multi-model pipeline
- * (Venice + AIsa + OpenRouter variants) with TEE attestation.
+ * (Venice + AIsa + OpenRouter variants) with server-side proof.
  */
 export function askTrendeAPI(
   runtime: Runtime<Config>,

@@ -5,8 +5,6 @@
 .env.production
 .env.test
 .env.test.local
-eigen-attestor/.env.deploy
-eigen-attestor/.env.tls*
 
 # Python
 __pycache__/
@@ -55,7 +53,6 @@ Thumbs.db
 
 # Deploy artifacts
 *.tar.gz
-temp_eigen/
 .junie/
 
 # Foundry / Solidity build artifacts

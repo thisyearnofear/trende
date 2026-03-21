@@ -182,7 +182,7 @@ export default function Home() {
     if (activeMissionProfileId === "due-diligence") {
       return {
         brief: "Technical conviction, reliability gating, and proof-led findings.",
-        report: "Consensus integrity checks and attestation-ready synthesis for verifiable use.",
+        report: "Consensus integrity checks and proof-ready synthesis for verifiable use.",
         feed: "Source-level evidence prioritized for reproducibility and deep validation.",
       };
     }
@@ -576,8 +576,8 @@ export default function Home() {
               Venice AI
             </Link>
             {" • "}
-            <Link href="https://eigen.xyz" className="text-[var(--accent-purple)] hover:underline">
-              Eigen TEE
+            <Link href="https://www.hetzner.com" className="text-[var(--accent-purple)] hover:underline">
+              Hetzner
             </Link>
             {" • "}
             <Link href="https://chain.link" className="text-[var(--accent-amber)] hover:underline">

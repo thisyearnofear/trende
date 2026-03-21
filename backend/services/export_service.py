@@ -186,7 +186,7 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     warnings = consensus.get("warnings") or []
     lines.append(f"- Warnings: {', '.join(warnings) if warnings else 'none'}")
     lines.append("")
-    lines.append("## Attestation")
+    lines.append("## Proof Manifest")
     lines.append("")
     attestation = payload.get("attestation") or {}
     lines.append(f"- Provider: {attestation.get('provider') or 'n/a'}")
@@ -241,7 +241,7 @@ def render_pdf_report(payload: dict[str, Any]) -> bytes:
     _key_value(pdf, "Warnings", ", ".join(warnings) if warnings else "none", content_width)
     pdf.ln(2)
 
-    _section_title(pdf, "TEE Attestation")
+    _section_title(pdf, "Proof Manifest")
     _key_value(pdf, "Provider", str(attestation.get("provider") or "n/a"), content_width)
     _key_value(pdf, "Method", str(attestation.get("method") or "n/a"), content_width)
     _key_value(pdf, "Status", str(attestation.get("status") or "n/a"), content_width)

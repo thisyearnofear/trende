@@ -548,7 +548,7 @@ export function ReportViewer({ summary, mode, queryId }: ReportViewerProps) {
 
                                 <div className={cn("p-3 rounded-lg border mb-4", isSoft ? "soft-ui-in border-0" : "bg-slate-900/50 border-emerald-500/20")}>
                                     <p className={cn("text-[10px] uppercase font-bold tracking-wider mb-1", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>
-                                        TEE Signer Address
+                                        Signer Address
                                     </p>
                                     {attestation?.signer ? (
                                         <a
@@ -1222,7 +1222,7 @@ export function ReportViewer({ summary, mode, queryId }: ReportViewerProps) {
                                 </p>
                                 <div className="flex gap-2 flex-wrap">
                                     <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-500/10 w-fit px-2 py-1 rounded">
-                                        <ShieldCheck className="w-3 h-3" /> EigenCompute Attested
+                                        <ShieldCheck className="w-3 h-3" /> Server Proof Attached
                                     </div>
                                     <div className="flex items-center gap-2 text-[10px] font-bold text-cyan-400 uppercase tracking-widest bg-cyan-500/10 w-fit px-2 py-1 rounded">
                                         <Link2 className="w-3 h-3" /> A2A Compatible

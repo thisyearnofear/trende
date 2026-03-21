@@ -45,7 +45,7 @@ class QueryRequest(BaseModel):
 
 
 class AttestationVerifyRequest(BaseModel):
-    """Request model for verifying TEE attestation."""
+    """Request model for verifying a Trende proof payload."""
     payload: dict[str, Any]
     attestation: dict[str, Any]
 

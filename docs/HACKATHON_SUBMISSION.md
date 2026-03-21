@@ -23,7 +23,7 @@ Trende combines:
 - Chainlink Functions for verifiable off-chain data fetching
 - Chainlink Runtime Environment (CRE) for decentralized multi-provider AI consensus
 - TrendeOracle for on-chain market creation and settlement
-- Eigen-backed TEE attestation for Trende's own internal intelligence path
+- Hetzner-backed server proof for Trende's own internal intelligence path
 
 This creates a usable primitive for agents, traders, creators, and prediction markets: verifiable intelligence that can be acted on, not just read.
 
@@ -94,7 +94,7 @@ The key product claim is that other agents can pay for, verify, and act on Trend
 - clear use of CRE, not just generic oracle branding
 - real oracle receiver settlement path with verified CRE simulation
 - strong multi-agent narrative
-- verifiable trust stack: CRE + Functions + TEE
+- verifiable trust stack: CRE + Functions + server proof
 - tangible product, not only infrastructure
 
 ## Networks and Contracts

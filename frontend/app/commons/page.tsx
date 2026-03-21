@@ -100,7 +100,7 @@ export default function CommonsPage() {
             Verifiable Intelligence for Everyone
           </h2>
           <p className="text-gray-400 font-mono text-sm max-w-2xl">
-            Browse research funded by the community across Base Sepolia and Arbitrum Sepolia. Every analysis is TEE-attested 
+            Browse research funded by the community across Base Sepolia and Arbitrum Sepolia. Every analysis is server-signed
             and permanently verifiable. Connect your wallet to sponsor new research.
           </p>
         </div>
@@ -136,7 +136,7 @@ export default function CommonsPage() {
             <p className="text-2xl sm:text-3xl font-black text-[#00ff88]">{research.length}</p>
           </div>
           <div className="bg-[#141414] border-2 border-white p-4" style={{ boxShadow: '4px 4px 0px 0px #00ffff' }}>
-            <p className="text-[10px] sm:text-xs font-mono text-gray-500 mb-1">TEE_ATTESTED</p>
+            <p className="text-[10px] sm:text-xs font-mono text-gray-500 mb-1">SIGNED_REPORTS</p>
             <p className="text-2xl sm:text-3xl font-black text-[#00ffff]">
               {research.filter(r => r.hasAttestation).length}
             </p>
@@ -186,7 +186,7 @@ export default function CommonsPage() {
                 {item.hasAttestation && (
                   <div className="flex items-center gap-1.5 mb-3">
                     <ShieldCheck className="w-4 h-4 text-[#00ff88]" />
-                    <span className="text-[10px] font-mono text-[#00ff88] uppercase">TEE Attested</span>
+                    <span className="text-[10px] font-mono text-[#00ff88] uppercase">Server Signed</span>
                   </div>
                 )}
 

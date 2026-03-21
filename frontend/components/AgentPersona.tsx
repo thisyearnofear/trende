@@ -27,7 +27,7 @@ const personaMessages = {
   idle: [
     "I'm Trende. Ready to hunt for signals across the social graph.",
     "What conviction are we testing today?",
-    "I run in a TEE - your queries stay encrypted end-to-end.",
+    "Every completed run is signed so provenance can be checked later.",
   ],
   listening: [
     "Interesting angle...",
@@ -37,11 +37,11 @@ const personaMessages = {
   thinking: [
     "Calculating optimal search strategy...",
     "Selecting the best data sources for this query...",
-    "Initializing secure enclave...",
+    "Initializing proof pipeline...",
   ],
   processing: [
-    "Trusted Execution Environment (TEE) is isolating this workflow from host tampering.",
-    "EigenCompute enclave policy checks are validating deterministic execution boundaries.",
+    "Hetzner runtime is executing the research workflow and collecting proof metadata.",
+    "Server-side integrity checks are validating deterministic execution boundaries.",
     "Connectors are harvesting source data and normalizing it into comparable signal objects.",
     "Tabstack web research is extracting long-form evidence for deeper source grounding.",
     "Rate-limiter and source checks are reducing spam/noise before scoring begins.",
@@ -52,20 +52,20 @@ const personaMessages = {
     "Divergence analysis is identifying where models disagree and why confidence may drop.",
     "Claim-level triangulation is ranking evidence by recency, specificity, and corroboration.",
     "Evidence weighting is combining freshness, breadth, and agreement into confidence.",
-    "Attestation payload assembly is binding output hashes to model-provider metadata.",
+    "Proof payload assembly is binding output hashes to model-provider metadata.",
     "Architect stage is structuring a shareable research report from validated findings.",
-    "Attestation is signing the result so provenance can be verified later.",
+    "Proof signing is sealing the result so provenance can be verified later.",
     "Wallet-bound persistence layer is preparing save-ready research records.",
     "Pipeline finalization complete. Persisting telemetry and preparing UI payload.",
   ],
   complete: [
     "Analysis complete. Your conviction brief is ready.",
-    "TEE attestation signed. Results are verifiable.",
+    "Server proof signed. Results are verifiable.",
     "Found strong signal convergence. Check the report.",
   ],
   error: [
     "Hit a snag in the pipeline. Retrying...",
-    "TEE connection unstable. Falling back to local validation...",
+    "Proof pipeline unstable. Retrying server-side validation...",
   ],
 };
 

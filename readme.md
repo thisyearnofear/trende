@@ -4,7 +4,7 @@ Trende researches any topic across social media, news, forums, and market data u
 
 **What it does:**
 1. **Research**: Multi-platform analysis across 17 data sources via LangGraph agents
-2. **Verify**: Every report is TEE-attested with cryptographic signatures (Eigen)
+2. **Verify**: Every report is server-signed with cryptographic proof from the live Hetzner runtime
 3. **Distribute**: Publish to Paragraph, settle on-chain via Chainlink, or serve via A2A API
 4. **Automate**: ACP integration lets other AI agents hire Trende for research
 
@@ -14,7 +14,7 @@ Trende researches any topic across social media, news, forums, and market data u
 
 Consolidated documentation (max 4 docs, 300 lines each):
 
-- **[Architecture](./docs/ARCHITECTURE.md)**: System overview, LangGraph workflow, TEE attestation, Chainlink oracle
+- **[Architecture](./docs/ARCHITECTURE.md)**: System overview, LangGraph workflow, server proof pipeline, Chainlink oracle
 - **[Integration](./docs/INTEGRATION.md)**: ACP, Paragraph, Chainlink integration guides
 - **[API Reference](./docs/API.md)**: Complete API documentation for developers
 - **[Developer Guide](./docs/GUIDE.md)**: Quick start, deployment, troubleshooting
@@ -50,13 +50,13 @@ python3 scripts/test_agent.py "Your Research Topic"
 
 Trende is built for the agent-to-agent economy:
 - **llms.txt**: [Master Discovery File](./llms.txt) for LLM-based agents.
-- **Verifiable Output**: Every analysis produces an **Attestation Payload** signed by a TEE.
+- **Verifiable Output**: Every analysis produces a signed proof payload with a reproducible hash.
 - **Settlement**: Native **X402 (EIP-3009)** support for automated intelligence purchases.
 - **Agentic UX**: Live "Deploy Agent" dispatch, visible on-chain oracle state, autonomous sentinel-triggered settlement, and copyable A2A invocation payloads.
 
 ## 🛡️ Core Principles
 
-- **Verifiable First**: Cryptographic proof for every report, leveraging **Eigen TEE** for verifiable compute.
+- **Verifiable First**: Cryptographic proof for every report, generated on Trende's live Hetzner runtime.
 - **Multi-Model**: Eliminates single-source bias using Venice, GPT-4o, Llama, and Gemini.
 - **Chain Agnostic**: Built to serve intelligence to any ecosystem, including Monad, Base, BNB, and Solana.
 - **Privacy Centric**: Primary inference routed via Venice AI.

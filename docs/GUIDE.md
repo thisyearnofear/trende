@@ -75,9 +75,9 @@ FRONTEND_URL=http://localhost:3000
 
 **Optional**:
 ```bash
-# Attestation (Production)
-ATTESTATION_PROVIDER=eigencompute
-EIGEN_ATTEST_URL=https://eigen-attest.famile.xyz/attest
+# Server-side proof
+ATTESTATION_PROVIDER=hetzner
+ATTESTATION_DEV_SECRET=replace_me_dev_secret
 
 # ACP (Agent Commerce)
 ACP_ENABLED=true
@@ -253,7 +253,7 @@ Trende now follows this pattern in `contracts/src/TrendeOracle.sol`.
 3. Register agent:
    - Name: "Trende Research Agent"
    - Role: Provider
-   - Description: "TEE-attested multi-platform research"
+   - Description: "Cryptographically signed multi-platform research"
 
 ### 2. Configure Service
 
@@ -291,14 +291,14 @@ pip install -e ".[dev]"
 
 ---
 
-### Attestation Fails
+### Proof Service Fails
 
-**Symptom**: `ATTESTATION_STRICT_MODE=true requires live Eigen attestation`
+**Symptom**: proof verification returns degraded or unsigned output
 
 **Solution**:
-1. Check endpoint: `curl https://eigen-attest.famile.xyz/health`
-2. Verify token in `.env`
-3. For dev, use: `ATTESTATION_PROVIDER=local_hmac`
+1. Verify `ATTESTATION_DEV_SECRET` is present in `.env`
+2. Ensure `ATTESTATION_PROVIDER=hetzner`
+3. Check `/api/health/attestation?probe=true`
 
 ---
 

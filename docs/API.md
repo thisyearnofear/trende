@@ -97,8 +97,8 @@ Retrieve task state, findings, summary, telemetry, and attestation bundle.
       "agreement_score": 0.74
     },
     "attestationData": {
-      "provider": "eigencompute",
-      "attestation_id": "ATTEST-..."
+      "provider": "hetzner",
+      "attestation_id": "PROOF-..."
     }
   },
   "telemetry": {
@@ -124,20 +124,20 @@ Export research in various formats.
 
 ---
 
-### Verify Attestation
+### Verify Proof
 
-**POST** `/api/attest/verify`
+**POST** `/api/health/attestation/verify`
 
-Verify cryptographic attestation authenticity.
+Verify cryptographic proof authenticity.
 
 **Request**:
 ```json
 {
   "payload": { /* original consensus data */ },
   "attestation": {
-    "attestation_id": "ATTEST-...",
-    "signature": "0x...",
-    "signer": "0xD518..."
+    "attestation_id": "PROOF-...",
+    "signature": "abc123...",
+    "key_id": "hetzner-runtime-key"
   }
 }
 ```
@@ -146,10 +146,9 @@ Verify cryptographic attestation authenticity.
 ```json
 {
   "verified": true,
-  "signer": "0xD518465105bc1a4Db877e5d7b0C64cc88260f15B",
-  "attestation_id": "ATTEST-...",
-  "message": "TrendeAttestation|...",
-  "timestamp": "2026-02-16T13:40:00.000000+00:00"
+  "provider": "hetzner",
+  "method": "server-signature",
+  "attestation_id": "PROOF-..."
 }
 ```
 
@@ -176,8 +175,8 @@ Returns compact, verifiable conviction manifest for external launch bots.
     "website": "https://trende.vercel.app/meme/{task_id}",
     "trende_proof_id": "uuid-v4",
     "attestation": {
-      "provider": "eigen_compute",
-      "method": "TEE_ATTESTATION_V1",
+      "provider": "hetzner",
+      "method": "SERVER_SIGNATURE_V1",
       "signature": "0x..."
     }
   },
@@ -211,10 +210,12 @@ Check attestation service connectivity.
 **Response**:
 ```json
 {
-  "status": "healthy",
-  "provider": "eigencompute",
-  "endpoint": "https://eigen-attest.famile.xyz/attest",
-  "reachable": true
+  "ok": true,
+  "status": "ready",
+  "configured": {
+    "provider": "hetzner",
+    "host": "hetzner"
+  }
 }
 ```
 

@@ -14,22 +14,22 @@ from backend.services.ai_service import ai_service
 from backend.services.attestation_service import attestation_service
 
 async def main():
-    print("🧪 Testing Trende Consensus & TEE Attestation Core...")
+    print("🧪 Testing Trende Consensus & Server Proof Core...")
     
-    # 1. Check Attestation Service Health
-    print("\n[Stage 1] Checking Attestation Service...")
+    # 1. Check proof service health
+    print("\n[Stage 1] Checking Proof Service...")
     health = await attestation_service.health_check(probe=True)
     print(f"Status: {health.get('status')}")
     print(f"Message: {health.get('message')}")
     
     if health.get('ok'):
-        print("✅ Attestation service is ready.")
+        print("✅ Proof service is ready.")
     else:
-        print("⚠️ Attestation service is degraded. Check your EIGEN_ATTEST_URL or provider settings.")
+        print("⚠️ Proof service is degraded. Check your ATTESTATION_* settings.")
 
     # 2. Test Parallel Consensus Extraction
     print("\n[Stage 2] Submitting Query to Multi-Model Consensus Engine...")
-    query = "Future of EigenCloud and Verifiable Agents"
+    query = "Future of verifiable AI agents"
     
     # We'll use a smaller set of models for speed during test
     providers = ["venice", "aisa"] # Venice and AIsa (GPT-4o)
@@ -52,12 +52,12 @@ async def main():
         print(f"Diversity Level: {bundle.get('diversity_level')}")
         print(f"Providers Responded: {', '.join(bundle.get('providers', []))}")
         
-        # 3. Verify TEE Attestation
-        print("\n[Stage 3] Verifying TEE Attestation Payload...")
+        # 3. Verify proof payload
+        print("\n[Stage 3] Verifying Proof Payload...")
         attestation = bundle.get("attestation")
         if attestation and attestation.get("status") == "signed":
-            print("✅ Attestation received and signed.")
-            print(f"Attestation ID: {attestation.get('attestation_id')}")
+            print("✅ Proof received and signed.")
+            print(f"Proof ID: {attestation.get('attestation_id')}")
             print(f"Provider: {attestation.get('provider')}")
             
             # Verify the signature locally

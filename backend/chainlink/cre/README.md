@@ -15,7 +15,7 @@ CRE Workflow DON (EVM Log Trigger)
   │
   ├─► Ask Venice AI — Llama 3.3 70B (HTTP, BFT consensus)
   ├─► Ask OpenRouter — Llama 3.3 70B free (HTTP, BFT consensus)
-  ├─► Ask Trende API — pre-computed TEE-attested consensus (HTTP, BFT consensus)
+  ├─► Ask Trende API — pre-computed signed consensus (HTTP, BFT consensus)
   │
   ├─► Compute cross-provider agreement (Jaccard index + score averaging)
   │
@@ -62,7 +62,7 @@ cre deploy
 
 1. **Trigger**: The workflow watches for `MarketCreated` events on TrendeOracle.
 2. **Data fetch**: GDELT and CoinGecko provide verifiable context about the topic.
-3. **AI consensus**: Venice and OpenRouter each analyze the topic independently. The Trende API provides a third signal from its own multi-model pipeline (Venice + AIsa + OpenRouter variants with TEE attestation).
+3. **AI consensus**: Venice and OpenRouter each analyze the topic independently. The Trende API provides a third signal from its own multi-model pipeline (Venice + AIsa + OpenRouter variants with server-side proof).
 4. **Agreement scoring**: Jaccard index across provider responses, same algorithm as `consensus.go` and `ai_service.py:_calculate_agreement_score`.
 5. **Settlement**: The DON signs the consensus score and submits it to `TrendeOracle.onReport(...)` through the configured Chainlink forwarder.
 

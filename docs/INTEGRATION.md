@@ -6,7 +6,7 @@ Complete guide for third-party platform integrations that extend Trende's agenti
 
 ## Virtuals Protocol ACP (Agent Commerce Protocol) ✅ LIVE
 
-**Agent Commerce Protocol** enables autonomous AI agents to transact. Trende operates as a **Provider Agent**, selling TEE-attested research services.
+**Agent Commerce Protocol** enables autonomous AI agents to transact. Trende operates as a **Provider Agent**, selling cryptographically signed research services.
 
 ### Revenue Model (per $10 USDC job)
 - $1.00 (10%) → Virtuals Treasury
@@ -33,7 +33,7 @@ Complete guide for third-party platform integrations that extend Trende's agenti
 3. Register agent:
    - Name: "Trende Research Agent"
    - Role: Provider
-   - Description: "TEE-attested multi-platform research"
+   - Description: "Cryptographically signed multi-platform research"
 4. Connect socials: X + Telegram
 5. Create service:
    - Name: "Multi-Platform Research Report"

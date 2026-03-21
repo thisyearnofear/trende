@@ -42,7 +42,7 @@ const STAGES = [
   { id: "researcher", label: "HARVEST", description: "Data Mining & Social Signal", detail: "Parallel connector execution with rate limits, caching, and source normalization." },
   { id: "validator", label: "VALIDATE", description: "Truth Verification", detail: "Cross-source reliability scoring and noise reduction." },
   { id: "consensus", label: "SYNTHESIZE", description: "Multi-Model Consensus", detail: "Divergence analysis + neutral synthesis across selected models." },
-  { id: "architect", label: "ATTEST", description: "TEE Proof Signing", detail: "Final payload shaping, trace metadata, and proof-ready output." },
+  { id: "architect", label: "ATTEST", description: "Server Proof Signing", detail: "Final payload shaping, trace metadata, and proof-ready output." },
 ];
 
 const SIMULATED_LOGS: Record<string, string[]> = {
@@ -89,10 +89,10 @@ const SIMULATED_LOGS: Record<string, string[]> = {
     "SYNTHESIZING SOVEREIGN REPORT...",
     "ENCODING VERIFIABLE EVIDENCE REFERENCES...",
     "BINDING EVIDENCE HASHES TO FINAL MANIFEST...",
-    "GENERATING EIGEN PROOF...",
-    "REQUESTING EIGENCLOUD ATTESTATION QUOTE...",
-    "SIGNING ATTESTATION PAYLOAD...",
-    "ESTABLISHING PROOF OF COMPUTE...",
+    "GENERATING SERVER PROOF...",
+    "SEALING HETZNER RUNTIME MANIFEST...",
+    "SIGNING PROOF PAYLOAD...",
+    "ESTABLISHING PROOF OF SOURCE...",
     "MISSION COMPLETE.",
   ],
 };
@@ -102,14 +102,14 @@ const STAGE_MILESTONES: Record<string, string> = {
   researcher: "Signal harvest phase active. Connectors are executing in parallel.",
   validator: "Truth engine active. Contradictions and low-quality evidence are being filtered.",
   consensus: "Multi-model synthesis underway. Divergence and agreement are being reconciled.",
-  architect: "TEE packaging + attestation handoff in progress.",
+  architect: "Server-side proof packaging is in progress.",
 };
 
 const WAIT_EXPLAINERS = [
   "Why this takes time: each source route has retries, timeout budgets, and quality filtering before synthesis.",
   "Consensus is weighted by source quality, freshness, and model agreement, not just raw volume.",
   "When primary routes fail, Trende triggers fallback paths to avoid single-source blind spots.",
-  "Attestation is generated after synthesis to bind what was computed and how it was produced.",
+  "Proof is generated after synthesis to bind what was computed and how it was produced.",
 ];
 
 const WAIT_WAYPOINTS = [
@@ -117,7 +117,7 @@ const WAIT_WAYPOINTS = [
   "Cross-platform connectors harvesting in parallel.",
   "Evidence quality checks removing stale/off-topic noise.",
   "Multi-model consensus measuring agreement vs divergence.",
-  "TEE attestation packaging report for verification.",
+  "Server proof manifest packaged for verification.",
   "Final report + proof manifest delivered to saved research.",
 ];
 
@@ -727,10 +727,10 @@ export function ProcessingStatus({
         <TimelineInterlude
           icon="shield"
           title="Verifiable Compute Path"
-          body="Consensus outputs are normalized for attestation, then signed through trusted execution so downstream users can verify provenance."
+          body="Consensus outputs are normalized into a proof manifest, then signed on the live runtime so downstream users can verify provenance."
         />
 
-        {/* ── Section 3: TEE Terminal ── */}
+        {/* ── Section 3: Proof Terminal ── */}
         <div
           className="relative animate-in fade-in slide-in-from-bottom-4 duration-500"
           style={{ animationDelay: "300ms", animationFillMode: "both" }}
@@ -751,7 +751,7 @@ export function ProcessingStatus({
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-black uppercase tracking-wider text-[var(--accent-cyan)]">
-                      {isProcessing ? "TEE RUNNING" : "TEE READY"}
+                      {isProcessing ? "PROOF RUNNING" : "PROOF READY"}
                     </h3>
                     {isProcessing && (
                       <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-cyan)]" />
@@ -760,7 +760,7 @@ export function ProcessingStatus({
                   <p className={`text-xs font-mono flex items-center gap-2 ${mutedTextClass}`}>
                     <span className={`text-emerald-500 ${prefersReducedMotion ? "" : "animate-pulse"}`}>●</span>
                     {activeHash}
-                    <span className={`opacity-70 hidden sm:inline ${mutedTextClass}`}>:: EigenCompute Enclave</span>
+                    <span className={`opacity-70 hidden sm:inline ${mutedTextClass}`}>:: Hetzner Runtime</span>
                   </p>
                 </div>
               </div>
@@ -790,7 +790,7 @@ export function ProcessingStatus({
                     <div className="flex items-center gap-2">
                       <Terminal className={`w-3.5 h-3.5 ${isSoft ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`} />
                       <span className={`text-[10px] font-mono ${isSoft ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>
-                        TEE_TELEMETRY.LOG
+                        PROOF_TELEMETRY.LOG
                       </span>
                     </div>
                     <div className="flex gap-1">

@@ -29,7 +29,10 @@ export function AttestationBadge({ attestation, size = 'md', showDetails = false
         return null;
     }
 
-    const isTEE = attestation.provider === 'eigencompute';
+    const normalizedProvider = (attestation.provider || 'hetzner').toLowerCase();
+    const providerLabel = normalizedProvider === 'hetzner'
+        ? 'Hetzner Runtime'
+        : (attestation.provider || 'Trende Runtime');
     const signerAddress = attestation.signer || '';
 
     const sizeClasses = {
@@ -57,7 +60,7 @@ export function AttestationBadge({ attestation, size = 'md', showDetails = false
                 onMouseLeave={() => setShowTooltip(false)}
             >
                 <ShieldCheck className={iconSizes[size]} />
-                <span>{isTEE ? 'TEE Verified' : 'Attested'}</span>
+                <span>Proof Verified</span>
                 <Info className={cn(iconSizes[size], isSoft ? "text-[var(--text-muted)]" : "opacity-60")} />
             </div>
 
@@ -74,10 +77,10 @@ export function AttestationBadge({ attestation, size = 'md', showDetails = false
                             <ShieldCheck className={cn("w-6 h-6", isSoft ? "text-[var(--accent-emerald)]" : "text-emerald-400")} />
                         </div>
                         <div>
-                            <h4 className={cn("text-sm font-bold mb-1", isSoft ? "text-[var(--text-primary)]" : "text-white")}>TEE Attestation</h4>
+                            <h4 className={cn("text-sm font-bold mb-1", isSoft ? "text-[var(--text-primary)]" : "text-white")}>Server Proof</h4>
                             <p className={cn("text-xs leading-relaxed", isSoft ? "text-[var(--text-secondary)]" : "text-slate-400")}>
-                                This report is cryptographically signed by a Trusted Execution Environment (TEE),
-                                providing verifiable proof that the consensus was generated securely.
+                                This report is cryptographically signed by Trende&apos;s backend runtime,
+                                making the payload hash and provenance independently verifiable.
                             </p>
                         </div>
                     </div>
@@ -87,6 +90,10 @@ export function AttestationBadge({ attestation, size = 'md', showDetails = false
                             "space-y-2 pt-3 border-t",
                             isSoft ? "border-[var(--text-muted)]/10" : "border-slate-700"
                         )}>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className={isSoft ? "text-[var(--text-muted)]" : "text-slate-500"}>Provider:</span>
+                                <span className={cn("font-mono", isSoft ? "text-[var(--text-secondary)]" : "text-slate-300")}>{providerLabel}</span>
+                            </div>
                             <div className="flex items-center justify-between text-xs">
                                 <span className={isSoft ? "text-[var(--text-muted)]" : "text-slate-500"}>Method:</span>
                                 <span className={cn("font-mono", isSoft ? "text-[var(--text-secondary)]" : "text-slate-300")}>{attestation.method}</span>
@@ -121,11 +128,11 @@ export function AttestationBadge({ attestation, size = 'md', showDetails = false
                         isSoft ? "border-[var(--text-muted)]/10" : "border-slate-700"
                     )}>
                         <p className={cn("text-[10px] uppercase tracking-wider font-bold mb-1", isSoft ? "text-[var(--text-muted)]" : "text-slate-500")}>
-                            What is TEE?
+                            How Verification Works
                         </p>
                         <p className={cn("text-xs", isSoft ? "text-[var(--text-secondary)]" : "text-slate-400")}>
-                            A secure area of a processor that guarantees code and data are protected with respect to
-                            confidentiality and integrity.
+                            Trende hashes the canonical payload and signs it on the live server runtime. Matching the
+                            hash and signature proves the result has not been tampered with.
                         </p>
                     </div>
                 </div>

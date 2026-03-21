@@ -137,7 +137,7 @@ End with:
 
 ## What Not To Do
 
-- Do not lead with Eigen. It is supporting trust infrastructure, not the Chainlink headline.
+- Do not over-explain infrastructure. Hetzner-backed proof is supporting trust infrastructure, not the Chainlink headline.
 - Do not show five different product modes.
 - Do not spend more than 20 seconds on setup screens.
 - Do not claim fully decentralized inference if the important part is still backend-assisted.

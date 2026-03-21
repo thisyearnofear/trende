@@ -101,7 +101,7 @@ async def consensus_health(probe: bool = False) -> dict[str, Any]:
 
 @router.post("/attestation/verify")
 async def verify_attestation(request: AttestationVerifyRequest) -> dict[str, Any]:
-    """Verify a TEE attestation."""
+    """Verify a Trende proof payload."""
     verified = attestation_service.verify(request.payload, request.attestation)
     return {
         "verified": verified,
@@ -114,9 +114,9 @@ async def verify_attestation(request: AttestationVerifyRequest) -> dict[str, Any
 @router.get("/attestation")
 async def attestation_health(probe: bool = False) -> dict[str, Any]:
     """
-    Attestation preflight endpoint.
-    - probe=false: reports provider config readiness
-    - probe=true: performs live Eigen endpoint reachability test when configured
+    Proof preflight endpoint.
+    - probe=false: reports server-side proof readiness
+    - probe=true: returns proof lane details for the active runtime
     """
     return await attestation_service.health_check(probe=probe)
 

@@ -13,7 +13,7 @@ interface KineticHeaderProps {
 export function KineticHeader({ 
   title = 'Trende Control Room', 
   subtitle = 'Intelligence-to-Asset Pipeline',
-  badge = 'TEE-Secured'
+  badge = 'Proof-Secured'
 }: KineticHeaderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -124,7 +124,7 @@ export function KineticHeader({
             {titleChars}
           </h1>
           
-          {/* TEE Badge */}
+          {/* Proof badge */}
           <div 
             ref={badgeRef}
             className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 shrink-0"
@@ -188,7 +188,7 @@ export function SectionHeader({ title, subtitle, icon: Icon, accent = 'cyan' }: 
   );
 }
 
-// Multi-chain / Eigen themed hero text
+// Multi-chain themed hero text
 export function HeroText({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   const textRef = useRef<HTMLDivElement>(null);
 

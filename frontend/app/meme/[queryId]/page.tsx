@@ -93,7 +93,7 @@ export default function MemePage({ params }: { params: Promise<{ queryId: string
       <footer className="max-w-5xl mx-auto px-4 py-12 border-t border-white/5 opacity-50 flex items-center justify-center gap-6">
         <div className="flex items-center gap-2 grayscale brightness-50 contrast-125">
           <Zap className="w-4 h-4" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">EigenCompute Verified</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Hetzner Runtime Verified</span>
         </div>
         <div className="w-px h-4 bg-slate-800" />
         <div className="flex items-center gap-2 grayscale brightness-50 contrast-125">

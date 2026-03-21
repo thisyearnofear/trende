@@ -25,8 +25,8 @@ const INTELLIGENCE_ENGINE_STEPS = [
   },
   {
     id: "03",
-    title: "TEE Consensus",
-    detail: "Multi-model validation with hardware-secured proof.",
+    title: "Runtime Proof",
+    detail: "Multi-model validation with server-side proof packaging.",
     icon: Shield,
   },
   {

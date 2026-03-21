@@ -38,11 +38,11 @@ export function VerificationCard({ verification, chainlinkStatusLabel, variant }
               Verification
             </p>
             <p className="text-xs text-[var(--text-secondary)]">
-              TEE attestation and multi-model consensus are live by default. Chainlink receiver settlement is deployed, with CRE workflow deployment pending access approval.
+              Server-side proof and multi-model consensus are live by default. Chainlink receiver settlement is deployed, with CRE workflow deployment pending access approval.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-[10px] font-mono uppercase">
-            <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">TEE: Active</span>
+            <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">Proof: Active</span>
             <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">Consensus: Active</span>
             <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">CRE Receiver: Live</span>
             <span className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-primary)]">Workflow: Pending</span>
@@ -72,10 +72,10 @@ export function VerificationCard({ verification, chainlinkStatusLabel, variant }
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">TEE</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Proof</p>
           <p className="text-sm font-black mt-1">{verification?.tee?.status || "pending"}</p>
           <p className="text-[11px] font-mono text-[var(--text-secondary)] mt-1">
-            Provider: {verification?.tee?.provider || "eigen"}
+            Provider: {verification?.tee?.provider || "hetzner"}
           </p>
         </div>
         <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-3">

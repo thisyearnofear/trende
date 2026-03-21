@@ -38,9 +38,9 @@ def test_trends_results_includes_consensus_and_attestation() -> None:
             'synthesis_model': 'meta-consensus',
         },
         'attestation_data': {
-            'provider': 'local_hmac',
-            'method': 'hmac-sha256',
-            'attestation_id': 'ATTEST-abc',
+            'provider': 'hetzner',
+            'method': 'server-signature',
+            'attestation_id': 'PROOF-abc',
             'input_hash': 'hash',
             'signature': 'sig',
             'payload': {'k': 'v'},
@@ -56,8 +56,8 @@ def test_trends_results_includes_consensus_and_attestation() -> None:
 
     summary = body['summary']
     assert summary['consensusData']['providers'] == ['venice', 'openrouter_llama']
-    assert summary['attestationData']['provider'] == 'local_hmac'
-    assert summary['attestationData']['attestation_id'] == 'ATTEST-abc'
+    assert summary['attestationData']['provider'] == 'hetzner'
+    assert summary['attestationData']['attestation_id'] == 'PROOF-abc'
     assert body['query']['status'] == 'completed'
     assert body['results'][0]['platform'] == 'newsapi'
 

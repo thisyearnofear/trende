@@ -195,27 +195,10 @@ async def check_rate_limit(
 
 async def enforce_attestation_startup_gate() -> None:
     """
-    In strict Eigen mode, fail fast on startup if attestation endpoint is not reachable.
+    Proof generation is local to the backend runtime, so there is no external
+    startup gate to enforce.
     """
-    if attestation_service.provider != "eigencompute" or not attestation_service.strict_mode:
-        return
-
-    health = await attestation_service.health_check(probe=True)
-    if health.get("ok"):
-        return
-
-    message = health.get("message") or "Attestation health check failed."
-    probe = health.get("probe") or {}
-    endpoint = (
-        probe.get("endpoint")
-        or attestation_service.eigen_health_url
-        or attestation_service.eigen_url
-    )
-    status_code = probe.get("status_code")
-    raise RuntimeError(
-        "Startup aborted: ATTESTATION_STRICT_MODE=true requires live Eigen attestation reachability. "
-        f"endpoint={endpoint!r} status_code={status_code!r} reason={message}"
-    )
+    return
 
 
 # _env_flag available in trends_utils.py or helpers.py

@@ -20,7 +20,7 @@ interface Stage {
   icon: React.ElementType;
   description: string;
   details: string[];
-  teeAction?: string;
+  proofAction?: string;
 }
 
 const STAGES: Stage[] = [
@@ -30,7 +30,7 @@ const STAGES: Stage[] = [
     icon: Compass, 
     description: 'Selecting the best worlds and strategy.',
     details: ['Analyzing query intent', 'Selecting data sources', 'Optimizing search strategy'],
-    teeAction: 'Strategy encrypted',
+    proofAction: 'Strategy checkpointed',
   },
   { 
     id: 'researcher', 
@@ -38,7 +38,7 @@ const STAGES: Stage[] = [
     icon: Search, 
     description: 'Harvesting multi-source signal and citations.',
     details: ['Querying Twitter/X API', 'Searching news sources', 'Extracting web content'],
-    teeAction: 'Data ingress secured',
+    proofAction: 'Data ingress normalized',
   },
   { 
     id: 'validator', 
@@ -46,7 +46,7 @@ const STAGES: Stage[] = [
     icon: ShieldCheck, 
     description: 'Cross-checking claims and confidence.',
     details: ['Cross-referencing sources', 'Calculating confidence scores', 'Detecting bias patterns'],
-    teeAction: 'Validation in TEE',
+    proofAction: 'Validation sealed',
   },
   { 
     id: 'architect', 
@@ -54,7 +54,7 @@ const STAGES: Stage[] = [
     icon: Blocks, 
     description: 'Structuring research output and attestations.',
     details: ['Synthesizing consensus', 'Generating attestations', 'Preparing outputs'],
-    teeAction: 'Attestation signed',
+    proofAction: 'Proof signed',
   },
 ];
 
@@ -223,11 +223,11 @@ export function PipelineStages({ progress, isProcessing }: PipelineStagesProps) 
                   ${isExpanded ? 'max-h-40 opacity-100 mt-3 pt-3 border-t border-slate-700/50' : 'max-h-0 opacity-0'}
                 `}
               >
-                {/* TEE Action badge */}
-                {stage.teeAction && (
+                {/* Proof action badge */}
+                {stage.proofAction && (
                   <div className="flex items-center gap-1.5 mb-3 px-2 py-1 rounded-lg bg-slate-950/50 border border-slate-800">
                     <Fingerprint className="w-3 h-3 text-cyan-400" />
-                    <span className="text-[10px] text-cyan-400 font-medium">{stage.teeAction}</span>
+                    <span className="text-[10px] text-cyan-400 font-medium">{stage.proofAction}</span>
                   </div>
                 )}
 
@@ -266,15 +266,15 @@ export function PipelineStages({ progress, isProcessing }: PipelineStagesProps) 
         })}
       </div>
 
-      {/* TEE Status footer */}
+      {/* Proof status footer */}
       <div className="mt-4 flex items-center justify-between px-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
             <Cpu className="w-4 h-4 text-cyan-400" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-300">EigenCompute TEE</p>
-            <p className="text-[10px] text-slate-500">Secure execution environment</p>
+            <p className="text-xs font-medium text-slate-300">Hetzner Runtime</p>
+            <p className="text-[10px] text-slate-500">Server-side proof environment</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

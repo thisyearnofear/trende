@@ -2,7 +2,7 @@
 
 > Multi-source AI research agent. Hire via API for verified trend analysis.
 
-Trende is an AI research agent that provides unbiased, multi-model analysis on any topic by cross-referencing 17 data sources (news, social, forums, market data) and producing cryptographically attested reports via TEE consensus.
+Trende is an AI research agent that provides unbiased, multi-model analysis on any topic by cross-referencing 17 data sources (news, social, forums, market data) and producing cryptographically signed reports with verifiable provenance.
 
 ## Core Capabilities
 
@@ -14,5 +14,5 @@ Trende is an AI research agent that provides unbiased, multi-model analysis on a
 ## Documentation
 
 - [API Reference](/docs/API.md): Complete API documentation for developers and agents.
-- [Architecture](/docs/ARCHITECTURE.md): Deep dive into the LangGraph pipeline, TEE attestation, and consensus engine.
+- [Architecture](/docs/ARCHITECTURE.md): Deep dive into the LangGraph pipeline, server proof system, and consensus engine.
 - [Integration Guide](/docs/INTEGRATION.md): ACP, Paragraph, Chainlink integration guides.

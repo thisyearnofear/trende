@@ -17,7 +17,7 @@ interface AttestationSealProps {
 export function AttestationSeal({
   status,
   attestationId,
-  provider = 'EigenCompute',
+  provider = 'Hetzner Runtime',
   onVerify,
   compact = false,
 }: AttestationSealProps) {
@@ -84,7 +84,7 @@ export function AttestationSeal({
       color: 'text-amber-400',
       bg: 'bg-amber-500/5',
       border: 'border-amber-500/20',
-      label: 'Pending Attestation',
+      label: 'Pending Proof',
       glow: 'shadow-amber-500/10',
       hologram: '',
     },
@@ -93,7 +93,7 @@ export function AttestationSeal({
       color: 'text-cyan-400',
       bg: 'bg-cyan-500/10',
       border: 'border-cyan-500/30',
-      label: 'TEE Orchestration...',
+      label: 'Signing Proof...',
       glow: 'shadow-cyan-500/20',
       hologram: 'animate-pulse',
     },
@@ -102,7 +102,7 @@ export function AttestationSeal({
       color: 'text-emerald-400',
       bg: 'bg-emerald-500/15',
       border: 'border-emerald-500/40',
-      label: 'Authenticity Verified',
+      label: 'Source Verified',
       glow: 'shadow-emerald-500/40',
       hologram: 'after:content-[""] after:absolute after:inset-0 after:bg-gradient-to-tr after:from-transparent after:via-emerald-400/10 after:to-transparent after:opacity-50',
     },
@@ -111,7 +111,7 @@ export function AttestationSeal({
       color: 'text-rose-400',
       bg: 'bg-rose-500/5',
       border: 'border-rose-500/30',
-      label: 'Attestation Fault',
+      label: 'Proof Fault',
       glow: 'shadow-rose-500/10',
       hologram: '',
     },
@@ -190,7 +190,7 @@ export function AttestationSeal({
           />
         )}
 
-        {/* Dynamic Static Noise Overlay for TEE feel */}
+        {/* Dynamic static noise overlay for proof-terminal feel */}
         {!isSoft && <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />}
 
         {/* Concentric rings for verified state */}
@@ -304,7 +304,7 @@ export function VerificationBadge({
       {verified ? (
         <>
           <Fingerprint className="w-3 h-3 animate-pulse" />
-          TEE-Verified
+          Proof Verified
         </>
       ) : (
         <>
